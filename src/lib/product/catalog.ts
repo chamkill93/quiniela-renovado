@@ -24,6 +24,8 @@ export interface ProductGame<TId extends string> {
   description: string;
   icon: string;
   art: string;
+  tone: "red" | "orange" | "blue" | "purple" | "green";
+  basePrice: number;
 }
 
 export const TRADITIONAL_GAMES: ProductGame<TraditionalGameId>[] = [
@@ -34,6 +36,8 @@ export const TRADITIONAL_GAMES: ProductGame<TraditionalGameId>[] = [
     description: "Elegí un número de tres cifras para la primera posición.",
     icon: "/assets/icons/game/head.svg",
     art: "/assets/game-art/head.webp",
+    tone: "red",
+    basePrice: 500,
   },
   {
     id: "prizes",
@@ -42,6 +46,8 @@ export const TRADITIONAL_GAMES: ProductGame<TraditionalGameId>[] = [
     description: "Tu número participa desde la segunda hasta la decimocuarta posición.",
     icon: "/assets/icons/game/prize.svg",
     art: "/assets/game-art/prize.webp",
+    tone: "orange",
+    basePrice: 500,
   },
   {
     id: "invert",
@@ -50,6 +56,8 @@ export const TRADITIONAL_GAMES: ProductGame<TraditionalGameId>[] = [
     description: "Jugá las tres cifras con una lectura visual clara por posición.",
     icon: "/assets/icons/game/invert.svg",
     art: "/assets/game-art/invert.webp",
+    tone: "blue",
+    basePrice: 500,
   },
   {
     id: "redoblona",
@@ -58,6 +66,8 @@ export const TRADITIONAL_GAMES: ProductGame<TraditionalGameId>[] = [
     description: "Combiná un número de cabeza con una terminación de dos cifras.",
     icon: "/assets/icons/game/redoblona.svg",
     art: "/assets/game-art/redoblona.webp",
+    tone: "red",
+    basePrice: 1_000,
   },
   {
     id: "sapyaite-traditional",
@@ -66,6 +76,8 @@ export const TRADITIONAL_GAMES: ProductGame<TraditionalGameId>[] = [
     description: "La forma directa de ingresar una selección tradicional de tres cifras.",
     icon: "/assets/icons/game/bolt.svg",
     art: "/assets/game-art/bolt.webp",
+    tone: "purple",
+    basePrice: 500,
   },
   {
     id: "megaloto",
@@ -74,6 +86,8 @@ export const TRADITIONAL_GAMES: ProductGame<TraditionalGameId>[] = [
     description: "Armá una combinación única de seis números, manual o al azar.",
     icon: "/assets/icons/game/mega.svg",
     art: "/assets/game-art/mega.webp",
+    tone: "blue",
+    basePrice: 10_000,
   },
 ];
 
@@ -85,6 +99,8 @@ export const INSTANT_GAMES: ProductGame<InstantGameId>[] = [
     description: "Elegí la paridad de un resultado entre 001 y 999.",
     icon: "/assets/icons/game/bolt.svg",
     art: "/assets/game-art/bolt.webp",
+    tone: "purple",
+    basePrice: 500,
   },
   {
     id: "poa",
@@ -93,6 +109,8 @@ export const INSTANT_GAMES: ProductGame<InstantGameId>[] = [
     description: "Elegí el rango de centena en el que caerá el resultado.",
     icon: "/assets/icons/game/poa.svg",
     art: "/assets/game-art/poa.webp",
+    tone: "green",
+    basePrice: 500,
   },
   {
     id: "pyae",
@@ -101,6 +119,8 @@ export const INSTANT_GAMES: ProductGame<InstantGameId>[] = [
     description: "Anticipá si el número será menor o mayor que 500.",
     icon: "/assets/icons/game/pyae.svg",
     art: "/assets/game-art/pyae.webp",
+    tone: "purple",
+    basePrice: 1_000,
   },
   {
     id: "petei",
@@ -109,6 +129,8 @@ export const INSTANT_GAMES: ProductGame<InstantGameId>[] = [
     description: "Elegí la cifra final del resultado de tres dígitos.",
     icon: "/assets/icons/game/petei.svg",
     art: "/assets/game-art/one.webp",
+    tone: "red",
+    basePrice: 500,
   },
   {
     id: "mokoi",
@@ -117,6 +139,8 @@ export const INSTANT_GAMES: ProductGame<InstantGameId>[] = [
     description: "Elegí las dos cifras con las que terminará el resultado.",
     icon: "/assets/icons/game/mokoi.svg",
     art: "/assets/game-art/two.webp",
+    tone: "blue",
+    basePrice: 500,
   },
   {
     id: "mbohapy",
@@ -125,6 +149,8 @@ export const INSTANT_GAMES: ProductGame<InstantGameId>[] = [
     description: "Buscá la coincidencia exacta de las tres cifras.",
     icon: "/assets/icons/game/mbohapy.svg",
     art: "/assets/game-art/three.webp",
+    tone: "orange",
+    basePrice: 500,
   },
   {
     id: "poa5",
@@ -133,6 +159,8 @@ export const INSTANT_GAMES: ProductGame<InstantGameId>[] = [
     description: "Elegí tres números distintos y encontralos en cinco resultados.",
     icon: "/assets/icons/game/poa5.svg",
     art: "/assets/game-art/prize.webp",
+    tone: "red",
+    basePrice: 1_000,
   },
   {
     id: "poa10",
@@ -141,6 +169,8 @@ export const INSTANT_GAMES: ProductGame<InstantGameId>[] = [
     description: "Tus tres elegidos se enfrentan a diez resultados independientes.",
     icon: "/assets/icons/game/poa10.svg",
     art: "/assets/game-art/mega.webp",
+    tone: "blue",
+    basePrice: 2_000,
   },
   {
     id: "racha5",
@@ -149,6 +179,8 @@ export const INSTANT_GAMES: ProductGame<InstantGameId>[] = [
     description: "Elegí par o impar y buscá cuatro o cinco coincidencias.",
     icon: "/assets/icons/game/racha5.svg",
     art: "/assets/game-art/redoblona.webp",
+    tone: "green",
+    basePrice: 1_000,
   },
 ];
 
@@ -159,7 +191,7 @@ export const MOCK_DRAWS = [
   { id: "night", label: "Nocturno", time: "21:00", result: "842", tone: "purple" },
 ] as const;
 
-export const BET_AMOUNTS = [5_000, 10_000, 20_000, 50_000] as const;
+export const BET_AMOUNTS = [500, 1_000, 2_000, 5_000, 10_000, 50_000] as const;
 
 export function getTraditionalGame(id: string) {
   return TRADITIONAL_GAMES.find((game) => game.id === id);

@@ -272,6 +272,7 @@ ul, ol { margin-block: 0; padding-inline-start: 1.2rem; }
 .q-site-footer__links a:hover { color: var(--q-red-soft); }
 .q-site-footer > .q-age-mark { flex: 0 0 auto; }
 .q-bottom-nav { display: none; }
+.mobileNav { display: none; }
 
 @media (max-width: 979px) {
   .q-app-shell { display: block; }
@@ -293,6 +294,116 @@ ul, ol { margin-block: 0; padding-inline-start: 1.2rem; }
   .q-bottom-nav__link[aria-current="page"]::before { opacity: 1; }
   .q-bottom-nav__link[aria-current="page"] .q-icon { color: var(--q-red-soft); }
   .q-bottom-nav__label { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mobileNav {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: var(--q-z-bottom-nav);
+    display: block;
+    min-height: calc(var(--q-bottom-nav-height) + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--q-line);
+    background: var(--q-panel-glass);
+    box-shadow: 0 -16px 36px rgb(0 0 0 / 20%), inset 0 1px 0 rgb(255 255 255 / 4%);
+    padding: .42rem max(.2rem, env(safe-area-inset-right)) calc(.34rem + env(safe-area-inset-bottom)) max(.2rem, env(safe-area-inset-left));
+    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(24px);
+  }
+  .mobileNavInner {
+    display: grid;
+    width: min(100%, 32rem);
+    min-width: 0;
+    min-height: 3.65rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(3.95rem, .85fr) repeat(2, minmax(0, 1.5fr));
+    align-items: start;
+    margin-inline: auto;
+  }
+  .mobileNavLink,
+  .mobileNavAction {
+    position: relative;
+    display: grid;
+    min-width: 0;
+    min-height: 3.65rem;
+    place-items: center;
+    align-content: center;
+    gap: .24rem;
+    border-radius: var(--q-r-sm);
+    color: var(--q-muted);
+    font-family: var(--q-font-display);
+    font-size: clamp(.46rem, 2vw, .58rem);
+    font-weight: 760;
+    line-height: 1;
+    -webkit-tap-highlight-color: transparent;
+    transition: color var(--q-duration-base) var(--q-ease-standard), background var(--q-duration-base) var(--q-ease-standard), transform var(--q-duration-fast) var(--q-ease-standard);
+  }
+  .mobileNavLink::before {
+    position: absolute;
+    top: -.42rem;
+    left: 50%;
+    width: 1.45rem;
+    height: 2px;
+    border-radius: var(--q-pill);
+    background: var(--q-red);
+    content: "";
+    opacity: 0;
+    transform: translateX(-50%);
+  }
+  .mobileNavLink:hover { background: var(--q-surface-hover); color: var(--q-text-strong); }
+  .mobileNavLink:active { transform: scale(.96); }
+  .mobileNavLink[aria-current="page"] { color: var(--q-red-soft); }
+  .mobileNavLink[aria-current="page"]::before { opacity: 1; }
+  .mobileNavIcon {
+    display: grid;
+    width: 1.36rem;
+    height: 1.36rem;
+    flex: 0 0 auto;
+    place-items: center;
+    color: currentColor;
+  }
+  .mobileNavIcon > svg { width: 100%; height: 100%; overflow: visible; }
+  .mobileNavLabel {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    letter-spacing: -.015em;
+    text-align: center;
+    text-overflow: clip;
+    white-space: nowrap;
+  }
+  .mobileNavAction {
+    z-index: 1;
+    min-height: 3.85rem;
+    align-content: start;
+    gap: .16rem;
+    margin-top: -1.45rem;
+    color: var(--q-text-strong);
+  }
+  .mobileNavAction:hover { color: var(--q-text-strong); transform: translateY(-1px); }
+  .mobileNavAction:active { transform: scale(.97); }
+  .mobileNavActionDisc {
+    position: relative;
+    display: grid;
+    width: 3.72rem;
+    height: 3.72rem;
+    place-items: center;
+    border: 1px solid rgb(255 255 255 / 24%);
+    border-radius: var(--q-circle);
+    background: linear-gradient(145deg, #fa3943, var(--q-red) 58%, #9d0710);
+    box-shadow: 0 12px 28px rgb(227 6 19 / 38%), inset 0 1px 0 rgb(255 255 255 / 34%), inset 0 -4px 9px rgb(90 0 7 / 34%);
+    color: var(--q-red-contrast);
+  }
+  .mobileNavActionDisc::after {
+    position: absolute;
+    inset: .28rem;
+    border: 1px solid rgb(255 255 255 / 12%);
+    border-radius: inherit;
+    content: "";
+    pointer-events: none;
+  }
+  .mobileNavActionDisc .mobileNavIcon { width: 1.42rem; height: 1.42rem; margin-left: .12rem; }
+  .mobileNavActionDisc .mobileNavIcon > svg { fill: currentColor; stroke: none; }
+  .mobileNavAction > .mobileNavLabel { color: var(--q-text-strong); font-size: .56rem; font-weight: 850; }
   .q-toast-region { bottom: calc(var(--q-bottom-nav-height) + env(safe-area-inset-bottom) + .75rem); }
 }
 

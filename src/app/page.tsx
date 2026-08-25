@@ -1,6 +1,6 @@
 import Link from "next/link";
-import Image from "next/image";
 import { GameCard } from "@/features/product/game-card";
+import { GameIcon } from "@/features/product/game-icon";
 import { SectionHeader } from "@/features/product/section-header";
 import { INSTANT_GAMES, MOCK_DRAWS } from "@/lib/product/catalog";
 import styles from "@/features/product/product.module.css";
@@ -10,19 +10,19 @@ const QUICK_LINKS = [
     href: "/quinielas",
     label: "Quiniela tradicional",
     description: "Seis formas de jugar tus números.",
-    icon: "/assets/icons/game/head.svg",
+    gameId: "head",
   },
   {
     href: "/instantaneas",
     label: "Instantáneas",
     description: "Nueve juegos, resultado al momento.",
-    icon: "/assets/icons/game/bolt.svg",
+    gameId: "sapyaite",
   },
   {
     href: "/quinielas/megaloto",
     label: "Megaloto",
     description: "Elegí seis números del 1 al 45.",
-    icon: "/assets/icons/game/mega.svg",
+    gameId: "megaloto",
   },
 ] as const;
 
@@ -49,7 +49,7 @@ export default function HomePage() {
         <div className={styles.quickGrid} aria-label="Accesos rápidos">
           {QUICK_LINKS.map((item) => (
             <Link className={styles.quickCard} href={item.href} key={item.href}>
-              <span className={styles.quickIcon} aria-hidden="true"><Image src={item.icon} alt="" width={34} height={34} /></span>
+              <span className={styles.quickIcon} aria-hidden="true"><GameIcon gameId={item.gameId} /></span>
               <span><strong>{item.label}</strong><small>{item.description}</small></span>
             </Link>
           ))}

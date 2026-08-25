@@ -123,21 +123,140 @@ function initialsFor(name: string) {
 interface ShellLinkProps {
   item: ShellNavItem;
   active: boolean;
-  mobile?: boolean;
 }
 
-function ShellLink({ item, active, mobile = false }: ShellLinkProps) {
+function ShellLink({ item, active }: ShellLinkProps) {
   const { playSound } = usePreferences();
   return (
     <Link
       href={item.href}
-      className={mobile ? "q-bottom-nav__link" : "q-nav-link"}
+      className="q-nav-link"
       aria-current={active ? "page" : undefined}
       onClick={() => playSound("nav")}
     >
-      <Icon name={item.icon} size={mobile ? 21 : 20} />
-      <span className={mobile ? "q-bottom-nav__label" : "q-nav-link__label"}>{item.label}</span>
-      {!mobile && item.badge !== undefined ? <span className="q-nav-link__badge">{item.badge}</span> : null}
+      <Icon name={item.icon} size={20} />
+      <span className="q-nav-link__label">{item.label}</span>
+      {item.badge !== undefined ? <span className="q-nav-link__badge">{item.badge}</span> : null}
+    </Link>
+  );
+}
+
+type MobileNavIconName =
+  | "home"
+  | "quiniela"
+  | "instant"
+  | "play"
+  | "results"
+  | "account";
+
+function MobileNavIcon({ name }: { name: MobileNavIconName }) {
+  const paths: Record<MobileNavIconName, ReactNode> = {
+    home: (
+      <>
+        <path d="m4 10 8-6 8 6v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1Z" />
+        <path d="M2.8 11.2 12 4l9.2 7.2" />
+      </>
+    ),
+    quiniela: (
+      <>
+        <path d="m12 3.5 7.4 4.3v8.4L12 20.5l-7.4-4.3V7.8Z" />
+        <circle cx="12" cy="12" r="2.1" />
+        <path d="m4.9 8 3.2 1.9M19.1 8l-3.2 1.9M12 16.4v4" />
+      </>
+    ),
+    instant: (
+      <>
+        <path d="M5 7.5 17.8 4l-3.3 12.8-3.2-3.2-3.1 3.1-.9-4.9Z" />
+        <path d="m11.3 13.6 4-4M4 18.5h5M5.5 21h4" />
+      </>
+    ),
+    play: <path d="m9 6 9 6-9 6Z" />,
+    results: (
+      <>
+        <path d="M12 3.5c1.8 2.2 4.8 3 7 3.1v5.2c0 4.2-2.7 7-7 8.7-4.3-1.7-7-4.5-7-8.7V6.6c2.2-.1 5.2-.9 7-3.1Z" />
+        <path d="m8.8 12.2 2.1 2.1 4.5-4.6" />
+      </>
+    ),
+    account: (
+      <>
+        <circle cx="12" cy="8" r="3.4" />
+        <path d="M5 20a7 7 0 0 1 14 0" />
+      </>
+    ),
+  };
+
+  return (
+    <span className="mobileNavIcon" aria-hidden="true">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        focusable="false"
+      >
+        {paths[name]}
+      </svg>
+    </span>
+  );
+}
+
+function mobileNavPresentation(item: ShellNavItem): {
+  icon: MobileNavIconName;
+  label: string;
+} {
+  if (item.href === "/") return { icon: "home", label: "Inicio" };
+  if (item.href.startsWith("/quinielas")) {
+    return { icon: "quiniela", label: "Quiniela" };
+  }
+  if (item.href.startsWith("/instantaneas")) {
+    return { icon: "instant", label: "Instantáneas" };
+  }
+  if (item.href.startsWith("/resultados")) {
+    return { icon: "results", label: "Resultados" };
+  }
+  if (
+    item.href.startsWith("/cuenta") ||
+    item.href.startsWith("/profile") ||
+    item.href.startsWith("/saldos")
+  ) {
+    return { icon: "account", label: "Cuenta" };
+  }
+  return { icon: "quiniela", label: item.label };
+}
+
+function MobileShellLink({ item, active }: ShellLinkProps) {
+  const { playSound } = usePreferences();
+  const presentation = mobileNavPresentation(item);
+
+  return (
+    <Link
+      href={item.href}
+      className="mobileNavLink"
+      aria-current={active ? "page" : undefined}
+      onClick={() => playSound("nav")}
+    >
+      <MobileNavIcon name={presentation.icon} />
+      <span className="mobileNavLabel">{presentation.label}</span>
+    </Link>
+  );
+}
+
+function MobilePlayAction() {
+  const { playSound } = usePreferences();
+
+  return (
+    <Link
+      href="/quinielas"
+      className="mobileNavAction"
+      aria-label="Jugar"
+      onClick={() => playSound("nav")}
+    >
+      <span className="mobileNavActionDisc">
+        <MobileNavIcon name="play" />
+      </span>
+      <span className="mobileNavLabel" aria-hidden="true">Jugar</span>
     </Link>
   );
 }
@@ -246,10 +365,16 @@ function AppShellFrame({
         </footer>
       </div>
 
-      <nav className="q-bottom-nav" aria-label="Navegación móvil">
-        {mobileItems.map((item) => (
-          <ShellLink key={item.href} item={item} active={isPathActive(pathname, item)} mobile />
-        ))}
+      <nav className="mobileNav" aria-label="Navegación móvil">
+        <div className="mobileNavInner">
+          {mobileItems.slice(0, 3).map((item) => (
+            <MobileShellLink key={item.href} item={item} active={isPathActive(pathname, item)} />
+          ))}
+          <MobilePlayAction />
+          {mobileItems.slice(3, 5).map((item) => (
+            <MobileShellLink key={item.href} item={item} active={isPathActive(pathname, item)} />
+          ))}
+        </div>
       </nav>
     </div>
   );

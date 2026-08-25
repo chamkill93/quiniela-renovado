@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { PlayResponse } from "@/lib/product/api-types";
 import { BET_AMOUNTS, type InstantGameId, formatGs, padNumber, type ProductGame } from "@/lib/product/catalog";
 import { useProduct } from "@/providers/product-provider";
+import { AmountChip } from "./amount-chip";
 import { NumericReels } from "./numeric-reels";
 import { TicketDialog } from "./ticket-dialog";
 import { useSoundEffects } from "./use-sound-effects";
@@ -134,15 +135,12 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
               <span className={styles.fieldLabel}>Importe de la jugada</span>
               <div className={styles.chipGrid}>
                 {BET_AMOUNTS.map((value) => (
-                  <button
-                    className={styles.chip}
-                    data-selected={amount === value}
+                  <AmountChip
                     key={value}
-                    onClick={() => setAmount(value)}
-                    type="button"
-                  >
-                    {formatGs(value).replace("Gs. ", "")}
-                  </button>
+                    onSelect={setAmount}
+                    selected={amount === value}
+                    value={value}
+                  />
                 ))}
               </div>
             </div>

@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Modal } from "@/components/ui";
 import { formatGs } from "@/lib/product/catalog";
 import { useProduct } from "@/providers/product-provider";
+import { AmountChip } from "./amount-chip";
 import { SectionHeader } from "./section-header";
 import styles from "./product.module.css";
 
@@ -95,7 +96,7 @@ export function BalanceClient() {
 
       <Modal open={open} onOpenChange={setOpen} title="Recargar saldo" description="Elegí el importe y el medio que vas a utilizar." size="sm">
         <form className={`${styles.ticketBody} ${styles.formStack}`} onSubmit={topup}>
-          <div className={styles.fieldGroup}><span className={styles.fieldLabel}>Importe</span><div className={styles.chipGrid}>{[20_000, 50_000, 100_000, 200_000].map((value) => <button className={styles.chip} data-selected={amount === value} key={value} onClick={() => setAmount(value)} type="button">{formatGs(value).replace("Gs. ", "")}</button>)}</div></div>
+          <div className={styles.fieldGroup}><span className={styles.fieldLabel}>Importe</span><div className={styles.chipGrid}>{[20_000, 50_000, 100_000, 200_000].map((value) => <AmountChip key={value} onSelect={setAmount} selected={amount === value} value={value} />)}</div></div>
           <div className={styles.fieldGroup}><label htmlFor="topup-method">Método</label><select className={styles.select} id="topup-method" onChange={(event) => setMethod(event.target.value)} value={method}><option value="CASH_POINT">Punto autorizado</option><option value="BANK_TRANSFER">Transferencia</option><option value="CARD">Tarjeta</option></select></div>
           {message ? <div className={message.startsWith("Recarga") ? styles.statusBox : styles.errorBox} role="status">{message}</div> : null}
           <button className={styles.primaryButton} disabled={pending} type="submit">{pending ? "Procesando…" : "Confirmar recarga"}</button>

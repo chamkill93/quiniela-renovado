@@ -1,22 +1,22 @@
 # quinie.LA
 
-Aplicación web de Quiniela para Paraguay, reconstruida con Next.js App Router y un proveedor local server-side. La FASE 1 conserva los flujos del HTML v25, suma las nueve Instantáneas documentadas y deja una base reproducible para persistencia y Kodexa en las fases siguientes.
+Frontend web de Quiniela para Paraguay, construido con Next.js App Router y preparado para consumir un backoffice externo. La FASE 1 conserva los flujos del HTML v25, incorpora las nueve Instantáneas y mantiene un proveedor temporal únicamente para previsualización y QA local.
 
 ## Estado
 
 - FASE 1: producto visual y proveedor local completados.
-- FASE 2: persistencia MySQL, autenticación definitiva y seguridad transaccional pendiente.
-- FASE 3: adaptador Kodexa y despliegue Hostinger pendiente.
+- FASE 2: frontend integrable con backoffice, contratos HTTP y flujos de login/registro en preparación.
+- FASE 3: conexión al contrato real, validación UAT y despliegue pendientes.
 
-El proveedor de FASE 1 mantiene la autoridad del saldo, resultados, premios, tickets e idempotencia en el servidor. Sus datos viven en memoria y se reinician junto con el proceso de desarrollo.
+El proveedor de FASE 1 existe solo para poder recorrer la interfaz sin depender de servicios externos. Sus datos ficticios viven en memoria y se reinician junto con el proceso de desarrollo; no representa la arquitectura productiva ni reemplaza al backoffice.
 
 ## Stack
 
 - Node.js 22
 - Next.js 16, React 19 y TypeScript strict
 - Tailwind CSS 4 y design tokens CSS
-- Prisma 6 con esquema MySQL preparado
-- Zod para validación server-side
+- Cliente HTTP de backoffice desacoplado y contratos TypeScript
+- Zod en el proveedor temporal de desarrollo
 - Vitest y Playwright
 
 ## Instalación local
@@ -37,7 +37,7 @@ En PowerShell también podés crear el archivo de entorno así:
 Copy-Item .env.example .env
 ```
 
-El acceso inicial crea una sesión de jugador ficticia. Para revisar RBAC, cerrá la sesión desde Cuenta e ingresá con identificador `admin` y cualquier contraseña ficticia de al menos ocho caracteres. Ninguna credencial real debe utilizarse en este entorno.
+El acceso inicial crea una sesión ficticia para la previsualización. Ninguna credencial real debe utilizarse mientras la aplicación esté conectada al proveedor temporal.
 
 ## Scripts
 
@@ -86,7 +86,19 @@ React UI
    └── AppShell / design system / preferencias locales
 ```
 
-La cookie de sesión es `HttpOnly`, `SameSite=Lax` y usa `Secure` cuando `APP_URL` es HTTPS (o `SESSION_COOKIE_SECURE=true`). El navegador no calcula resultados ni modifica el saldo.
+La cookie del proveedor temporal es `HttpOnly`, `SameSite=Lax` y usa `Secure` cuando `APP_URL` es HTTPS (o `SESSION_COOKIE_SECURE=true`). En producción, identidad, saldo, jugadas y resultados llegan exclusivamente del backoffice externo.
+
+## Conectores de backoffice
+
+`src/lib/backoffice` expone un cliente HTTP configurable y contratos tipados para sesión, login, registro, logout, catálogo, jugadas y resultados. El transporte incluye cookies, cancelación, idempotencia y errores normalizados, pero no contiene reglas de juego ni lógica de negocio.
+
+```ts
+const client = createBackofficeClient({ baseUrl, endpoints });
+await client.login({ documentOrPhone, password });
+await client.register({ displayName, documentOrPhone, password, acceptedTerms: true });
+```
+
+Las URLs y formas definitivas de los endpoints deben venir del contrato del backoffice; no se hardcodean en páginas o componentes.
 
 ## QA
 
@@ -117,4 +129,4 @@ npm run verify
 npm run test:e2e
 ```
 
-La guía de Hostinger está en `project-docs/HOSTINGER_DEPLOY.md`. El despliegue productivo requiere completar FASE 2 y FASE 3, migraciones MySQL, secretos reales y validaciones de Negocio/Kodexa/Legal.
+La guía de Hostinger está en `project-docs/HOSTINGER_DEPLOY.md`. El despliegue productivo requiere el contrato y credenciales del backoffice, validación UAT y aprobación de Negocio/Legal.

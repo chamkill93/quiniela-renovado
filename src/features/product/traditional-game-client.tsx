@@ -12,6 +12,7 @@ import {
   padNumber,
 } from "@/lib/product/catalog";
 import { useProduct } from "@/providers/product-provider";
+import { AmountChip } from "./amount-chip";
 import { TicketDialog } from "./ticket-dialog";
 import { useSoundEffects } from "./use-sound-effects";
 import styles from "./product.module.css";
@@ -93,9 +94,7 @@ export function TraditionalGameClient({ game }: { game: ProductGame<TraditionalG
               <span className={styles.fieldLabel}>Importe</span>
               <div className={styles.chipGrid}>
                 {BET_AMOUNTS.map((value) => (
-                  <button className={styles.chip} data-selected={amount === value} key={value} onClick={() => setAmount(value)} type="button">
-                    {formatGs(value).replace("Gs. ", "")}
-                  </button>
+                  <AmountChip key={value} onSelect={setAmount} selected={amount === value} value={value} />
                 ))}
               </div>
             </div>
