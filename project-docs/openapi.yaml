@@ -1,0 +1,76 @@
+openapi: 3.1.0
+info:
+  title: quinie.LA BFF API
+  version: 1.0.0
+servers:
+  - url: /api
+paths:
+  /health:
+    get:
+      responses:
+        '200': { description: OK }
+  /auth/login:
+    post:
+      responses:
+        '200': { description: Session created }
+        '401': { description: Invalid credentials }
+  /auth/logout:
+    post:
+      responses:
+        '204': { description: Logged out }
+  /me:
+    get:
+      responses:
+        '200': { description: Current user }
+  /wallet:
+    get:
+      responses:
+        '200': { description: Authoritative balance }
+  /wallet/movements:
+    get:
+      responses:
+        '200': { description: Ledger movements }
+  /games:
+    get:
+      responses:
+        '200': { description: Enabled games and public configuration }
+  /draws:
+    get:
+      responses:
+        '200': { description: Active draws }
+  /bets/traditional:
+    post:
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string }
+      responses:
+        '201': { description: Bet accepted }
+        '409': { description: Duplicate or conflicting request }
+  /bets/instant:
+    post:
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string }
+      responses:
+        '201': { description: Instant bet accepted with authoritative result }
+  /me/plays:
+    get:
+      responses:
+        '200': { description: User plays }
+  /results:
+    get:
+      responses:
+        '200': { description: Draw results }
+  /bets/{id}/ticket:
+    get:
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Digital ticket }

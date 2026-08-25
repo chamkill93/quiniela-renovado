@@ -1,0 +1,1014 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  /* — quinie.LA palette — */
+  --color-ink: #060507;
+  --color-ink-2: #0d0a0c;
+  --color-panel: #121013;
+  --color-panel-2: #1a1518;
+  --color-line: rgba(255, 255, 255, 0.08);
+
+  --color-brand: #ee1c2c;
+  --color-brand-bright: #ff4653;
+  --color-brand-soft: #ff8b93;
+  --color-brand-deep: #7c0d16;
+  --color-brand-ember: #a3121e;
+
+  --color-blush: #ffdadd;
+  --color-cream: #fff6f6;
+  --color-smoke: #b9b2b5;
+
+  --color-win: #2fd77c;
+
+  --font-display: var(--font-unbounded), system-ui, sans-serif;
+  --font-body: var(--font-onest), system-ui, sans-serif;
+}
+
+:root {
+  /* shadcn tokens — quinie.LA is a single dark theme */
+  --background: #060507;
+  --foreground: #fff6f6;
+  --card: #121013;
+  --card-foreground: #fff6f6;
+  --popover: #170f12;
+  --popover-foreground: #fff6f6;
+  --primary: #ee1c2c;
+  --primary-foreground: #ffffff;
+  --secondary: #1a1518;
+  --secondary-foreground: #fff6f6;
+  --muted: #1f181b;
+  --muted-foreground: #b9b2b5;
+  --accent: #2a1216;
+  --accent-foreground: #ffdadd;
+  --destructive: #ff4653;
+  --border: rgba(255, 255, 255, 0.09);
+  --input: rgba(255, 255, 255, 0.14);
+  --ring: #ee1c2c;
+  --chart-1: #ee1c2c;
+  --chart-2: #ff8b93;
+  --chart-3: #b9b2b5;
+  --chart-4: #7c0d16;
+  --chart-5: #fff6f6;
+  --radius: 0.75rem;
+  --sidebar: #121013;
+  --sidebar-foreground: #fff6f6;
+  --sidebar-primary: #ee1c2c;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #2a1216;
+  --sidebar-accent-foreground: #ffdadd;
+  --sidebar-border: rgba(255, 255, 255, 0.09);
+  --sidebar-ring: #ee1c2c;
+}
+
+@theme inline {
+  --font-sans: var(--font-onest), system-ui, sans-serif;
+  --font-heading: var(--font-unbounded), system-ui, sans-serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+}
+
+html {
+  background: var(--color-ink);
+}
+
+body {
+  min-height: 100dvh;
+  color: var(--color-cream);
+  font-family: var(--font-body);
+  /* clean deep black with one soft red glow at the top — no grain, no texture */
+  background:
+    radial-gradient(1100px 520px at 50% -180px, rgba(238, 28, 44, 0.16), transparent 70%),
+    linear-gradient(180deg, #0a0708 0%, var(--color-ink) 480px);
+  position: relative;
+}
+
+::selection {
+  background: rgba(238, 28, 44, 0.5);
+  color: #fff;
+}
+
+/* ————— type helpers ————— */
+.font-display {
+  font-family: var(--font-display);
+}
+
+.tracking-label {
+  letter-spacing: 0.22em;
+}
+
+/* ————— primary CTA: red jelly pill ————— */
+.btn-cta {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #fff;
+  background: linear-gradient(180deg, #ff8b93 0%, #ee1c2c 52%, #83101c 100%);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow:
+    0 10px 28px -8px rgba(238, 28, 44, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -6px 12px rgba(60, 4, 10, 0.55);
+  text-shadow: 0 1px 2px rgba(70, 4, 10, 0.6);
+  transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+}
+.btn-cta:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+.btn-cta:active {
+  transform: translateY(1px) scale(0.98);
+}
+.btn-cta:disabled {
+  filter: saturate(0.25) brightness(0.7);
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* light pill used inside colorful game cards */
+.btn-card {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: 9999px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-brand-ember);
+  background: linear-gradient(180deg, #ffffff 0%, #ffe7e9 60%, #ffc9cd 100%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    0 6px 16px -6px rgba(10, 4, 6, 0.55),
+    inset 0 -4px 8px rgba(238, 28, 44, 0.18);
+  transition: transform 0.15s ease, filter 0.15s ease;
+  cursor: pointer;
+}
+.btn-card:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+.btn-card:active {
+  transform: translateY(1px) scale(0.97);
+}
+
+/* ghost / outline button */
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-blush);
+  background: rgba(238, 28, 44, 0.07);
+  border: 1px solid rgba(238, 28, 44, 0.45);
+  transition: background 0.15s ease, transform 0.15s ease;
+  cursor: pointer;
+}
+.btn-ghost:hover {
+  background: rgba(238, 28, 44, 0.16);
+}
+.btn-ghost:active {
+  transform: scale(0.98);
+}
+
+/* ————— cards / panels ————— */
+.panel {
+  background: linear-gradient(180deg, rgba(30, 22, 25, 0.85), rgba(14, 10, 12, 0.92));
+  border: 1px solid var(--color-line);
+  border-radius: 1rem;
+  box-shadow: 0 18px 40px -22px rgba(0, 0, 0, 0.9);
+}
+
+.panel-glow {
+  background:
+    radial-gradient(220px 120px at 85% -10%, rgba(238, 28, 44, 0.22), transparent 70%),
+    linear-gradient(180deg, rgba(32, 20, 23, 0.9), rgba(13, 9, 11, 0.95));
+  border: 1px solid rgba(238, 28, 44, 0.28);
+  border-radius: 1rem;
+  box-shadow:
+    0 18px 44px -20px rgba(238, 28, 44, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* glass surface (nav, dock) */
+.glass {
+  background: linear-gradient(180deg, rgba(22, 14, 17, 0.72), rgba(9, 6, 8, 0.82));
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow:
+    0 24px 60px -30px rgba(0, 0, 0, 0.95),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+/* corner brackets (saldo ganado) */
+.corners {
+  position: relative;
+}
+.corners::before,
+.corners::after {
+  content: "";
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--color-brand-soft);
+  opacity: 0.9;
+}
+.corners::before {
+  top: 7px;
+  left: 7px;
+  border-right: 0;
+  border-bottom: 0;
+  border-top-left-radius: 10px;
+}
+.corners::after {
+  bottom: 7px;
+  right: 7px;
+  border-left: 0;
+  border-top: 0;
+  border-bottom-right-radius: 10px;
+}
+
+/* ————— 3D balls ————— */
+.ball {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: #fff;
+  background: radial-gradient(circle at 34% 28%, #ff9aa1 0%, #ee1c2c 55%, #6d0a12 100%);
+  box-shadow:
+    0 10px 20px -8px rgba(238, 28, 44, 0.55),
+    inset 0 -6px 10px rgba(60, 3, 9, 0.5),
+    inset 0 4px 6px rgba(255, 255, 255, 0.35);
+  text-shadow: 0 1px 2px rgba(70, 4, 10, 0.7);
+}
+
+.ball-ghost {
+  background: radial-gradient(circle at 34% 28%, #3a3134 0%, #221c1f 55%, #0c090b 100%);
+  box-shadow:
+    0 10px 20px -10px rgba(0, 0, 0, 0.8),
+    inset 0 -6px 10px rgba(0, 0, 0, 0.6),
+    inset 0 4px 6px rgba(255, 255, 255, 0.08);
+}
+
+/* ————— poker chips (bet amounts) ————— */
+.chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--chip-text);
+  /* 2° blend zones between rim blocks kill the jagged edges */
+  background:
+    radial-gradient(circle, transparent 0 60%, rgba(0, 0, 0, 0.22) 96%, rgba(0, 0, 0, 0.45) 100%),
+    repeating-conic-gradient(
+      from -14deg,
+      var(--chip-rim) 0deg 26deg,
+      var(--chip-bg) 30deg 56deg,
+      var(--chip-rim) 60deg
+    );
+  box-shadow:
+    0 10px 22px -9px rgba(0, 0, 0, 0.9),
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    inset 0 2px 5px rgba(255, 255, 255, 0.32),
+    inset 0 -4px 7px rgba(0, 0, 0, 0.42);
+  transition: transform 0.15s ease, filter 0.15s ease;
+  cursor: pointer;
+}
+.chip::before {
+  content: "";
+  position: absolute;
+  inset: 17%;
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.2), transparent 58%),
+    var(--chip-bg);
+  box-shadow:
+    inset 0 1px 5px rgba(0, 0, 0, 0.38),
+    0 0 0 1.5px rgba(0, 0, 0, 0.22);
+}
+.chip > span {
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+.chip:hover {
+  transform: translateY(-2px) rotate(-5deg);
+  filter: brightness(1.06);
+}
+.chip:active {
+  transform: scale(0.9);
+}
+.chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.chip-white {
+  --chip-bg: #f2ebec;
+  --chip-rim: #ee1c2c;
+  --chip-text: #8f1019;
+}
+.chip-red {
+  --chip-bg: #d81322;
+  --chip-rim: #fff2f3;
+  --chip-text: #ffffff;
+}
+.chip-black {
+  --chip-bg: #241c1f;
+  --chip-rim: #ee1c2c;
+  --chip-text: #ffffff;
+}
+.chip-ember {
+  --chip-bg: #6d0a12;
+  --chip-rim: #ffb9be;
+  --chip-text: #ffdadd;
+}
+
+/* ————— decorative floating orbs ————— */
+.orb {
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+  filter: saturate(1.05);
+  animation: float 9s ease-in-out infinite;
+}
+.orb-red {
+  background: radial-gradient(circle at 32% 28%, #ff9aa1, #ee1c2c 58%, #57070e);
+  box-shadow: 0 24px 50px -18px rgba(238, 28, 44, 0.55), inset 0 -10px 18px rgba(60, 3, 9, 0.55);
+}
+.orb-smoke {
+  background: radial-gradient(circle at 32% 28%, #eceaea, #9d9598 58%, #4a4346);
+  box-shadow: 0 24px 50px -20px rgba(0, 0, 0, 0.7), inset 0 -10px 18px rgba(30, 26, 28, 0.6);
+  opacity: 0.55;
+}
+.orb-dark {
+  background: radial-gradient(circle at 32% 28%, #453a3e, #201a1d 58%, #0a0709);
+  box-shadow: 0 24px 50px -20px rgba(0, 0, 0, 0.8), inset 0 -10px 18px rgba(0, 0, 0, 0.6);
+  opacity: 0.8;
+}
+.orb-dashed::after {
+  content: "";
+  position: absolute;
+  inset: 14%;
+  border-radius: 9999px;
+  border: 2px dashed rgba(255, 255, 255, 0.35);
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-14px) rotate(6deg);
+  }
+}
+
+/* ————— slash motif (from the logo's crossed ring) ————— */
+.slash {
+  display: inline-block;
+  width: 26px;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ff4653, #ee1c2c);
+  transform: rotate(-45deg);
+  box-shadow: 0 0 12px rgba(238, 28, 44, 0.7);
+}
+
+.stripes {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(238, 28, 44, 0.16) 0 10px,
+    transparent 10px 22px
+  );
+}
+
+/* ————— section heading rule ————— */
+.rule-line {
+  height: 2px;
+  flex: 1;
+  background: linear-gradient(90deg, transparent, rgba(238, 28, 44, 0.55), rgba(255, 255, 255, 0.14));
+  border-radius: 999px;
+}
+.rule-line-r {
+  background: linear-gradient(270deg, transparent, rgba(238, 28, 44, 0.55), rgba(255, 255, 255, 0.14));
+}
+
+/* ————— inputs ————— */
+.field {
+  width: 100%;
+  border-radius: 0.8rem;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(238, 28, 44, 0.3);
+  color: var(--color-cream);
+  font-family: var(--font-display);
+  font-weight: 500;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.field::placeholder {
+  color: rgba(255, 218, 221, 0.28);
+}
+.field:focus {
+  outline: none;
+  border-color: var(--color-brand-bright);
+  box-shadow: 0 0 0 3px rgba(238, 28, 44, 0.22);
+}
+
+/* ————— slot machine reels ————— */
+.slot-machine {
+  --slot-h: 38px;
+  position: relative;
+  display: inline-flex;
+  gap: 5px;
+  padding: 9px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #34181d 0%, #1b0e11 45%, #0d0709 100%);
+  border: 1px solid rgba(238, 28, 44, 0.4);
+  box-shadow:
+    0 24px 55px -22px rgba(238, 28, 44, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -3px 10px rgba(0, 0, 0, 0.7);
+}
+@media (min-width: 640px) {
+  .slot-machine {
+    --slot-h: 46px;
+    gap: 6px;
+    padding: 11px;
+  }
+}
+
+/* versión grande para la pantalla de sorteo */
+.slot-machine.slot-lg {
+  --slot-h: 62px;
+  gap: 7px;
+  padding: 13px;
+  border-radius: 26px;
+}
+@media (min-width: 640px) {
+  .slot-machine.slot-lg {
+    --slot-h: 80px;
+    gap: 9px;
+    padding: 16px;
+  }
+}
+
+/* halo rojo alrededor de la máquina */
+.slot-machine::before {
+  content: "";
+  position: absolute;
+  inset: -14px;
+  border-radius: 30px;
+  background: radial-gradient(circle, rgba(238, 28, 44, 0.28), transparent 70%);
+  filter: blur(12px);
+  z-index: -1;
+  pointer-events: none;
+}
+
+.slot-reel {
+  position: relative;
+  width: calc(var(--slot-h) * 1.5);
+  height: calc(var(--slot-h) * 3);
+  overflow: hidden;
+  border-radius: 9px;
+  background:
+    radial-gradient(ellipse at 50% 50%, #4a2129 0%, #241014 55%, #0b0507 100%);
+  box-shadow: inset 0 0 22px rgba(0, 0, 0, 0.95), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+/* sombreado tipo cilindro: bordes oscuros, centro iluminado */
+.slot-reel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.95) 0%,
+    rgba(0, 0, 0, 0.55) 18%,
+    rgba(255, 255, 255, 0.09) 50%,
+    rgba(0, 0, 0, 0.55) 82%,
+    rgba(0, 0, 0, 0.95) 100%
+  );
+}
+
+/* ventana de la línea de premio */
+.slot-reel::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: var(--slot-h);
+  transform: translateY(-50%);
+  border-top: 1px solid rgba(255, 139, 147, 0.5);
+  border-bottom: 1px solid rgba(255, 139, 147, 0.5);
+  box-shadow: inset 0 0 22px rgba(238, 28, 44, 0.28);
+  z-index: 3;
+  pointer-events: none;
+}
+
+.slot-strip {
+  will-change: transform;
+}
+
+.slot-digit {
+  height: var(--slot-h);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: calc(var(--slot-h) * 0.72);
+  line-height: 1;
+  color: #ffe9ea;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.85);
+}
+
+.slot-spinning .slot-digit {
+  filter: blur(1.1px);
+}
+
+/* landed: the payline lights up */
+.slot-machine[data-landed="true"] .slot-reel::after {
+  border-color: var(--color-brand-bright);
+  box-shadow: inset 0 0 26px rgba(238, 28, 44, 0.55), 0 0 22px -4px rgba(238, 28, 44, 0.7);
+}
+
+@keyframes slotPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 24px 55px -22px rgba(238, 28, 44, 0.65),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      inset 0 -3px 10px rgba(0, 0, 0, 0.7);
+  }
+  50% {
+    box-shadow:
+      0 24px 65px -18px rgba(238, 28, 44, 0.95),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      inset 0 -3px 10px rgba(0, 0, 0, 0.7);
+  }
+}
+.slot-machine[data-landed="true"] {
+  animation: slotPulse 1.6s ease-in-out infinite;
+}
+
+/* campo de monto destacado */
+.field-amount {
+  width: 100%;
+  border-radius: 1rem;
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-weight: 700;
+  background: linear-gradient(180deg, rgba(48, 28, 33, 0.95), rgba(18, 11, 14, 0.98));
+  border: 2px solid rgba(238, 28, 44, 0.55);
+  box-shadow:
+    0 0 0 4px rgba(238, 28, 44, 0.08),
+    0 14px 34px -18px rgba(238, 28, 44, 0.6),
+    inset 0 2px 10px rgba(0, 0, 0, 0.55);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.field-amount::placeholder {
+  color: rgba(255, 218, 221, 0.4);
+  font-weight: 600;
+}
+.field-amount:focus {
+  outline: none;
+  border-color: var(--color-brand-bright);
+  box-shadow:
+    0 0 0 5px rgba(238, 28, 44, 0.22),
+    0 0 34px -6px rgba(238, 28, 44, 0.55),
+    inset 0 2px 10px rgba(0, 0, 0, 0.55);
+}
+
+/* ————— entry animations ————— */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.rise {
+  animation: fadeUp 0.55s cubic-bezier(0.22, 0.9, 0.3, 1) both;
+}
+.rise-1 { animation-delay: 0.05s; }
+.rise-2 { animation-delay: 0.12s; }
+.rise-3 { animation-delay: 0.19s; }
+.rise-4 { animation-delay: 0.26s; }
+.rise-5 { animation-delay: 0.33s; }
+.rise-6 { animation-delay: 0.4s; }
+
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+  70% {
+    transform: scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.pop {
+  animation: popIn 0.35s cubic-bezier(0.22, 0.9, 0.3, 1) both;
+}
+
+@keyframes pulseGlow {
+  0%,
+  100% {
+    box-shadow: 0 10px 28px -8px rgba(238, 28, 44, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.55),
+      inset 0 -6px 12px rgba(60, 4, 10, 0.55);
+  }
+  50% {
+    box-shadow: 0 10px 38px -6px rgba(238, 28, 44, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.55),
+      inset 0 -6px 12px rgba(60, 4, 10, 0.55);
+  }
+}
+.cta-pulse {
+  animation: pulseGlow 2.4s ease-in-out infinite;
+}
+
+/* live dot */
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(238, 28, 44, 0.7);
+  }
+  50% {
+    opacity: 0.6;
+    box-shadow: 0 0 0 6px rgba(238, 28, 44, 0);
+  }
+}
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-brand-bright);
+  animation: blink 1.6s ease-in-out infinite;
+}
+
+/* results ticker */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.marquee {
+  animation: marquee 30s linear infinite;
+}
+.marquee:hover {
+  animation-play-state: paused;
+}
+
+/* hide scrollbars on carousels */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ————— mobile dock padding ————— */
+@media (max-width: 767.98px) {
+  main {
+    padding-bottom: 5.5rem !important;
+  }
+}
+
+/* ————— small screen tweaks ————— */
+@media (max-width: 359px) {
+  .slot-machine.slot-lg {
+    --slot-h: 50px;
+    gap: 5px;
+    padding: 10px;
+  }
+}
+
+/* ————— modo claro (brightness toggle) ————— */
+
+/* base tokens */
+.page-bright {
+  --color-ink: #1a1618;
+  --color-panel: #f5f0f1;
+  --color-panel-2: #ece5e7;
+  --color-line: rgba(0, 0, 0, 0.08);
+  --color-cream: #1a1214;
+  --color-smoke: #6b5e62;
+}
+
+/* page background */
+.page-bright html { background: #e8e0e2 !important; }
+.page-bright body {
+  color: #1a1214 !important;
+  background:
+    radial-gradient(1100px 520px at 50% -180px, rgba(238, 28, 44, 0.08), transparent 70%),
+    linear-gradient(180deg, #f0ebed 0%, #e8e0e2 480px) !important;
+}
+
+/* logo handled in component — pixel-level white→dark, red preserved */
+
+/* ——— glass (navbar, dock) ——— */
+.page-bright .glass {
+  background: linear-gradient(180deg, rgba(255,255,255,0.82), rgba(245,238,240,0.88)) !important;
+  border-color: rgba(0,0,0,0.08) !important;
+  box-shadow: 0 24px 60px -30px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.8) !important;
+}
+
+/* ——— panels ——— */
+.page-bright .panel {
+  background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(245,238,240,0.95)) !important;
+  border-color: rgba(0,0,0,0.06) !important;
+  box-shadow: 0 18px 40px -22px rgba(0,0,0,0.12) !important;
+}
+.page-bright .panel-glow {
+  background:
+    radial-gradient(220px 120px at 85% -10%, rgba(238,28,44,0.06), transparent 70%),
+    linear-gradient(180deg, rgba(255,255,255,0.93), rgba(245,238,240,0.96)) !important;
+  border-color: rgba(238,28,44,0.15) !important;
+}
+
+/* ——— saldo bar ——— */
+.page-bright .rise.flex.items-center.gap-3\.5 {
+  background: rgba(255,255,255,0.7) !important;
+  border-color: rgba(0,0,0,0.06) !important;
+}
+
+/* ——— stripes pattern: soften on light ——— */
+.page-bright .stripes {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(238, 28, 44, 0.06) 0 10px,
+    transparent 10px 22px
+  ) !important;
+}
+
+/* ——— Mega Loto banner ——— */
+.page-bright a.stripes > div {
+  background:
+    radial-gradient(420px 180px at 10% 0%, rgba(238,28,44,0.12), transparent 65%),
+    linear-gradient(120deg, #fff8f9 0%, #f5eff0 70%) !important;
+}
+.page-bright a.stripes > div .bg-gradient-to-b {
+  background: linear-gradient(180deg, #1a1214, #c41420) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  filter: none !important;
+}
+.page-bright a.stripes > div .text-brand-bright {
+  color: #ee1c2c !important;
+  text-shadow: none !important;
+}
+
+/* ——— next draw bar ——— */
+.page-bright .glass.rounded-2xl {
+  background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(245,238,240,0.94)) !important;
+}
+
+/* ——— sorteo cards (handled in component via MutationObserver) ——— */
+
+/* ——— instant cards ——— */
+.page-bright .instant-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(245,238,240,0.97)) !important;
+  border-color: rgba(0,0,0,0.06) !important;
+}
+.page-bright .instant-card::after {
+  opacity: 0.4 !important;
+}
+
+/* ——— slot machine ——— keep dark even in light mode, only soften halo ——— */
+.page-bright .slot-machine {
+  box-shadow:
+    0 24px 55px -22px rgba(238, 28, 44, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -3px 10px rgba(0, 0, 0, 0.7) !important;
+}
+.page-bright .slot-machine::before {
+  background: radial-gradient(circle, rgba(238, 28, 44, 0.15), transparent 70%) !important;
+}
+.page-bright .slot-digit { color: #f5e8ea !important; }
+.page-bright .slot-reel {
+  background:
+    radial-gradient(ellipse at 50% 50%, #3a1820 0%, #1c0d10 55%, #0a0506 100%) !important;
+}
+
+/* ——— fields ——— */
+.page-bright .field,
+.page-bright input.field {
+  background: rgba(255,255,255,0.85) !important;
+  border-color: rgba(0,0,0,0.12) !important;
+  color: #1a1214 !important;
+}
+
+/* ——— buttons ——— */
+.page-bright .btn-ghost {
+  color: #8f1019 !important;
+  background: rgba(238,28,44,0.06) !important;
+  border-color: rgba(238,28,44,0.3) !important;
+}
+
+/* ——— chip values ——— */
+.page-bright .chip { filter: brightness(0.92); }
+
+/* ——— CONTEXTO: textosdentro de paneles/cards ——— */
+/* solo cambio textos en contextos OSCUROS, NO dentro de badges/botones de color */
+
+/* sorteos del dia — textos sobre fondo claro */
+.page-bright .rise > a > div p { color: #1a1214 !important; }
+.page-bright .rise > a > div > div > p.text-brand-soft { color: #c41420 !important; }
+.page-bright .rise > a > div > div > span.text-smoke { color: #6b5e62 !important; }
+
+/* badges de sorteo —保持 colored */
+.page-bright .rise > a > div span.bg-brand { background: #ee1c2c !important; color: #fff !important; }
+.page-bright .rise > a > div span.bg-white\/8 { background: rgba(0,0,0,0.06) !important; color: #6b5e62 !important; }
+
+/* next draw textos */
+.page-bright .glass.rounded-2xl p.truncate { color: #1a1214 !important; }
+.page-bright .glass.rounded-2xl span.text-brand-soft { color: #c41420 !important; }
+.page-bright .glass.rounded-2xl span.text-brand-bright { color: #ee1c2c !important; }
+.page-bright .glass.rounded-2xl span.text-smoke { color: #6b5e62 !important; }
+
+/* saldo textos */
+.page-bright .rise.flex span.text-smoke { color: #6b5e62 !important; }
+.page-bright .rise.flex span.text-brand-soft { color: #c41420 !important; }
+.page-bright .rise.flex span.text-white { color: #1a1214 !important; }
+
+/* ——— text-white / text-cream → dark in light mode ——— */
+.page-bright .text-white { color: #1a1214 !important; }
+.page-bright .text-cream,
+.page-bright [class*="text-cream/"] { color: #3a2a2e !important; }
+/* keep white inside colored badges / buttons */
+.page-bright .bg-brand .text-white,
+.page-bright .bg-win .text-white,
+.page-bright .btn-cta .text-white { color: #fff !important; }
+
+/* headings — solo los del body, NO dentro de badges */
+.page-bright h2 { color: #1a1214 !important; }
+.page-bright h3 { color: #1a1214 !important; }
+.page-bright .text-smoke { color: #6b5e62 !important; }
+.page-bright .text-smoke\/60,
+.page-bright .text-smoke\/70,
+.page-bright .text-smoke\/80 { color: #8a7d81 !important; }
+.page-bright .text-brand-soft { color: #c41420 !important; }
+.page-bright .text-brand-bright { color: #ee1c2c !important; }
+
+/* footer */
+.page-bright footer { color: #6b5e62 !important; }
+.page-bright footer a { color: #c41420 !important; }
+
+/* timeline dots */
+.page-bright .live-dot { background: #ee1c2c !important; }
+.page-bright .rounded-full.border-white\/25 {
+  border-color: rgba(0,0,0,0.12) !important;
+  background: rgba(0,0,0,0.06) !important;
+}
+
+/* dialog / game info */
+.page-bright [role="dialog"] {
+  background: #f5f0f1 !important;
+  color: #1a1214 !important;
+  border-color: rgba(0,0,0,0.08) !important;
+}
+
+/* ————— instant card enhanced ————— */
+.instant-card {
+  position: relative;
+  border-radius: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(22, 16, 19, 0.95), rgba(10, 7, 9, 0.98));
+  padding: 1rem;
+  overflow: hidden;
+  transition: transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.instant-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 1.25rem;
+  padding: 1px;
+  background: var(--card-accent, transparent);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+}
+.instant-card:hover::before {
+  opacity: 1;
+}
+.instant-card:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 40px -18px rgba(0, 0, 0, 0.8);
+}
+.instant-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--card-accent, linear-gradient(90deg, transparent, transparent));
+  opacity: 0.6;
+  border-radius: 1.25rem 1.25rem 0 0;
+}
+.instant-card:active {
+  transform: scale(0.98);
+}
+
+/* ————— profile page light mode ————— */
+.page-bright .profile-avatar {
+  background: radial-gradient(circle at 35% 30%, #f5eff0, #e8e0e2 70%) !important;
+  box-shadow: 0 0 0 3px rgba(238,28,44,0.5), 0 0 30px rgba(238,28,44,0.15), inset 0 2px 10px rgba(0,0,0,0.06) !important;
+  color: #8f1019 !important;
+}
+.page-bright .profile-name { color: #1a1214 !important; }
+.page-bright .profile-label { color: #c41420 !important; }
+.page-bright .profile-value { color: #1a1214 !important; }
+.page-bright .profile-muted { color: #8a7d81 !important; }
+.page-bright .profile-pref { color: #3a2a2e !important; }
+.page-bright .profile-cta {
+  background: linear-gradient(to bottom, #1a1214, #3a1116) !important;
+  color: #fff !important;
+}

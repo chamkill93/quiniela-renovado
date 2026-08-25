@@ -1,0 +1,2 @@
+import { LegalPage } from "@/features/product/legal-page";
+export default function PrivacyPage() { return <LegalPage title="Privacidad"><h2>Principios</h2><p>La versión final detallará qué datos se recopilan, para qué se usan, durante cuánto tiempo se conservan y cómo ejercer los derechos aplicables.</p><h2>Protección</h2><p>Las credenciales y datos sensibles no se exponen en componentes del navegador ni se incluyen en registros públicos.</p></LegalPage>; }

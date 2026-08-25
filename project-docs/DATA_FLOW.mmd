@@ -1,0 +1,14 @@
+flowchart LR
+ U[Jugador] --> UI[quinie.LA Next.js UI]
+ UI --> API[Server/BFF]
+ API --> AUTH[Auth + Session]
+ API --> WALLET[Wallet Ledger]
+ API --> GAME[Game Engine]
+ GAME --> ADAPTER[KodexaAdapter]
+ ADAPTER --> MOCK[MOCK local]
+ ADAPTER --> UAT[Kodexa UAT]
+ ADAPTER --> PROD[Kodexa PROD]
+ API --> DB[(MySQL)]
+ API --> AUDIT[Audit Log]
+ ADAPTER --> API
+ API --> UI

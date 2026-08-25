@@ -1,0 +1,2 @@
+import { LegalPage } from "@/features/product/legal-page";
+export default function TermsPage() { return <LegalPage title="Términos y condiciones"><h2>Alcance</h2><p>Este espacio establecerá las condiciones de acceso, uso, registro de jugadas y emisión de comprobantes de quinie.LA.</p><h2>Validación pendiente</h2><p>Los textos regulatorios definitivos, límites y jurisdicción aplicable serán incorporados únicamente después de su aprobación legal.</p></LegalPage>; }

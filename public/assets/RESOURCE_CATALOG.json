@@ -1,0 +1,322 @@
+[
+  {
+    "path": "public/assets/SOUND_SPEC.md",
+    "bytes": 488,
+    "sha256": "c695c624e4587a0a3f12d72464c95fe5b0dece9f3fdc8a69189eea6cadb716ad"
+  },
+  {
+    "path": "public/assets/brand/logo_quiniela_original.png",
+    "bytes": 10090,
+    "sha256": "f5a2dc6095a20605807636628ff700fc8eb9c4fbe64e37631b30d34718405939"
+  },
+  {
+    "path": "public/assets/brand/logo_quiniela_reference.png",
+    "bytes": 10211,
+    "sha256": "836edad1db98bb1649528f454740f4a6726e4d2fd6305b1e4de066301d62cc28"
+  },
+  {
+    "path": "public/assets/game-art/bolt.webp",
+    "bytes": 16250,
+    "sha256": "7fd0d8537a39fa4f4d657b5571993297eaaafc5dd2b4a938854096f9866e7faa"
+  },
+  {
+    "path": "public/assets/game-art/head.webp",
+    "bytes": 23740,
+    "sha256": "f46cdf477224addb21156d1e71ec8227819891ae6d7e094de55266f07e7c1391"
+  },
+  {
+    "path": "public/assets/game-art/invert.webp",
+    "bytes": 24384,
+    "sha256": "3a62a321acb9725dfc97ef7353c7ced7c3711699f1ef872a00280f56301efb1f"
+  },
+  {
+    "path": "public/assets/game-art/mega.webp",
+    "bytes": 22254,
+    "sha256": "9038519feb44a38e0594efbbd46fe51b622d402062ed7da8c04ca7069dbe8f27"
+  },
+  {
+    "path": "public/assets/game-art/one.webp",
+    "bytes": 19634,
+    "sha256": "a12b71a1af2dae2dc416388e0ec06bb361bc41d2e0470d8c22bd220b87c06851"
+  },
+  {
+    "path": "public/assets/game-art/poa.webp",
+    "bytes": 18562,
+    "sha256": "b60e3354ec843ba5e88239a67fe0f20689e760e0549b318444289e07ef999d42"
+  },
+  {
+    "path": "public/assets/game-art/prize.webp",
+    "bytes": 24276,
+    "sha256": "e6dcedc69eb0e3a4fec11c7cd12da15a67d99cfe0c97d3fd12ff5730db6b487c"
+  },
+  {
+    "path": "public/assets/game-art/pyae.webp",
+    "bytes": 16386,
+    "sha256": "8b1b9a014f5d35a3e9a7ab8c9d50450898b7dd79e36b74aebb77d1aaaea79bca"
+  },
+  {
+    "path": "public/assets/game-art/redoblona.webp",
+    "bytes": 21282,
+    "sha256": "946f8a2ae2b08d814b3c545b27e34a4b01419a7f01999428971a10f934dc92ed"
+  },
+  {
+    "path": "public/assets/game-art/three.webp",
+    "bytes": 21284,
+    "sha256": "7d8cb2c44e93e601c0fca9eed84188f1532c6954b3f8fdf58387671ccf4fd4e7"
+  },
+  {
+    "path": "public/assets/game-art/two.webp",
+    "bytes": 21480,
+    "sha256": "d690bd678ea3693b48c7b3c9c93ab72c1b6e0f9da6c5e1baec2f597f82653f67"
+  },
+  {
+    "path": "public/assets/icons/game/bolt.svg",
+    "bytes": 204,
+    "sha256": "29b33374a31389ae2c9e9c15a8912ef76e1b875a079b69b7deecc0c3a47faf8e"
+  },
+  {
+    "path": "public/assets/icons/game/head.svg",
+    "bytes": 390,
+    "sha256": "301123dd75f43342427c842109cdfad6a57d3c74b3c56ec71c71d7bc8d212ef1"
+  },
+  {
+    "path": "public/assets/icons/game/invert.svg",
+    "bytes": 194,
+    "sha256": "d443f8fc3490a906cc824c4169e0c5d6b3e63d7afab2fadf75fc8a5473f34249"
+  },
+  {
+    "path": "public/assets/icons/game/mbohapy.svg",
+    "bytes": 335,
+    "sha256": "a92d34c1651c0665f17e5c66120be475c28b0766b4f3edd215761ce99f5e0288"
+  },
+  {
+    "path": "public/assets/icons/game/mega.svg",
+    "bytes": 273,
+    "sha256": "a1b1554c8ef754d47c148b13fbc63dacdb3b2d87795009c07dd249d42fc47088"
+  },
+  {
+    "path": "public/assets/icons/game/mokoi.svg",
+    "bytes": 273,
+    "sha256": "17dcc8b4b88ce2b102cc343e180075e70534e76183c2dd9b8d6ce8ea84a004be"
+  },
+  {
+    "path": "public/assets/icons/game/petei.svg",
+    "bytes": 200,
+    "sha256": "6e5554d7ce5481f6ce22b480cc952968c3e9d606e69f1493947375d41e152c12"
+  },
+  {
+    "path": "public/assets/icons/game/poa.svg",
+    "bytes": 286,
+    "sha256": "c6aff912fbe832b15505fc230bf508d66a07c547bae2e57ec0e6b21da725f24a"
+  },
+  {
+    "path": "public/assets/icons/game/poa10.svg",
+    "bytes": 641,
+    "sha256": "63fc1644145f96d77660f82cf9ea9cd57298f4932ab82981eef0d9611156278f"
+  },
+  {
+    "path": "public/assets/icons/game/poa5.svg",
+    "bytes": 427,
+    "sha256": "0e92f367f7668df33b3009b8275c1ddef302856b3688e7a9100271bdfb904840"
+  },
+  {
+    "path": "public/assets/icons/game/prize.svg",
+    "bytes": 338,
+    "sha256": "4c6a35a0e5704204d45943f702621dc6f4561c054f687cb9aa997f43426e6ffe"
+  },
+  {
+    "path": "public/assets/icons/game/pyae.svg",
+    "bytes": 193,
+    "sha256": "c1e3d07937594ca9bd6aa309c5a284361ecafd1b6e191029b6dc830c72ea8174"
+  },
+  {
+    "path": "public/assets/icons/game/racha5.svg",
+    "bytes": 394,
+    "sha256": "14b754cefbd150cfd555073a4f7c90b5b7660db2c01a47220fd2d826e6d5ae57"
+  },
+  {
+    "path": "public/assets/icons/game/redoblona.svg",
+    "bytes": 248,
+    "sha256": "2a24657830fb74a84d8ef1ca2e96d7a2d163d0ef2b4e589a6d698a89a9c83db7"
+  },
+  {
+    "path": "public/assets/icons/ui/home.svg",
+    "bytes": 230,
+    "sha256": "d8bace495d7bc3997d51c4757bd382fd7469d58c1359d790e1b9a9132bde0efe"
+  },
+  {
+    "path": "public/assets/icons/ui/rules.svg",
+    "bytes": 253,
+    "sha256": "eeac557900085c670f399d788b7df8e88408267e1972819b13d2a767b9bb0a95"
+  },
+  {
+    "path": "public/assets/icons/ui/sound.svg",
+    "bytes": 227,
+    "sha256": "970bf5b5c8cdd92b336efc59e1e475d4a2f758377339a5855838abb1a76f6e3b"
+  },
+  {
+    "path": "public/assets/icons/ui/theme.svg",
+    "bytes": 272,
+    "sha256": "51b1f66ddbcc7cbd986516d5750642025a48bea4e2a9d4405c06d1415bd5c700"
+  },
+  {
+    "path": "public/assets/icons/ui/user.svg",
+    "bytes": 211,
+    "sha256": "1d10dc0dfa5bed2bc3a3a27ea3cd611a272f7a226eddf623823bcd69f203afb7"
+  },
+  {
+    "path": "public/assets/icons/ui/wallet.svg",
+    "bytes": 242,
+    "sha256": "eb0ff860c97a46832503f1e603a6f41779fb6e6541e287868e3d8d14b29df302"
+  },
+  {
+    "path": "public/assets/mockups/01_rodillos_final.png",
+    "bytes": 1597175,
+    "sha256": "573f930da9bbec9ab243597e75e65b0ea7caaed80354abebfdb15a392169f102"
+  },
+  {
+    "path": "public/assets/mockups/02_design_system_final.png",
+    "bytes": 1981087,
+    "sha256": "d834af1810f0002e4d24eec3effa91e84b287620cdb2f4b0a4aae339c02eacb4"
+  },
+  {
+    "path": "public/assets/mockups/03_brand_ui_kit.png",
+    "bytes": 1741536,
+    "sha256": "eba3800bd3f82d545e2b3716ed74512606c8fcfdf88d72f858dc8a2132918fea"
+  },
+  {
+    "path": "public/assets/mockups/04_iconography_sheet.png",
+    "bytes": 1806702,
+    "sha256": "e0580855801f32878a3f2de599c18f781213357de510eb0d55676e01aec5a2d5"
+  },
+  {
+    "path": "public/assets/mockups/05_desktop_mobile_mockup.png",
+    "bytes": 1865324,
+    "sha256": "226589af2b6df1117b07fcb7bf77e23773b9858b0261a63ef76e52f9f5095adb"
+  },
+  {
+    "path": "public/assets/mockups/06_desktop_mobile_marketing.png",
+    "bytes": 1830136,
+    "sha256": "5a6f4ed8d7701db4c41d6a2c4838c4dc828e9f10692c12240af0a01da9495150"
+  },
+  {
+    "path": "public/assets/mockups/07_rodillos_redondeados_latest.png",
+    "bytes": 1597175,
+    "sha256": "573f930da9bbec9ab243597e75e65b0ea7caaed80354abebfdb15a392169f102"
+  },
+  {
+    "path": "public/assets/mockups/08_design_system_latest.png",
+    "bytes": 1981087,
+    "sha256": "d834af1810f0002e4d24eec3effa91e84b287620cdb2f4b0a4aae339c02eacb4"
+  },
+  {
+    "path": "public/assets/mockups/09_ui_ux_brand_latest.png",
+    "bytes": 1741536,
+    "sha256": "eba3800bd3f82d545e2b3716ed74512606c8fcfdf88d72f858dc8a2132918fea"
+  },
+  {
+    "path": "public/assets/mockups/10_desktop_mobile_presentation.png",
+    "bytes": 1763931,
+    "sha256": "8916ca0b2de0d8c90d833afd09cbd3ba8cbdbfab9454b6d3c04ef10c216fd009"
+  },
+  {
+    "path": "public/assets/mockups/11_promotional_ui.png",
+    "bytes": 1865324,
+    "sha256": "226589af2b6df1117b07fcb7bf77e23773b9858b0261a63ef76e52f9f5095adb"
+  },
+  {
+    "path": "reference/reference-screens/balance_reference.png",
+    "bytes": 171901,
+    "sha256": "d8341d5a0a99e9660e91f4dd7b513db18e25a6765b73817cf1452bf221f81ef0"
+  },
+  {
+    "path": "reference/reference-screens/home_reference.png",
+    "bytes": 273562,
+    "sha256": "cede04f2c1fa83c4eb1dd648fe1dc1f543443b7e469d9fd8e23b177660cacddd"
+  },
+  {
+    "path": "reference/reference-screens/movements_reference.png",
+    "bytes": 140829,
+    "sha256": "ea00f041bb1c84583730eec0be16b251bfcf68fb1b74ceb67a53c0a0b2c8f518"
+  },
+  {
+    "path": "reference/reference-screens/profile_reference.png",
+    "bytes": 162554,
+    "sha256": "5192dafd1a80bf2b7c7e9f7c22703ea1df7122d019e0c85cea426e82ab049863"
+  },
+  {
+    "path": "reference/reference-screens/results_reference.png",
+    "bytes": 153468,
+    "sha256": "b1934ce79964b3e80d9a54a9c18d5470c2b897b2f2a0d650e70aebda6f0387ef"
+  },
+  {
+    "path": "reference/reference-screens/traditional_reference.png",
+    "bytes": 191967,
+    "sha256": "03cae06a0e5a6378dbd3c1ec5f8df8d9c15c44f95175beb37dc6e1908561300b"
+  },
+  {
+    "path": "reference/reference-screens/v10_cards_reference.png",
+    "bytes": 192935,
+    "sha256": "c48c200e6bf21448c4a0f167c9f208f483ac9a903deddb6686cc105ffff43bd6"
+  },
+  {
+    "path": "public/assets/sounds/lose.wav",
+    "bytes": 24740,
+    "sha256": "98ea3cdd21c208094df70c1eeb404ab6d084ed3bbd72427ce0d231688929c61c"
+  },
+  {
+    "path": "public/assets/sounds/nav.wav",
+    "bytes": 7980,
+    "sha256": "d74cd42b6a061605a0c15e48661387e7b144f6341b8c6aba840836ad6bd7d00d"
+  },
+  {
+    "path": "public/assets/sounds/notification.wav",
+    "bytes": 10628,
+    "sha256": "6d75d987c1b7d880cedda8b96047ecd5bd8d0b1cc4b62af4854d2cd4c18f55a2"
+  },
+  {
+    "path": "public/assets/sounds/play_confirm.wav",
+    "bytes": 11510,
+    "sha256": "b122cadfe671b681e4bcaf0ce7f14cd116015f5b47646a06092e32ee210140b9"
+  },
+  {
+    "path": "public/assets/sounds/reel_start.wav",
+    "bytes": 17684,
+    "sha256": "e46eb08efce5ebe7474155e2efc25efebd55d4c7bf010c3146ccb29df97b04cd"
+  },
+  {
+    "path": "public/assets/sounds/reel_stop.wav",
+    "bytes": 10626,
+    "sha256": "cb0b64e022a6a88f724313b8d23d364f0bed63be44bcac5cbde650c059ec4b87"
+  },
+  {
+    "path": "public/assets/sounds/reel_tick.wav",
+    "bytes": 4452,
+    "sha256": "773526bc63ed3b61027580d36f6acab812344c0624e52e246f18418667640705"
+  },
+  {
+    "path": "public/assets/sounds/select.wav",
+    "bytes": 7540,
+    "sha256": "b48be2a79f2b60fe1ac87178861cf5f111b94ac8d5364fe1eaec742e4e456de3"
+  },
+  {
+    "path": "public/assets/sounds/theme.wav",
+    "bytes": 9304,
+    "sha256": "45a37a807123268600844b50662ef35adc31c7b4fc8fbdfaf68f9884156a6593"
+  },
+  {
+    "path": "public/assets/sounds/ticket_open.wav",
+    "bytes": 10626,
+    "sha256": "26cbf6ca5378c48b473c3b744302996fd2457252c4fd643b3b29192dd6a72289"
+  },
+  {
+    "path": "public/assets/sounds/win_big.wav",
+    "bytes": 42380,
+    "sha256": "6b8426ad272f3a40d46369bf1fdd427d1a257af6001d84ff4316d8f0ab22e58d"
+  },
+  {
+    "path": "public/assets/sounds/win_small.wav",
+    "bytes": 26504,
+    "sha256": "568a56d4b68171e314efd1110992af4e5086b48b98efbec020260041ff91259a"
+  }
+]

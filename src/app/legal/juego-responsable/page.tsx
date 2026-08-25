@@ -1,0 +1,2 @@
+import { LegalPage } from "@/features/product/legal-page";
+export default function ResponsiblePage() { return <LegalPage title="Juego responsable"><h2>Jugá con límites</h2><p>Elegí de antemano cuánto tiempo y dinero destinar. Apostar no debe interferir con tus responsabilidades ni utilizar fondos necesarios para otros fines.</p><h2>Mayores de edad</h2><p>El acceso comercial deberá restringirse a personas legalmente habilitadas y aplicar los controles aprobados para Paraguay.</p></LegalPage>; }

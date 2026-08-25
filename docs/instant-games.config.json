@@ -1,0 +1,162 @@
+[
+  {
+    "id": "sapyaite",
+    "name": "Sapy'aite",
+    "engine": "parity",
+    "reels": 1,
+    "selection": {
+      "type": "enum",
+      "values": [
+        "PAR",
+        "IMPAR"
+      ]
+    },
+    "rng": {
+      "min": 1,
+      "max": 999
+    }
+  },
+  {
+    "id": "poa",
+    "name": "Po'a",
+    "engine": "hundred_range",
+    "reels": 1,
+    "selection": {
+      "type": "hundred"
+    },
+    "rng": {
+      "min": 1,
+      "max": 999
+    }
+  },
+  {
+    "id": "pyae",
+    "name": "Pya'e",
+    "engine": "over_under_500",
+    "reels": 1,
+    "selection": {
+      "type": "enum",
+      "values": [
+        "MENOR",
+        "MAYOR"
+      ]
+    },
+    "neutral500Policy": "REFUND",
+    "rng": {
+      "min": 1,
+      "max": 999
+    }
+  },
+  {
+    "id": "petei",
+    "name": "Petei",
+    "engine": "last_digit",
+    "reels": 1,
+    "selection": {
+      "type": "integer",
+      "min": 0,
+      "max": 9
+    },
+    "rng": {
+      "min": 1,
+      "max": 999
+    }
+  },
+  {
+    "id": "mokoi",
+    "name": "Mokoi",
+    "engine": "last_two_digits",
+    "reels": 1,
+    "selection": {
+      "type": "integer",
+      "min": 0,
+      "max": 99,
+      "pad": 2
+    },
+    "rng": {
+      "min": 1,
+      "max": 999
+    }
+  },
+  {
+    "id": "mbohapy",
+    "name": "Mbohapy",
+    "engine": "exact_three_digits",
+    "reels": 1,
+    "selection": {
+      "type": "integer",
+      "min": 1,
+      "max": 999,
+      "pad": 3
+    },
+    "rng": {
+      "min": 1,
+      "max": 999
+    }
+  },
+  {
+    "id": "poa5",
+    "name": "Po'a 5",
+    "engine": "multi_exact",
+    "reels": 5,
+    "selection": {
+      "type": "unique_numbers",
+      "count": 3,
+      "min": 1,
+      "max": 999
+    },
+    "rng": {
+      "min": 1,
+      "max": 999
+    },
+    "prototypePayouts": {
+      "1": 60,
+      "2": 500,
+      "3": 5000,
+      "4+": "PAYOUT_CONFIG_REQUIRED"
+    }
+  },
+  {
+    "id": "poa10",
+    "name": "Po'a 10",
+    "engine": "multi_exact",
+    "reels": 10,
+    "selection": {
+      "type": "unique_numbers",
+      "count": 3,
+      "min": 1,
+      "max": 999
+    },
+    "rng": {
+      "min": 1,
+      "max": 999
+    },
+    "prototypePayouts": {
+      "1": 25,
+      "2": 400,
+      "3": 12500,
+      "4+": "JACKPOT_CONFIG"
+    }
+  },
+  {
+    "id": "racha5",
+    "name": "Racha 5",
+    "engine": "multi_parity",
+    "reels": 5,
+    "selection": {
+      "type": "enum",
+      "values": [
+        "PAR",
+        "IMPAR"
+      ]
+    },
+    "rng": {
+      "min": 1,
+      "max": 999
+    },
+    "prototypePayouts": {
+      "4": 3,
+      "5": 15
+    }
+  }
+]
