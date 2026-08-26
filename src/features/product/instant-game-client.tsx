@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { InstantPlayRequest } from "@/lib/gaming/schemas";
 import type { InstantGameDefinition } from "@/lib/gaming/types";
@@ -105,6 +105,8 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
   const [error, setError] = useState<string | null>(null);
   const [response, setResponse] = useState<PlayResponse | null>(null);
   const [animationDone, setAnimationDone] = useState(false);
+  const [resultPopoutOpen, setResultPopoutOpen] = useState(false);
+  const resultPopoutTimer = useRef<number | null>(null);
   const playSound = useSoundEffects();
   const availableAmounts = useMemo(
     () => [...new Set((catalog?.amounts ?? []).filter((value) => INSTANT_AMOUNTS.has(value)))]
@@ -134,14 +136,45 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
   const visibleResults = response && resultNumbers.length ? resultNumbers : previewResults;
   const selectionLabel = Array.isArray(selection) ? selection.join(" · ") : selection;
 
+  const clearResultPopoutTimer = useCallback(() => {
+    if (resultPopoutTimer.current === null) return;
+    window.clearTimeout(resultPopoutTimer.current);
+    resultPopoutTimer.current = null;
+  }, []);
+
+  const dismissResultPopout = useCallback(() => {
+    clearResultPopoutTimer();
+    setResultPopoutOpen(false);
+  }, [clearResultPopoutTimer]);
+
+  const scheduleResultPopoutDismiss = useCallback(() => {
+    clearResultPopoutTimer();
+    resultPopoutTimer.current = window.setTimeout(() => {
+      setResultPopoutOpen(false);
+      resultPopoutTimer.current = null;
+    }, 6_000);
+  }, [clearResultPopoutTimer]);
+
+  const resumeResultPopoutDismiss = useCallback((popout: HTMLElement) => {
+    if (popout.matches(":hover") || popout.contains(document.activeElement)) return;
+    scheduleResultPopoutDismiss();
+  }, [scheduleResultPopoutDismiss]);
+
+  useEffect(() => () => {
+    clearResultPopoutTimer();
+  }, [clearResultPopoutTimer]);
+
   const finishResult = useCallback(() => {
     setAnimationDone(true);
+    setResultPopoutOpen(true);
+    scheduleResultPopoutDismiss();
     const won = resultVisualState(response?.play.status ?? "PENDING") === "won";
     playSound(won ? "win" : "lose");
-  }, [playSound, response?.play.status]);
+  }, [playSound, response?.play.status, scheduleResultPopoutDismiss]);
 
   const play = async () => {
     if (pending) return;
+    dismissResultPopout();
     setPending(true);
     setError(null);
     setResponse(null);
@@ -185,33 +218,14 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
             selectedParity={game.id === "racha5" || game.id === "sapyaite" ? selection as "PAR" | "IMPAR" : undefined}
             onComplete={response ? finishResult : undefined}
           />
-          {response ? (
-            <ResultStateCard
-              live
-              status={animationDone ? response.play.status : "PENDING"}
-              description={
-                !animationDone
-                  ? "Presentando el resultado confirmado…"
-                  : resultVisualState(response.play.status) === "won"
-                    ? `Premio ${formatGs(response.play.prize ?? 0)}`
-                    : resultVisualState(response.play.status) === "lost"
-                      ? "Intentá de nuevo"
-                      : "Resultado confirmado"
-              }
-              meta={
-                animationDone ? (
-                  <span>
-                    {typeof response.play.matches === "number"
-                      ? `${response.play.matches} coincidencia${response.play.matches === 1 ? "" : "s"}`
-                      : resultNumbers.join(" · ")}
-                  </span>
-                ) : null
-              }
-            />
-          ) : null}
         </div>
 
-        <div className={`${styles.contentCard} ${styles.instantFormCard}`}>
+        <div
+          aria-label="Panel de jugada"
+          className={`${styles.contentCard} ${styles.instantFormCard}`}
+          data-testid="instant-bet-panel"
+          role="region"
+        >
           <div className={`${styles.formStack} ${styles.instantFormStack}`}>
             <SelectionControl definition={remoteGame} gameId={game.id} selection={selection} onChange={setSelection} />
             <div className={styles.fieldGroup}>
@@ -253,6 +267,45 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
           </div>
         </div>
       </section>
+      {response && animationDone && resultPopoutOpen ? (
+        <div
+          className={styles.instantResultPopout}
+          data-result-popout="true"
+          data-testid="instant-result-popout"
+          onBlurCapture={(event) => resumeResultPopoutDismiss(event.currentTarget)}
+          onFocusCapture={clearResultPopoutTimer}
+          onMouseEnter={clearResultPopoutTimer}
+          onMouseLeave={(event) => resumeResultPopoutDismiss(event.currentTarget)}
+        >
+          <ResultStateCard
+            className={styles.instantResultCard}
+            live
+            status={response.play.status}
+            description={
+              resultVisualState(response.play.status) === "won"
+                ? `Premio ${formatGs(response.play.prize ?? 0)}`
+                : resultVisualState(response.play.status) === "lost"
+                  ? "Intentá de nuevo"
+                  : "Resultado confirmado"
+            }
+            meta={(
+              <span>
+                {typeof response.play.matches === "number"
+                  ? `${response.play.matches} coincidencia${response.play.matches === 1 ? "" : "s"}`
+                  : resultNumbers.join(" · ")}
+              </span>
+            )}
+          />
+          <button
+            aria-label="Cerrar resultado"
+            className={styles.instantResultClose}
+            onClick={dismissResultPopout}
+            type="button"
+          >
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
+      ) : null}
     </main>
   );
 }

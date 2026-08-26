@@ -111,6 +111,7 @@ export function ResultStateCard({
 
   return (
     <div
+      aria-atomic={live ? true : undefined}
       aria-live={live ? "polite" : undefined}
       className={`${styles.card} ${className}`.trim()}
       data-result-state={state}

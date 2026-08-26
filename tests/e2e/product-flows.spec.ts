@@ -393,10 +393,29 @@ test("renders an authoritative fixture result without invoking local game logic"
   await page.goto("/instantaneas/sapyaite", {
     waitUntil: "domcontentloaded",
   });
+  const reelStage = page.getByLabel("Rodillos numéricos");
+  const betPanel = page.getByTestId("instant-bet-panel");
+  const reelBoxBefore = await reelStage.boundingBox();
+  const betPanelBoxBefore = await betPanel.boundingBox();
+  const scrollYBefore = await page.evaluate(() => window.scrollY);
+  if (!reelBoxBefore || !betPanelBoxBefore) throw new Error("No se pudo medir el juego instantáneo.");
+  expect(Math.abs(reelBoxBefore.width - betPanelBoxBefore.width)).toBeLessThanOrEqual(1);
+  expect(Math.abs(reelBoxBefore.x - betPanelBoxBefore.x)).toBeLessThanOrEqual(1);
+
   await page.getByRole("button", { name: "Jugar", exact: true }).click();
 
   await expect(page.getByLabel("Rodillo 1: 246")).toBeVisible();
   await expect(page.getByText("Premio Gs. 20.000", { exact: true })).toBeVisible();
+  const resultPopout = page.getByTestId("instant-result-popout");
+  await expect(resultPopout).toHaveCSS("position", "fixed");
+  const betPanelBoxAfter = await betPanel.boundingBox();
+  const scrollYAfter = await page.evaluate(() => window.scrollY);
+  if (!betPanelBoxAfter) throw new Error("No se pudo volver a medir el panel de jugada.");
+  expect(
+    Math.abs((betPanelBoxAfter.y + scrollYAfter) - (betPanelBoxBefore.y + scrollYBefore)),
+  ).toBeLessThanOrEqual(1);
+  await resultPopout.getByRole("button", { name: "Cerrar resultado" }).click();
+  await expect(resultPopout).toHaveCount(0);
   await expect(page.getByRole("dialog", { name: "Jugada registrada" })).toHaveCount(0);
 
   await page.goto("/mis-jugadas", { waitUntil: "domcontentloaded" });

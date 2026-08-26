@@ -521,6 +521,7 @@
 
 .instantGameShell {
   --instant-accent: #e30613;
+  --instant-play-width: 720px;
   --instant-signature: #f4212f;
   width: min(100%, 980px);
   display: grid;
@@ -558,12 +559,14 @@
 }
 
 .instantReelArea {
+  width: min(100%, var(--instant-play-width));
   display: grid;
   gap: 8px;
+  margin: 0 auto;
 }
 
 .instantFormCard {
-  width: min(100%, 720px);
+  width: min(100%, var(--instant-play-width));
   margin: 0 auto;
   padding: 11px 16px 13px;
 }
@@ -901,6 +904,7 @@
 }
 
 .instantReelArea .reelStage {
+  width: 100%;
   min-height: 178px;
   padding: 38px 24px 20px;
   border-color: color-mix(in srgb, var(--instant-accent) 62%, var(--instant-signature));
@@ -915,6 +919,73 @@
     inset 0 -32px 62px rgba(0, 0, 0, 0.68),
     0 18px 44px rgba(0, 0, 0, 0.26),
     0 0 32px color-mix(in srgb, var(--instant-accent) 12%, transparent);
+}
+
+.instantResultPopout {
+  position: fixed;
+  z-index: var(--q-z-toast);
+  top: max(84px, calc(env(safe-area-inset-top) + 72px));
+  right: max(18px, env(safe-area-inset-right));
+  width: min(330px, calc(100vw - 36px));
+  filter: drop-shadow(0 18px 34px rgba(0, 0, 0, 0.34));
+}
+
+.instantResultPopout .instantResultCard {
+  width: 100%;
+  min-height: 0;
+  grid-template-columns: 40px minmax(0, 1fr);
+  justify-items: start;
+  align-items: center;
+  align-content: center;
+  gap: 2px 11px;
+  margin: 0;
+  padding: 14px 54px 14px 14px;
+  border-radius: 16px;
+  text-align: left;
+}
+
+.instantResultCard > :first-child {
+  width: 36px;
+  height: 36px;
+  grid-row: 1 / span 3;
+}
+
+.instantResultCard > :not(:first-child) {
+  min-width: 0;
+  grid-column: 2;
+  justify-items: start;
+  text-align: left;
+}
+
+.instantResultClose {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.24);
+  color: rgba(255, 255, 255, 0.86);
+  cursor: pointer;
+  font: inherit;
+  font-size: 1.25rem;
+  line-height: 1;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.instantResultClose:hover {
+  border-color: rgba(255, 255, 255, 0.44);
+  background: rgba(0, 0, 0, 0.42);
+  color: #fff;
+}
+
+.instantResultClose:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--q-red) 72%, #fff);
+  outline-offset: 2px;
 }
 
 .instantReelArea .reelStage::before {
@@ -1662,6 +1733,18 @@
   .reelStage { min-height: 230px; padding: 48px 8px 22px; }
   .instantReelArea .reelStage { min-height: 174px; padding: 36px 7px 18px; border-radius: 19px; }
   .instantReelArea .reels[data-layout="single"] { width: min(100%, 280px); }
+  .instantResultPopout {
+    top: max(72px, calc(env(safe-area-inset-top) + 62px));
+    right: max(10px, env(safe-area-inset-right));
+    left: max(10px, env(safe-area-inset-left));
+    width: auto;
+  }
+  .instantResultPopout .instantResultCard {
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 2px 9px;
+    padding: 12px 52px 12px 12px;
+  }
+  .instantResultCard > :first-child { width: 31px; height: 31px; }
   .reels { gap: 8px; padding: 0 10px; }
   .instantReelArea .reels { gap: 6px; padding-inline: 4px; }
   .reel { padding: 5px; }
@@ -1694,4 +1777,15 @@
   }
 
   .reelConfetti { display: none; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .instantResultPopout {
+    animation: instantResultPopoutIn 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+}
+
+@keyframes instantResultPopoutIn {
+  from { opacity: 0; transform: translate3d(18px, -4px, 0) scale(0.98); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
 }
