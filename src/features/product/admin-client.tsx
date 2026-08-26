@@ -8,10 +8,10 @@ export function AdminClient() {
     <main className={styles.page}>
       <div className={styles.emptyState}>
         <div>
-          <h1>Gestión en el backoffice</h1>
+          <h1>Sección no disponible</h1>
           <p>
-            La disponibilidad de juegos, sorteos y operaciones se administra en
-            el backoffice externo. Este frontend no modifica esa configuración.
+            Esta sección no forma parte de la experiencia de juego. Volvé al
+            inicio para continuar.
           </p>
           <Link className={styles.primaryButton} href="/">Volver al inicio</Link>
         </div>

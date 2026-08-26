@@ -191,7 +191,10 @@ const instantGameSchema = z
       "MULTI_PARITY",
     ]),
     reels: z.union([z.literal(1), z.literal(5), z.literal(10)]),
-    rng: z.object({ min: z.literal(1), max: z.literal(999) }),
+    rng: z.object({
+      min: z.union([z.literal(0), z.literal(1)]),
+      max: z.literal(999),
+    }),
     selection: instantSelectionSchema,
     payout: z.discriminatedUnion("kind", [
       multiplierPayoutSchema,
@@ -201,7 +204,7 @@ const instantGameSchema = z
   })
   .superRefine((game, context) => {
     const expected = {
-      sapyaite: { engine: "PARITY", reels: 1 },
+      sapyaite: { engine: "EXACT_THREE_DIGITS", reels: 1 },
       poa: { engine: "HUNDRED_RANGE", reels: 1 },
       pyae: { engine: "OVER_UNDER_500", reels: 1 },
       petei: { engine: "LAST_DIGIT", reels: 1 },
@@ -218,6 +221,10 @@ const instantGameSchema = z
     if (game.reels !== contract.reels) {
       context.addIssue({ code: "custom", message: "Cantidad de rodillos incompatible con la pantalla del juego.", path: ["reels"] });
     }
+    const expectedMinimum = game.id === "sapyaite" ? 0 : 1;
+    if (game.rng.min !== expectedMinimum || game.rng.max !== 999) {
+      context.addIssue({ code: "custom", message: "Rango incompatible con la pantalla del juego.", path: ["rng"] });
+    }
 
     const issueSelection = () => context.addIssue({
       code: "custom",
@@ -225,7 +232,7 @@ const instantGameSchema = z
       path: ["selection"],
     });
     const selection = game.selection;
-    if (game.id === "sapyaite" || game.id === "racha5" || game.id === "pyae") {
+    if (game.id === "racha5" || game.id === "pyae") {
       const expectedValues = game.id === "pyae"
         ? ["MENOR", "MAYOR"]
         : ["PAR", "IMPAR"];
@@ -255,6 +262,7 @@ const instantGameSchema = z
       return;
     }
     const padded = {
+      sapyaite: { min: 0, max: 999, width: 3 },
       petei: { min: 0, max: 9, width: 1 },
       mokoi: { min: 0, max: 99, width: 2 },
       mbohapy: { min: 1, max: 999, width: 3 },
@@ -437,7 +445,7 @@ const placeInstantPlayResultSchema = placePlayResultSchema.superRefine(
     const expectedResultCount = expectedResults[play.gameId];
     const playNumbers = play.resultNumbers;
     const ticketNumbers = ticket.resultNumbers;
-    const threeDigit = /^(?!000)\d{3}$/;
+    const threeDigit = play.gameId === "sapyaite" ? /^\d{3}$/ : /^(?!000)\d{3}$/;
     const valid =
       expectedResultCount !== undefined &&
       play.status !== "PENDING" &&

@@ -109,7 +109,7 @@ function DataStatus({
     return (
       <div className={styles.dataStatus} role="status">
         <span aria-hidden="true" className={styles.loadingLine} />
-        Consultando la programación del backoffice…
+        Consultando la programación…
       </div>
     );
   }
@@ -138,7 +138,7 @@ function DataStatus({
 
   return (
     <div className={styles.dataStatus} role="status">
-      Este sorteo no está publicado por el backoffice en este momento.
+      Este sorteo no está disponible en este momento.
     </div>
   );
 }

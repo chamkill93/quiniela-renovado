@@ -34,12 +34,12 @@ const catalog = buildGamingCatalog(
 
 const firstCommand = {
   kind: "instant",
-  input: { gameId: "sapyaite", amount: 500, selection: "PAR" },
+  input: { gameId: "sapyaite", amount: 500, selection: "007" },
 } as const satisfies ProductPlayCommand;
 
 const secondCommand = {
   kind: "instant",
-  input: { gameId: "sapyaite", amount: 500, selection: "IMPAR" },
+  input: { gameId: "sapyaite", amount: 500, selection: "999" },
 } as const satisfies ProductPlayCommand;
 
 function acceptedSecondPlay(): PlacePlayResponse {
@@ -50,7 +50,7 @@ function acceptedSecondPlay(): PlacePlayResponse {
       family: "INSTANT",
       gameId: "sapyaite",
       gameName: "Sapy’aite",
-      selection: "IMPAR",
+      selection: "999",
       drawId: null,
       amount: 500,
       currency: "PYG",
@@ -58,7 +58,7 @@ function acceptedSecondPlay(): PlacePlayResponse {
       status: "LOST",
       result: "497",
       resultNumbers: ["497"],
-      ruleResult: "ODD",
+      ruleResult: "497",
       matches: null,
       payoutMultiplier: 0,
       createdAt: "2026-08-25T12:00:00.000Z",
@@ -70,14 +70,14 @@ function acceptedSecondPlay(): PlacePlayResponse {
       gameId: "sapyaite",
       gameName: "Sapy’aite",
       family: "INSTANT",
-      selection: "IMPAR",
+      selection: "999",
       drawId: null,
       amount: 500,
       currency: "PYG",
       status: "LOST",
       result: "497",
       resultNumbers: ["497"],
-      ruleResult: "ODD",
+      ruleResult: "497",
       prize: 0,
       issuedAt: "2026-08-25T12:00:00.000Z",
     },
@@ -167,7 +167,7 @@ describe("PreviewProductGateway timeout in ProductProvider", () => {
         if (url.endsWith("/instant")) {
           instantRequests += 1;
           const body = JSON.parse(String(init?.body)) as { selection: string };
-          if (body.selection === "PAR") {
+          if (body.selection === "007") {
             markFirstRequestStarted();
             return await new Promise<Response>(() => undefined);
           }

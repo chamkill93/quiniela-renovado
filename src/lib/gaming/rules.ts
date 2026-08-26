@@ -27,8 +27,8 @@ export interface InstantEvaluation {
 }
 
 export function formatResultNumber(value: number): string {
-  if (!Number.isInteger(value) || value < 1 || value > 999) {
-    throw new GamingDomainError("INVALID_RESULT", "El resultado debe estar entre 001 y 999.");
+  if (!Number.isInteger(value) || value < 0 || value > 999) {
+    throw new GamingDomainError("INVALID_RESULT", "El resultado debe estar entre 000 y 999.");
   }
   return String(value).padStart(3, "0");
 }
@@ -64,10 +64,15 @@ function resultValuesFor(
   }
 
   return resultNumbers.map((result) => {
-    if (!/^(?!000)\d{3}$/.test(result)) {
+    const value = Number(result);
+    if (
+      !/^\d{3}$/.test(result) ||
+      value < game.rng.min ||
+      value > game.rng.max
+    ) {
       throw new GamingDomainError("INVALID_RESULT", `Resultado inválido: ${result}.`);
     }
-    return Number(result);
+    return value;
   });
 }
 
@@ -112,15 +117,13 @@ export function evaluateInstantPlay(
   const first = values[0];
 
   switch (input.gameId) {
-    case "sapyaite": {
-      const outcome = parityFor(first);
+    case "sapyaite":
       return winEvaluation(
-        input.selection === outcome,
-        outcome,
+        input.selection === resultNumbers[0],
+        resultNumbers[0],
         input.amount,
         game.payout.kind === "MULTIPLIER" ? game.payout.winMultiplier : 0,
       );
-    }
     case "poa": {
       const outcome = hundredRangeFor(first);
       return winEvaluation(

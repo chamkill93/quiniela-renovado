@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Modal } from "@/components/ui";
 import type { TopupMethod } from "@/lib/gaming/types";
 import { formatGs } from "@/lib/product/catalog";
+import { publicProductErrorMessage } from "@/lib/product/public-error";
 import { useProduct } from "@/providers/product-provider";
 import { AmountChip } from "./amount-chip";
 import { SectionHeader } from "./section-header";
@@ -37,7 +38,7 @@ export function BalanceClient() {
       await requestTopUp({ amount, method });
       setMessage("Recarga acreditada correctamente.");
     } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "No pudimos completar la recarga.");
+      setMessage(publicProductErrorMessage(reason, "No pudimos completar la recarga."));
     } finally {
       setPending(false);
     }
@@ -53,7 +54,7 @@ export function BalanceClient() {
             <h2 className={styles.title}>{loading ? "—" : formatGs(session?.balance ?? 0)}</h2>
             <p className={styles.lede}>Moneda: {session?.currency ?? "PYG"}</p>
             <button className={styles.primaryButton} disabled={!walletAvailable || !session} onClick={() => setOpen(true)} style={{ marginTop: 24 }} type="button">Recargar saldo</button>
-            {!walletAvailable ? <p className={styles.fieldHint}>La recarga se habilitará cuando el backoffice publique esa capacidad.</p> : null}
+            {!walletAvailable ? <p className={styles.fieldHint}>La recarga no está disponible en este momento.</p> : null}
             {error ? <div className={styles.errorBox} role="alert"><p>{error}</p><button className={styles.quietButton} onClick={() => void refresh()} type="button">Reintentar conexión</button></div> : null}
             {!error && (unauthorized || (!loading && !session)) ? <p className={styles.fieldHint}>Iniciá sesión para consultar o recargar tu saldo. <Link className={styles.textLink} href="/cuenta">Ir a Cuenta</Link></p> : null}
           </article>
@@ -79,7 +80,7 @@ export function BalanceClient() {
             <button className={styles.quietButton} onClick={() => void refreshMovements()} type="button">Reintentar</button>
           </div>
         ) : !error && session && !walletAvailable ? (
-          <div className={styles.emptyState}><p>El backoffice todavía no expone el historial de movimientos.</p></div>
+          <div className={styles.emptyState}><p>El historial de movimientos no está disponible en este momento.</p></div>
         ) : !error && session && !movementsLoading && movements.length === 0 ? <div className={styles.emptyState}><div><p>Tus movimientos aparecerán después de la primera jugada o recarga.</p><button className={styles.quietButton} onClick={() => void refreshMovements()} type="button">Actualizar</button></div></div> : !error && session ? (
           <div className={styles.list}>
             {movements.map((movement) => (

@@ -86,45 +86,47 @@ describe("MockGamingProvider", () => {
   });
 
   it("keeps balance authoritative and replays an idempotent instant bet once", () => {
-    const provider = providerWithResults([684]);
+    const provider = providerWithResults([0]);
     const session = provider.createSession();
-    const request = { gameId: "sapyaite", amount: 500, selection: "PAR" };
+    const request = { gameId: "sapyaite", amount: 500, selection: "000" };
 
     const first = provider.placeInstantBet(session.id, request, "instant-key-001");
     const replay = provider.placeInstantBet(session.id, request, "instant-key-001");
 
-    expect(first.play.result).toBe("684");
+    expect(first.play.result).toBe("000");
     expect(first.play.status).toBe("WON");
-    expect(first.session.balance).toBe(250_500);
+    expect(first.play.payoutMultiplier).toBe(700);
+    expect(first.play.prize).toBe(350_000);
+    expect(first.session.balance).toBe(599_500);
     expect(replay).toMatchObject({
       replayed: true,
       play: { id: first.play.id },
-      session: { balance: 250_500 },
+      session: { balance: 599_500 },
     });
     expect(provider.listPlays(session.id)).toHaveLength(1);
     expect(provider.listResults(session.id)[0]).toMatchObject({
       source: "INSTANT",
-      result: "684",
+      result: "000",
     });
     expect(provider.listMovements(session.id)).toMatchObject([
-      { type: "PRIZE", amount: 1_000, balanceAfter: 250_500 },
+      { type: "PRIZE", amount: 350_000, balanceAfter: 599_500 },
       { type: "STAKE", amount: -500, balanceAfter: 249_500 },
     ]);
   });
 
   it("rejects reuse of an idempotency key with a different request", () => {
-    const provider = providerWithResults([684]);
+    const provider = providerWithResults([7]);
     const session = provider.createSession();
     provider.placeInstantBet(
       session.id,
-      { gameId: "sapyaite", amount: 500, selection: "PAR" },
+      { gameId: "sapyaite", amount: 500, selection: "007" },
       "instant-key-002",
     );
 
     expect(() =>
       provider.placeInstantBet(
         session.id,
-        { gameId: "sapyaite", amount: 1_000, selection: "PAR" },
+        { gameId: "sapyaite", amount: 1_000, selection: "007" },
         "instant-key-002",
       ),
     ).toThrowError(GamingDomainError);

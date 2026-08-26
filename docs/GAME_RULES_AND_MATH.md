@@ -9,10 +9,10 @@
 6. Megaloto: 6 numeros unicos del 1 al 45, manual o al azar.
 
 ## Instantaneas - total 9
-Todas usan resultados de 001 a 999 y el servidor es autoritativo. La animacion nunca decide el resultado.
+Sapy'aite usa resultados de 000 a 999; las demas modalidades mantienen sus rangos documentados. El servidor es autoritativo y la animacion nunca decide el resultado.
 
-### 1. Sapy'aite - Par / Impar
-El jugador elige PAR o IMPAR. El servidor genera 001-999 y evalua la paridad. En 001-999 hay 499 pares y 500 impares.
+### 1. Sapy'aite - Exacto de 3 cifras
+El jugador elige un numero completo de 000 a 999. Gana solamente si las tres cifras coinciden exactamente y en el mismo orden con el resultado confirmado. Probabilidad exacta: 1/1000. El multiplicador x700 es un valor exclusivo de vista previa y no reemplaza la tabla autoritativa.
 
 ### 2. Po'a - Centena
 El jugador elige la centena y se evalua el rango del resultado. La primera centena tiene 99 resultados si se usa 001-099; el motor debe contemplar esta asimetria en la tabla de pagos si se usa dinero real.

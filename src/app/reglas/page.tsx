@@ -86,10 +86,10 @@ export default function RulesPage() {
   const { catalog, error, loading, refresh, unauthorized } = useProduct();
 
   if (!catalog) {
-    let state = <RemoteEmptyState message="El backoffice no publicó reglas disponibles." />;
+    let state = <RemoteEmptyState message="No hay reglas disponibles en este momento." />;
     if (loading) state = <RemoteLoadingState label="Cargando juegos habilitados…" />;
     else if (unauthorized) {
-      state = <RemoteUnauthorizedState message="Iniciá sesión para consultar las reglas habilitadas por el backoffice." />;
+      state = <RemoteUnauthorizedState message="Iniciá sesión para consultar las reglas disponibles." />;
     } else if (error) {
       state = <RemoteErrorState message={error} onRetry={() => void refresh()} />;
     }
@@ -123,7 +123,7 @@ export default function RulesPage() {
         <div className={styles.rulesGuideIntro}>
           <p className={styles.eyebrow}>Antes de jugar</p>
           <h2 id="rules-guide-title">Cómo registrar una jugada</h2>
-          <p>El comprobante debe coincidir con tu selección. El resultado y el premio válidos son siempre los que confirma el proveedor.</p>
+          <p>El comprobante debe coincidir con tu selección. El resultado y el premio válidos son los publicados para la jugada.</p>
         </div>
         <ol className={styles.rulesGuideSteps}>
           <li><strong>1</strong><span><b>Elegí el juego</b> y, si corresponde, el sorteo.</span></li>
@@ -135,7 +135,7 @@ export default function RulesPage() {
 
       <section>
         <SectionHeader
-          description="Estas modalidades dependen de un sorteo. El proveedor publica el resultado y la tabla de premios aplicable."
+          description="Estas modalidades dependen de un sorteo. Consultá el resultado publicado y la tabla de premios aplicable."
           eyebrow="Resultado por sorteo"
           headingLevel={2}
           title="Quinielas tradicionales"
@@ -161,7 +161,7 @@ export default function RulesPage() {
         )}
       </section>
       <section className={styles.statusBox} aria-label="Juego responsable">
-        <strong>Jugá de forma responsable.</strong> Definí un importe antes de empezar y no persigas resultados. Los importes y premios visibles deben coincidir con la información que confirme el proveedor antes de cada jugada.
+        <strong>Jugá de forma responsable.</strong> Definí un importe antes de empezar y no persigas resultados. Los importes y premios visibles deben coincidir con el resumen confirmado antes de cada jugada.
       </section>
     </main>
   );

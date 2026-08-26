@@ -3,6 +3,7 @@
 import { FormEvent, useRef, useState } from "react";
 import { useProduct } from "@/providers/product-provider";
 import { formatGs } from "@/lib/product/catalog";
+import { publicProductErrorMessage } from "@/lib/product/public-error";
 import { SectionHeader } from "./section-header";
 import styles from "./product.module.css";
 
@@ -78,13 +79,13 @@ export function accountErrorMessage(
     code === "BACKOFFICE_NETWORK_ERROR" ||
     code === "BACKOFFICE_TIMEOUT"
   ) {
-    return "El backoffice no está disponible en este momento. Intentá nuevamente.";
+    return "El servicio no está disponible en este momento. Intentá nuevamente.";
   }
   if (typeof failure?.message === "string" && failure.message.trim()) {
-    return failure.message;
+    return publicProductErrorMessage(failure.message, "No pudimos completar la operación.");
   }
   if (mode === "register") {
-    return "El backoffice no pudo crear tu cuenta. Intentá nuevamente.";
+    return "No pudimos crear tu cuenta. Intentá nuevamente.";
   }
   if (mode === "logout") {
     return "No pudimos cerrar la sesión. Intentá nuevamente.";
@@ -174,7 +175,7 @@ export function AccountClient() {
         });
         setStatus(
           persistentRegistration
-            ? "Registro aceptado por el backoffice. Tu cuenta ya está lista."
+            ? "Registro completado. Tu cuenta ya está lista."
             : "Registro simulado para esta vista previa; no se creó una cuenta persistente.",
         );
       } else {
@@ -227,7 +228,7 @@ export function AccountClient() {
             <dl className={styles.summaryList} style={{ marginTop: 24 }}>
               <div className={styles.summaryRow}><dt>Saldo disponible</dt><dd>{formatGs(session.balance)}</dd></div>
               <div className={styles.summaryRow}><dt>Moneda</dt><dd>{session.currency}</dd></div>
-              <div className={styles.summaryRow}><dt>Sesión</dt><dd>{persistentRegistration ? "Protegida por el backoffice" : "Fixture de vista previa"}</dd></div>
+              <div className={styles.summaryRow}><dt>Sesión</dt><dd>{persistentRegistration ? "Sesión segura" : "Fixture de vista previa"}</dd></div>
             </dl>
             {status ? (
               <div className={styles.statusBox} role="status" style={{ marginTop: 20 }}>
@@ -265,7 +266,7 @@ export function AccountClient() {
       <SectionHeader
         eyebrow="Acceso seguro"
         title={formTitle}
-        description="La validación de identidad, las credenciales y la sesión son administradas por el backoffice de Quiniela."
+        description="Tus credenciales y tu sesión se validan de forma segura."
       />
       <div className={styles.accountGrid}>
         <form aria-busy={pending} className={`${styles.contentCard} ${styles.formStack}`} noValidate onSubmit={submit}>
@@ -315,7 +316,7 @@ export function AccountClient() {
             />
             {fieldErrors.identifier
               ? <p className={styles.fieldHint} id="identifier-error">{fieldErrors.identifier}</p>
-              : <p className={styles.fieldHint} id="identifier-hint">El backoffice admite el documento o teléfono asociado a tu cuenta.</p>}
+              : <p className={styles.fieldHint} id="identifier-hint">Ingresá el documento o teléfono asociado a tu cuenta.</p>}
           </div>
           <div className={styles.fieldGroup}>
             <label htmlFor="password">Contraseña</label>
@@ -340,7 +341,7 @@ export function AccountClient() {
               : <p className={styles.fieldHint} id="password-hint">
                   {isRegister
                     ? "Usá al menos 8 caracteres."
-                    : "La política de credenciales la valida el backoffice."}
+                    : "La política de credenciales se valida al ingresar."}
                 </p>}
           </div>
           {isRegister ? (
@@ -383,9 +384,9 @@ export function AccountClient() {
           </button>
         </form>
         <aside className={styles.contentCard}>
-          <p className={styles.eyebrow}>Conexión al backoffice</p>
+          <p className={styles.eyebrow}>Seguridad de tu cuenta</p>
           <h2 className={styles.sectionTitle}>Una sola fuente de verdad</h2>
-          <p className={styles.lede}>Esta interfaz envía tus datos mediante el conector seguro. El backoffice decide si las credenciales son válidas, crea la cuenta y conserva la sesión.</p>
+          <p className={styles.lede}>Tus datos se envían mediante una conexión segura para validar el acceso, crear la cuenta y mantener tu sesión.</p>
           <p className={styles.lede}>Quinie.LA no replica reglas de identidad ni almacena contraseñas en este frontend.</p>
         </aside>
       </div>

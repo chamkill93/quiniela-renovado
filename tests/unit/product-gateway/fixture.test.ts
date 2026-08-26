@@ -33,7 +33,7 @@ const session: MockSession = {
 
 const playCommand: ProductPlayCommand = {
   kind: "instant",
-  input: { gameId: "sapyaite", amount: 500, selection: "PAR" },
+  input: { gameId: "sapyaite", amount: 500, selection: "246" },
 };
 
 const ticket: MockTicket = {
@@ -48,7 +48,7 @@ const ticket: MockTicket = {
   currency: "PYG",
   prize: 7_777,
   status: "WON",
-  selection: "PAR",
+  selection: "246",
   resultNumbers: ["246"],
   issuedAt: "2026-08-25T12:00:00.000Z",
 };
@@ -60,7 +60,7 @@ const playResponse: PlayResponse = {
     family: "INSTANT",
     gameId: "sapyaite",
     gameName: "Sapy’aite",
-    selection: "PAR",
+    selection: "246",
     drawId: null,
     amount: 500,
     prize: 7_777,
@@ -150,7 +150,7 @@ describe("FixtureProductGateway", () => {
     const gateway = createFixtureProductGateway(completeFixtures());
 
     const firstPlay = await gateway.requestPlay({
-      input: { selection: "PAR", amount: 500, gameId: "sapyaite" },
+      input: { selection: "246", amount: 500, gameId: "sapyaite" },
       kind: "instant",
     });
     firstPlay.play.resultNumbers?.push("changed-by-consumer");
@@ -194,7 +194,7 @@ describe("FixtureProductGateway", () => {
     await expect(
       gateway.requestPlay({
         kind: "instant",
-        input: { gameId: "sapyaite", amount: 500, selection: "IMPAR" },
+        input: { gameId: "sapyaite", amount: 500, selection: "999" },
       }),
     ).rejects.toBeInstanceOf(FixtureProductGatewayMissingResponseError);
     await expect(gateway.getResults()).rejects.toMatchObject({

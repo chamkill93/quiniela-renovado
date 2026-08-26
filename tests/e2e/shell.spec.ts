@@ -88,7 +88,7 @@ test("renders the accessible product shell without horizontal overflow", async (
   await expectNoHorizontalOverflow(page);
 });
 
-test("shows only the instant game enabled by the backoffice", async ({
+test("shows only the enabled instant game", async ({
   page,
 }) => {
   await page.goto("/instantaneas", { waitUntil: "domcontentloaded" });
@@ -104,6 +104,9 @@ test("shows only the instant game enabled by the backoffice", async ({
   await expect(cards).toHaveCount(1);
   await expect(cards.first()).toBeVisible();
   await expect(cards.first().getByText("Sapy’aite", { exact: true })).toBeVisible();
+  await expect(
+    cards.first().getByText("Elegí las 3 cifras exactas.", { exact: true }),
+  ).toBeVisible();
   await expectInsideHorizontalViewport(cards.first(), page);
 
   await expectNoHorizontalOverflow(page);

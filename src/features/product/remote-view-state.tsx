@@ -35,7 +35,7 @@ export function RemoteEmptyState({ message }: { message: string }) {
 }
 
 export function RemoteUnauthorizedState({
-  message = "Iniciá sesión para consultar esta información del backoffice.",
+  message = "Iniciá sesión para consultar esta información.",
 }: {
   message?: string;
 }) {

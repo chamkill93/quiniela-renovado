@@ -7,7 +7,7 @@ export interface RulePayoutView {
   detail: string;
   headline: string;
   note: string;
-  source: "backoffice" | "catalog-preview";
+  source: "official" | "catalog-preview";
   sourceLabel: string;
 }
 
@@ -40,7 +40,7 @@ export const TRADITIONAL_RULES = [
       "Elegí el importe disponible que querés jugar.",
       "Revisá número, sorteo e importe y confirmá antes del cierre.",
     ],
-    winCondition: "Tu jugada apunta al primer resultado del sorteo elegido. El proveedor valida la coincidencia exacta al publicar el resultado.",
+    winCondition: "Tu jugada apunta al primer resultado del sorteo elegido y gana cuando coincide exactamente con el resultado publicado.",
     example: "Jugás 497 en el Matutino. La selección ganadora debe coincidir exactamente con 497 en la primera posición.",
     href: "/quinielas/head",
   },
@@ -56,7 +56,7 @@ export const TRADITIONAL_RULES = [
       "Elegí el sorteo y el importe habilitado.",
       "Comprobá el límite de posición en el resumen y confirmá la jugada.",
     ],
-    winCondition: "El proveedor evalúa tu número dentro del límite de posición elegido y aplica la regla oficial vigente del sorteo.",
+    winCondition: "Tu número participa dentro del límite de posición elegido y se aplica la regla oficial vigente del sorteo.",
     example: "Si ingresás 208 y elegís hasta la posición 5, el comprobante debe registrar 208 y el límite 5.",
     href: "/quinielas/prizes",
   },
@@ -72,7 +72,7 @@ export const TRADITIONAL_RULES = [
       "Seleccioná el sorteo y el importe disponible.",
       "Verificá las tres cifras y la posición antes de confirmar.",
     ],
-    winCondition: "La validación de Invertida la realiza el proveedor con la regla oficial y la posición seleccionada; la separación por puntos es solamente visual.",
+    winCondition: "La jugada se evalúa con la regla oficial y la posición seleccionada; la separación por puntos es solamente visual.",
     example: "Ingresás 208 y la pantalla muestra 2 · 0 · 8. Revisá que la posición y el premio informados sean los correctos antes de jugar.",
     href: "/quinielas/invert",
   },
@@ -88,7 +88,7 @@ export const TRADITIONAL_RULES = [
       "Elegí para la redoblona una posición entre 2 y 14.",
       "Seleccioná sorteo e importe, revisá ambas cifras y confirmá.",
     ],
-    winCondition: "El proveedor valida la combinación de la cabeza y la redoblona, junto con la posición seleccionada, según su regla oficial vigente.",
+    winCondition: "La combinación de cabeza y redoblona, junto con la posición elegida, se evalúa según la regla oficial vigente.",
     example: "Cabeza 497 + redoblona 12 hasta la posición 5. El comprobante debe mostrar las dos selecciones y la posición 5.",
     href: "/quinielas/redoblona",
   },
@@ -99,16 +99,16 @@ export const INSTANT_RULES = [
     id: "sapyaite",
     family: "instant",
     title: "Sapy’aite",
-    tagline: "Par o impar · resultado inmediato",
-    copy: "Elegí si el resultado de 001 a 999 será par o impar.",
+    tagline: "3 cifras exactas · resultado inmediato",
+    copy: "Elegí un número completo de 000 a 999.",
     instructions: [
-      "Elegí PAR o IMPAR.",
+      "Ingresá exactamente tres cifras, de 000 a 999.",
       "Seleccioná uno de los importes habilitados.",
-      "Revisá tu elección y presioná Jugar.",
-      "Esperá a que el rodillo termine: el resultado del proveedor es el válido.",
+      "Revisá el número completo y presioná Jugar.",
+      "Esperá a que el rodillo termine y muestre el resultado confirmado.",
     ],
-    winCondition: "Ganás si la paridad del resultado coincide con tu elección.",
-    example: "Elegís PAR y sale 208: acertaste. Si sale 497, no acertaste.",
+    winCondition: "Ganás únicamente si las tres cifras coinciden exactamente y en el mismo orden.",
+    example: "Elegís 007 y sale 007: acertaste. Si sale 070, no acertaste.",
     href: "/instantaneas/sapyaite",
   },
   {
@@ -137,7 +137,7 @@ export const INSTANT_RULES = [
       "Elegí MENOR para 001–499 o MAYOR para 501–999.",
       "Seleccioná el importe que querés jugar.",
       "Revisá tu elección y presioná Jugar.",
-      "Si sale 500, se aplica la política informada por el proveedor.",
+      "Si sale 500, se aplica la política vigente informada antes de jugar.",
     ],
     winCondition: "Ganás si el resultado cae en el lado de 500 que elegiste; el 500 se resuelve según la configuración publicada.",
     example: "Elegís MENOR y sale 208: acertaste. Si sale 731, no acertaste.",
@@ -245,10 +245,10 @@ export const ALL_GAME_RULES = [...TRADITIONAL_RULES, ...INSTANT_RULES] as const;
 
 const TRADITIONAL_PAYOUT: RulePayoutView = {
   headline: "Premio según tabla oficial vigente",
-  detail: "Varía según el importe, la modalidad y la posición. Revisá el valor que informe el proveedor antes de confirmar; luego queda registrado en Mis jugadas.",
+  detail: "Varía según el importe, la modalidad y la posición. Revisá el valor informado antes de confirmar; luego queda registrado en Mis jugadas.",
   note: "No mostramos una cifra fija porque el catálogo actual todavía no publica la tabla de pagos de estas modalidades.",
-  source: "backoffice",
-  sourceLabel: "Tabla del proveedor",
+  source: "official",
+  sourceLabel: "Tabla vigente",
 };
 
 function multiplierLabel(value: number) {
@@ -260,7 +260,7 @@ function instantPayoutView(
   amounts: readonly number[],
 ): RulePayoutView {
   const exampleAmount = amounts.length > 0 ? Math.min(...amounts) : null;
-  const sharedNote = "Es la configuración de vista previa actual; el proveedor debe confirmar la tabla vigente antes de jugar.";
+  const sharedNote = "Es la configuración de vista previa actual; revisá siempre la tabla vigente antes de jugar.";
 
   if (game.payout.kind === "MULTIPLIER") {
     const multiplier = game.payout.winMultiplier;

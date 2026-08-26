@@ -28,13 +28,13 @@ const ticket: MockTicket = {
   gameId: "sapyaite",
   gameName: "Sapy’aite",
   family: "INSTANT",
-  selection: "PAR",
+  selection: "246",
   drawId: null,
   amount: 500,
   currency: "PYG",
   status: "WON",
   resultNumbers: ["246"],
-  prize: 1_000,
+  prize: 350_000,
   issuedAt: "2026-08-25T12:00:00.000Z",
 };
 

@@ -77,7 +77,7 @@ Mantener las reglas definidas en `GAME_RULES_AND_MATH.md`. Los numeros de Quinie
 
 ## 9 INSTANTANEAS
 Implementar EXACTAMENTE estas 9:
-1. Sapy'aite - Par/Impar
+1. Sapy'aite - acertar exactamente un numero de 000 a 999
 2. Po'a - Centena
 3. Pya'e - Mayor/Menor 500
 4. Petei - Ultima cifra

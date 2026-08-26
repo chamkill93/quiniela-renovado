@@ -537,12 +537,15 @@ test("shows only four traditional games and retires the former direct routes", a
   await expect(page.getByText("Qué tenés que hacer", { exact: true })).toHaveCount(5);
   await expect(page.getByText("Cuánto ganás", { exact: true })).toHaveCount(5);
   await expect(page.getByText("Premio según tabla oficial vigente", { exact: true })).toHaveCount(4);
-  await expect(page.getByText("Premio total actual: 2× el importe", { exact: true })).toBeVisible();
+  await expect(page.getByText("Premio total actual: 700× el importe", { exact: true })).toBeVisible();
   await expect(
-    page.getByText("Ejemplo con Gs. 500: recibís Gs. 1.000 en total y la ganancia neta es Gs. 500.", { exact: true }),
+    page.getByText("Ejemplo con Gs. 500: recibís Gs. 350.000 en total y la ganancia neta es Gs. 349.500.", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText("Elegí si el resultado de 001 a 999 será par o impar.", { exact: true }),
+    page.getByText("Elegí un número completo de 000 a 999.", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Ganás únicamente si las tres cifras coinciden exactamente y en el mismo orden.", { exact: true }),
   ).toBeVisible();
   const ruleColumns = await page.getByTestId("traditional-rules-grid").evaluate(
     (element) => getComputedStyle(element).gridTemplateColumns.split(" ").filter(Boolean).length,
@@ -735,10 +738,11 @@ test("publishes only Sapy’aite and rejects disabled instant games", async ({
   const activePlay = await postPlay(
     page,
     "/api/mock/instant",
-    { gameId: "sapyaite", amount: 500, selection: "PAR" },
+    { gameId: "sapyaite", amount: 500, selection: "007" },
     "e2e-sapyaite-active-001",
   );
   expect(activePlay.body.play.gameId).toBe("sapyaite");
+  expect(activePlay.body.play.selection).toBe("007");
   const afterActivePlay = await bootstrap(page);
 
   const disabledResponse = await page.request.post("/api/mock/instant", {
@@ -773,8 +777,16 @@ test("keeps the reel active and opens the receipt only from Mis Jugadas", async 
 
   const reelStage = page.getByLabel("Rodillos numéricos");
   const playButton = page.getByRole("button", { name: "Jugar", exact: true });
+  const exactNumber = page.getByRole("textbox", { name: "Número exacto" });
   await expect(reelStage).toHaveAttribute("data-state", "preview");
   await expect(reelStage).toHaveAttribute("data-variant", "classic");
+  await expect(exactNumber).toHaveValue("000");
+  await exactNumber.fill("7");
+  await expect(playButton).toBeDisabled();
+  await exactNumber.fill("000");
+  await expect(playButton).toBeEnabled();
+  await exactNumber.fill("007");
+  await expect(exactNumber).toHaveValue("007");
   await expect(page.getByRole("button", { name: "Gs. 10.000", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Gs. 20.000", exact: true })).toHaveCount(0);
   await expect(page.getByText("La jugada se registra una sola vez y el resultado se define antes de animar.", { exact: true })).toHaveCount(0);
@@ -833,17 +845,17 @@ test("renders an authoritative fixture result without invoking local game logic"
     family: "INSTANT" as const,
     gameId: "sapyaite" as const,
     gameName: "Sapy’aite",
-    selection: "PAR",
+    selection: "246",
     drawId: null,
     amount: 10_000,
     currency: "PYG" as const,
     status: "WON" as const,
     result: "246",
     resultNumbers: ["246"],
-    ruleResult: "PAR",
+    ruleResult: "246",
     matches: 1,
-    payoutMultiplier: 2,
-    prize: 20_000,
+    payoutMultiplier: 700,
+    prize: 7_000_000,
     createdAt: occurredAt,
   };
   const ticket = {
@@ -908,7 +920,7 @@ test("renders an authoritative fixture result without invoking local game logic"
     expect(request.postDataJSON()).toEqual({
       gameId: "sapyaite",
       amount: 10_000,
-      selection: "PAR",
+      selection: "246",
     });
     acceptedPlays += 1;
     await route.fulfill({
@@ -917,7 +929,7 @@ test("renders an authoritative fixture result without invoking local game logic"
       body: JSON.stringify({
         play,
         ticket,
-        session: { balance: 240_000, currency: "PYG" },
+        session: { balance: 7_240_000, currency: "PYG" },
         replayed: false,
       }),
     });
@@ -943,10 +955,13 @@ test("renders an authoritative fixture result without invoking local game logic"
   expect(Math.abs(reelBoxBefore.width - betPanelBoxBefore.width)).toBeLessThanOrEqual(1);
   expect(Math.abs(reelBoxBefore.x - betPanelBoxBefore.x)).toBeLessThanOrEqual(1);
 
+  const exactNumber = page.getByRole("textbox", { name: "Número exacto" });
+  await exactNumber.fill("246");
+  await expect(exactNumber).toHaveValue("246");
   await page.getByRole("button", { name: "Jugar", exact: true }).click();
 
   await expect(page.getByLabel("Rodillo 1: 246")).toBeVisible();
-  await expect(page.getByText("Premio Gs. 20.000", { exact: true })).toBeVisible();
+  await expect(page.getByText("Premio Gs. 7.000.000", { exact: true })).toBeVisible();
   const resultPopout = page.getByTestId("instant-result-popout");
   await expect(resultPopout).toHaveCSS("position", "fixed");
   const betPanelBoxAfter = await betPanel.boundingBox();
@@ -1106,7 +1121,7 @@ test("registers through the explicit non-persistent preview fixture", async ({
   await expect(page.getByRole("status")).toContainText("Registro simulado");
 });
 
-test("renders an unauthorized state when the backoffice session expires", async ({
+test("renders an unauthorized state when the session expires", async ({
   page,
 }) => {
   await page.route("**/api/mock/bootstrap", async (route) => {
@@ -1137,6 +1152,39 @@ test("offers a safe retry when the preview transport is unavailable", async ({
   });
   await expect(alert).toContainText("No se pudo conectar con el servicio de vista previa.");
   await expect(alert.getByRole("button", { name: "Reintentar" })).toBeVisible();
+});
+
+test("keeps implementation vocabulary out of public copy", async ({ page }) => {
+  const forbiddenCopy = /\b(?:backoffice|proveedor|codexa|kodexa)\b/i;
+  const publicRoutes = [
+    "/",
+    "/instantaneas",
+    "/instantaneas/sapyaite",
+    "/quinielas",
+    "/reglas",
+    "/resultados",
+    "/mis-jugadas",
+    "/cuenta",
+    "/saldos",
+    "/ayuda",
+    "/gestion",
+  ] as const;
+
+  for (const path of publicRoutes) {
+    await page.goto(path, { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("main")).toBeVisible();
+    await page.waitForLoadState("networkidle");
+
+    const publicCopy = await page.evaluate(() => ({
+      ariaLabels: Array.from(document.querySelectorAll<HTMLElement>("[aria-label]"))
+        .map((element) => element.getAttribute("aria-label") ?? "")
+        .join("\n"),
+      visibleText: document.body.innerText,
+    }));
+
+    expect(publicCopy.visibleText, `visible copy at ${path}`).not.toMatch(forbiddenCopy);
+    expect(publicCopy.ariaLabels, `aria-label copy at ${path}`).not.toMatch(forbiddenCopy);
+  }
 });
 
 test("stays stable through repeated Home and instant-game navigation", async ({ page }) => {

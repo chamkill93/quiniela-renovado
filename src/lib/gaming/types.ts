@@ -119,7 +119,7 @@ export interface InstantGameDefinition {
     | "MULTI_EXACT"
     | "MULTI_PARITY";
   reels: 1 | 5 | 10;
-  rng: { min: 1; max: 999 };
+  rng: { min: 0 | 1; max: 999 };
   selection: InstantSelectionDefinition;
   payout: PrototypePayout;
   neutral500Policy?: PyaeNeutralPolicy;

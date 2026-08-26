@@ -17,6 +17,10 @@ export const threeDigitSchema = z
   .string()
   .regex(/^(?!000)\d{3}$/, "Usá un número entre 001 y 999.");
 
+export const exactThreeDigitSchema = z
+  .string()
+  .regex(/^\d{3}$/, "Usá exactamente tres cifras entre 000 y 999.");
+
 export const twoDigitSchema = z
   .string()
   .regex(/^\d{2}$/, "Usá dos cifras entre 00 y 99.");
@@ -45,7 +49,7 @@ export const instantPlayRequestSchema = z.discriminatedUnion("gameId", [
   z.object({
     gameId: z.literal("sapyaite"),
     amount: prototypeAmountSchema,
-    selection: paritySchema,
+    selection: exactThreeDigitSchema,
   }),
   z.object({
     gameId: z.literal("poa"),

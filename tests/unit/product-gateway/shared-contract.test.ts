@@ -19,7 +19,7 @@ import {
 
 const playCommand: ProductPlayCommand = {
   kind: "instant",
-  input: { gameId: "sapyaite", amount: 500, selection: "PAR" },
+  input: { gameId: "sapyaite", amount: 500, selection: "007" },
 };
 
 const topUpInput: ProductTopUpInput = {
@@ -39,7 +39,7 @@ interface GatewayAdapter {
   create(responses: ContractResponses): ProductGateway;
 }
 
-function playResponse(selection = "PAR"): SharedPlayResponse {
+function playResponse(selection = "007"): SharedPlayResponse {
   return {
     play: {
       id: "play-contract-1",
@@ -54,7 +54,7 @@ function playResponse(selection = "PAR"): SharedPlayResponse {
       status: "LOST",
       result: "497",
       resultNumbers: ["497"],
-      ruleResult: "ODD",
+      ruleResult: "497",
       matches: null,
       payoutMultiplier: 0,
       prize: 0,
@@ -74,7 +74,7 @@ function playResponse(selection = "PAR"): SharedPlayResponse {
       status: "LOST",
       result: "497",
       resultNumbers: ["497"],
-      ruleResult: "ODD",
+      ruleResult: "497",
       prize: 0,
       issuedAt: "2026-08-25T12:00:00.000Z",
     },
@@ -223,7 +223,7 @@ describe.each(adapters)("shared ProductGateway contract: $name", (adapter) => {
 
   it("rejects a valid response that belongs to another play command", async () => {
     const gateway = adapter.create({
-      play: playResponse("IMPAR"),
+      play: playResponse("999"),
       topUp: topUpResponse(),
     });
 

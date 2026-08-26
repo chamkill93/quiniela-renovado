@@ -10,6 +10,7 @@ import {
   formatGs,
   padNumber,
 } from "@/lib/product/catalog";
+import { publicProductErrorMessage } from "@/lib/product/public-error";
 import { useProduct } from "@/providers/product-provider";
 import { AmountChip } from "./amount-chip";
 import { DrawIcon } from "./draw-icon";
@@ -97,7 +98,7 @@ export function TraditionalGameClient({ game }: { game: ProductGame<TraditionalG
   );
   const enabledGame = Boolean(remoteGame);
   const displayName = remoteGame?.name ?? (loading ? "Cargando juego…" : "Juego no disponible");
-  const displayDescription = remoteGame?.description ?? "Esperando la definición habilitada por el backoffice.";
+  const displayDescription = remoteGame?.description ?? "Información del juego no disponible.";
   const availableDraws = useMemo(() => {
     if (!catalog) return [];
     const definition = catalog.traditional.find((item) => item.id === game.id);
@@ -141,7 +142,7 @@ export function TraditionalGameClient({ game }: { game: ProductGame<TraditionalG
       });
       setRegisteredPlayId(data.play.id);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "No pudimos registrar la jugada.");
+      setError(publicProductErrorMessage(reason, "No pudimos registrar la jugada."));
     } finally {
       setPending(false);
     }
@@ -180,7 +181,7 @@ export function TraditionalGameClient({ game }: { game: ProductGame<TraditionalG
               </div>
             </div>
             {loading ? <div className={styles.loadingBar} aria-label="Cargando catálogo" /> : null}
-            {catalog && !enabledGame ? <div className={styles.errorBox} role="alert">Este juego no está habilitado por el backoffice.</div> : null}
+            {catalog && !enabledGame ? <div className={styles.errorBox} role="alert">Este juego no está disponible en este momento.</div> : null}
             {gatewayError ? <div className={styles.errorBox} role="alert"><p>{gatewayError}</p><button className={styles.quietButton} onClick={() => void refresh()} type="button">Reintentar conexión</button></div> : null}
             {!gatewayError && (unauthorized || (!loading && !session)) ? <div className={styles.errorBox} role="alert">Iniciá sesión para registrar una jugada. <Link className={styles.textLink} href="/cuenta">Ir a Cuenta</Link></div> : null}
             {error ? <div className={styles.errorBox} role="alert">{error}</div> : null}

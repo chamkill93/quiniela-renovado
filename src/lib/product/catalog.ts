@@ -73,8 +73,8 @@ export const INSTANT_GAMES: ProductGame<InstantGameId>[] = [
   {
     id: "sapyaite",
     name: "Sapy’aite",
-    eyebrow: "Par o impar",
-    description: "Elegí la paridad de un resultado entre 001 y 999.",
+    eyebrow: "Tres cifras exactas",
+    description: "Elegí un número de 000 a 999 y acertá el resultado exacto.",
     icon: "/assets/icons/game/bolt.svg",
     art: "/assets/game-art/bolt.webp",
     tone: "purple",

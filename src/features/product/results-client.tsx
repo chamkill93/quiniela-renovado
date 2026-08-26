@@ -15,9 +15,9 @@ import { SectionHeader } from "./section-header";
 import styles from "./product.module.css";
 
 function formatOccurredAt(value: string | null) {
-  if (!value) return "Confirmado por el backoffice";
+  if (!value) return "Publicado";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Confirmado por el backoffice";
+  if (Number.isNaN(date.getTime())) return "Publicado";
   return new Intl.DateTimeFormat("es-PY", {
     dateStyle: "medium",
     timeStyle: "short",
@@ -46,18 +46,18 @@ export function ResultsClient() {
   return (
     <main className={`${styles.page} ${styles.pageStack}`}>
       <SectionHeader
-        description="Mostramos únicamente publicaciones y resultados recibidos desde el backoffice."
+        description="Consultá las publicaciones y los resultados disponibles."
         eyebrow="Información verificable"
         title="Resultados"
       />
 
-      {loading && !catalog ? <RemoteLoadingState label="Cargando resultados del backoffice…" /> : null}
+      {loading && !catalog ? <RemoteLoadingState label="Cargando resultados…" /> : null}
       {unavailable && unauthorized ? (
-        <RemoteUnauthorizedState message="Iniciá sesión para consultar los resultados disponibles en el backoffice." />
+        <RemoteUnauthorizedState message="Iniciá sesión para consultar los resultados disponibles." />
       ) : null}
       {unavailable && !unauthorized && error ? <RemoteErrorState message={error} onRetry={() => void refresh()} /> : null}
       {unavailable && !unauthorized && !error ? (
-        <RemoteEmptyState message="El backoffice no entregó información de resultados." />
+        <RemoteEmptyState message="Todavía no hay información de resultados." />
       ) : null}
 
       {catalog ? (
@@ -73,7 +73,7 @@ export function ResultsClient() {
               title="Resultados publicados"
             />
             {drawResults.length === 0 ? (
-              <RemoteEmptyState message="No hay sorteos publicados por el backoffice." />
+              <RemoteEmptyState message="No hay sorteos publicados." />
             ) : (
               <div className={styles.drawGrid}>
                 {drawResults.map((result) => (
@@ -95,7 +95,7 @@ export function ResultsClient() {
 
           <section aria-label="Resultados instantáneos de la cuenta">
             <SectionHeader
-              description="Historial asociado a la sesión validada por el backoffice."
+              description="Historial asociado a tu cuenta."
               eyebrow="Historial reciente"
               headingLevel={2}
               title="Resultados instantáneos"

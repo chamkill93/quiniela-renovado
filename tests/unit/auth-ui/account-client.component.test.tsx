@@ -196,13 +196,13 @@ describe("AccountClient integrado con ProductProvider", () => {
       expected: "demasiados intentos",
     },
     {
-      label: "backoffice indisponible",
+      label: "servicio indisponible",
       failure: new ProductGatewayHttpError(
         503,
         "BACKOFFICE_UNAVAILABLE",
         "Detalle privado de indisponibilidad",
       ),
-      expected: "backoffice no está disponible",
+      expected: "servicio no está disponible",
     },
     {
       label: "timeout",
@@ -211,7 +211,7 @@ describe("AccountClient integrado con ProductProvider", () => {
         "BACKOFFICE_TIMEOUT",
         "Detalle privado del timeout",
       ),
-      expected: "backoffice no está disponible",
+      expected: "servicio no está disponible",
     },
     {
       label: "error de red",
@@ -220,7 +220,7 @@ describe("AccountClient integrado con ProductProvider", () => {
         "BACKOFFICE_NETWORK_ERROR",
         "Detalle privado de la red",
       ),
-      expected: "backoffice no está disponible",
+      expected: "servicio no está disponible",
     },
     {
       label: "sesión expirada",
@@ -388,8 +388,9 @@ describe("AccountClient integrado con ProductProvider", () => {
     const user = renderAccount(gateway);
 
     expect((await screen.findByRole("alert")).textContent).toContain(
-      "Sin conexión con el backoffice fixture.",
+      "Sin conexión con el servicio fixture.",
     );
+    expect(screen.queryByText(/backoffice/i)).toBeNull();
     expect(getBootstrapCalls()).toBe(1);
 
     await user.click(screen.getByRole("button", { name: "Reintentar conexión" }));

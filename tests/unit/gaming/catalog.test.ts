@@ -34,8 +34,17 @@ describe("gaming catalog", () => {
     expect(catalog.instant.find((game) => game.id === "pyae")?.neutral500Policy).toBe(
       "LOSS",
     );
-    expect(catalog.instant.every((game) => game.rng.min === 1 && game.rng.max === 999)).toBe(
-      true,
-    );
+    expect(catalog.instant.find((game) => game.id === "sapyaite")).toMatchObject({
+      engine: "EXACT_THREE_DIGITS",
+      reels: 1,
+      rng: { min: 0, max: 999 },
+      selection: { kind: "PADDED_INTEGER", min: 0, max: 999, width: 3 },
+      payout: { kind: "MULTIPLIER", winMultiplier: 700 },
+    });
+    expect(
+      catalog.instant
+        .filter((game) => game.id !== "sapyaite")
+        .every((game) => game.rng.min === 1 && game.rng.max === 999),
+    ).toBe(true);
   });
 });

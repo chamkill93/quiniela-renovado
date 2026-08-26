@@ -13,7 +13,6 @@ function evaluate(rawInput: unknown, results: readonly string[], policy: "REFUND
 
 describe("instant rules", () => {
   it.each([
-    ["sapyaite", "PAR", ["684"], "PAR", 2],
     ["poa", "300-399", ["372"], "300-399", 9],
     ["pyae", "MAYOR", ["718"], "MAYOR", 2],
     ["petei", "7", ["297"], "7", 9],
@@ -32,6 +31,37 @@ describe("instant rules", () => {
       });
     },
   );
+
+  it.each(["000", "007", "999"])(
+    "wins Sapy’aite only on the exact three-digit result %s",
+    (selection) => {
+      expect(
+        evaluate(
+          { gameId: "sapyaite", amount: 500, selection },
+          [selection],
+        ),
+      ).toMatchObject({
+        status: "WON",
+        ruleResult: selection,
+        payoutMultiplier: 700,
+        prize: 350_000,
+      });
+    },
+  );
+
+  it("loses Sapy’aite when any digit differs", () => {
+    expect(
+      evaluate(
+        { gameId: "sapyaite", amount: 500, selection: "007" },
+        ["008"],
+      ),
+    ).toMatchObject({
+      status: "LOST",
+      ruleResult: "008",
+      payoutMultiplier: 0,
+      prize: 0,
+    });
+  });
 
   it("supports refund or loss for Pya’e result 500", () => {
     const input = { gameId: "pyae", amount: 500, selection: "MAYOR" };

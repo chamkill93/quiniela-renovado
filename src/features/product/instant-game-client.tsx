@@ -6,6 +6,7 @@ import type { InstantPlayRequest } from "@/lib/gaming/schemas";
 import type { InstantGameDefinition } from "@/lib/gaming/types";
 import type { PlayResponse } from "@/lib/product/api-types";
 import { type InstantGameId, formatGs, padNumber, type ProductGame } from "@/lib/product/catalog";
+import { publicProductErrorMessage } from "@/lib/product/public-error";
 import { useProduct } from "@/providers/product-provider";
 import { AmountChip } from "./amount-chip";
 import { NumericReels } from "./numeric-reels";
@@ -23,7 +24,8 @@ const INSTANT_AMOUNTS = new Set([500, 1_000, 2_000, 5_000, 10_000]);
 
 function buildInitialSelection(gameId: InstantGameId) {
   if (gameId === "poa5" || gameId === "poa10") return ["001", "002", "003"];
-  if (gameId === "sapyaite" || gameId === "racha5") return "PAR";
+  if (gameId === "sapyaite") return "000";
+  if (gameId === "racha5") return "PAR";
   if (gameId === "pyae") return "MENOR";
   if (gameId === "poa") return "001-099";
   if (gameId === "petei") return "0";
@@ -58,8 +60,11 @@ function buildInstantPlayInput(
   amount: number,
   selection: string | string[],
 ): InstantPlayRequest {
-  if (gameId === "sapyaite" || gameId === "racha5") {
+  if (gameId === "racha5") {
     return { gameId, amount, selection: paritySelection(selection) };
+  }
+  if (gameId === "sapyaite") {
+    return { gameId, amount, selection: padNumber(String(selection), 3) };
   }
   if (gameId === "poa") {
     return { gameId, amount, selection: hundredRangeSelection(selection) };
@@ -91,8 +96,36 @@ function buildInstantPlayInput(
 
 function selectedForMatches(gameId: InstantGameId, selection: string | string[]) {
   if (gameId === "poa5" || gameId === "poa10") return (selection as string[]).map((number) => padNumber(number));
-  if (gameId === "mbohapy") return [padNumber(selection as string)];
+  if (gameId === "sapyaite" || gameId === "mbohapy") return [padNumber(selection as string)];
   return [];
+}
+
+function hasValidSelection(
+  definition: InstantGameDefinition | undefined,
+  selection: string | string[],
+) {
+  if (!definition) return false;
+  const contract = definition.selection;
+  if (contract.kind === "ENUM") {
+    return typeof selection === "string" && contract.values.includes(selection);
+  }
+  if (contract.kind === "HUNDRED_RANGE") {
+    return typeof selection === "string" && contract.values.some((option) => option.value === selection);
+  }
+  if (contract.kind === "UNIQUE_THREE_DIGIT_NUMBERS") {
+    return Array.isArray(selection) &&
+      selection.length === contract.count &&
+      new Set(selection).size === selection.length &&
+      selection.every((value) => {
+        const numericValue = Number(value);
+        return /^\d{3}$/.test(value) && numericValue >= contract.min && numericValue <= contract.max;
+      });
+  }
+  if (Array.isArray(selection) || !new RegExp(`^\\d{${contract.width}}$`).test(selection)) {
+    return false;
+  }
+  const numericValue = Number(selection);
+  return numericValue >= contract.min && numericValue <= contract.max;
 }
 
 export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }) {
@@ -123,10 +156,11 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
     (definition) => definition.id === game.id,
   );
   const displayName = remoteGame?.name ?? (loading ? "Cargando juego…" : "Juego no disponible");
-  const displayDescription = remoteGame?.description ?? "Esperando la definición habilitada por el backoffice.";
+  const displayDescription = remoteGame?.description ?? "Esperando la información vigente del juego.";
   const effectiveAmount = availableAmounts.includes(amount)
     ? amount
     : (availableAmounts[0] ?? 0);
+  const selectionIsValid = hasValidSelection(remoteGame, selection);
 
   const selectedNumbers = useMemo(() => selectedForMatches(game.id, selection), [game.id, selection]);
   const resultNumbers = useMemo(() => {
@@ -178,7 +212,7 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
   }, [playSound, response?.play.status, scheduleResultPopoutDismiss]);
 
   const play = async () => {
-    if (pending) return;
+    if (pending || !selectionIsValid) return;
     dismissResultPopout();
     setPending(true);
     setError(null);
@@ -192,7 +226,7 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
       });
       setResponse(data);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "No pudimos registrar la jugada.");
+      setError(publicProductErrorMessage(reason, "No pudimos registrar la jugada."));
     } finally {
       setPending(false);
     }
@@ -200,7 +234,7 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
 
   if (!catalog) {
     let state = <RemoteEmptyState message="No pudimos verificar si este juego está habilitado." />;
-    if (loading) state = <RemoteLoadingState label="Verificando el catálogo del backoffice…" />;
+    if (loading) state = <RemoteLoadingState label="Verificando los juegos disponibles…" />;
     else if (unauthorized) {
       state = <RemoteUnauthorizedState message="Iniciá sesión para consultar los juegos habilitados." />;
     } else if (gatewayError) {
@@ -226,7 +260,7 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
         <div className={styles.emptyState} data-testid="disabled-instant-game">
           <div>
             <h1>Juego no disponible</h1>
-            <p>Este juego está desactivado en el catálogo del backoffice.</p>
+            <p>Este juego no está disponible en este momento.</p>
             <Link className={styles.primaryButton} href="/instantaneas">
               Ver juegos disponibles
             </Link>
@@ -258,7 +292,7 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
             key={response?.play.id ?? "active-preview"}
             results={visibleResults}
             selectedNumbers={selectedNumbers}
-            selectedParity={game.id === "racha5" || game.id === "sapyaite" ? selection as "PAR" | "IMPAR" : undefined}
+            selectedParity={game.id === "racha5" ? selection as "PAR" | "IMPAR" : undefined}
             onComplete={response ? finishResult : undefined}
           />
         </div>
@@ -300,7 +334,7 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
             {error ? <div className={styles.errorBox} role="alert">{error}</div> : null}
             <button
               className={`${styles.primaryButton} ${styles.instantPlayButton}`}
-              disabled={pending || Boolean(response && !animationDone) || loading || Boolean(gatewayError) || !session || availableAmounts.length === 0}
+              disabled={pending || Boolean(response && !animationDone) || loading || Boolean(gatewayError) || !session || availableAmounts.length === 0 || !selectionIsValid}
               onClick={play}
               type="button"
             >
@@ -428,10 +462,15 @@ function SelectionControl({
 
   const digits = contract.width;
   const label = gameId === "petei" ? "Última cifra" : gameId === "mokoi" ? "Últimas dos cifras" : "Número exacto";
+  const hint = `Ingresá ${digits === 1 ? "una cifra" : `${digits} cifras`} entre ${String(contract.min).padStart(digits, "0")} y ${String(contract.max).padStart(digits, "0")}.`;
+  const value = selection as string;
+  const valid = new RegExp(`^\\d{${digits}}$`).test(value) && Number(value) >= contract.min && Number(value) <= contract.max;
   return (
     <div className={styles.fieldGroup}>
       <label htmlFor="instant-number">{label}</label>
       <input
+        aria-describedby="instant-number-hint"
+        aria-invalid={!valid}
         className={`${styles.input} ${styles.numberInput}`}
         id="instant-number"
         inputMode="numeric"
@@ -439,8 +478,9 @@ function SelectionControl({
         onBlur={(event) => onChange(padNumber(event.target.value, digits))}
         onChange={(event) => onChange(event.target.value.replace(/\D/g, "").slice(0, digits))}
         type="text"
-        value={selection as string}
+        value={value}
       />
+      <p className={styles.fieldHint} id="instant-number-hint">{hint}</p>
     </div>
   );
 }

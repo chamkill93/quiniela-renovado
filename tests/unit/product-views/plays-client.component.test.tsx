@@ -26,11 +26,11 @@ const plays: MockPlay[] = [
     gameId: "sapyaite",
     gameName: "Sapy’aitépe",
     amount: 5_000,
-    prize: 50_000,
+    prize: 3_500_000,
     status: "WON",
     createdAt: "2026-08-25T12:30:00.000Z",
-    selection: ["1", "4", "7"],
-    resultNumbers: ["1", "4", "7"],
+    selection: "007",
+    resultNumbers: ["007"],
   },
   {
     id: "play-traditional-2",
@@ -57,10 +57,10 @@ const tickets: MockTicket[] = [
     gameName: "Sapy’aitépe",
     amount: 5_000,
     currency: "PYG",
-    prize: 50_000,
+    prize: 3_500_000,
     status: "WON",
-    selection: ["1", "4", "7"],
-    resultNumbers: ["1", "4", "7"],
+    selection: "007",
+    resultNumbers: ["007"],
     issuedAt: "2026-08-25T12:30:00.000Z",
   },
   {
@@ -147,9 +147,9 @@ describe("comprobantes en Mis Jugadas", () => {
 
     const dialog = screen.getByRole("dialog", { name: "Jugada registrada" });
     expect(within(dialog).getByText("Sapy’aitépe")).toBeTruthy();
-    expect(within(dialog).getAllByText("1 · 4 · 7")).toHaveLength(2);
+    expect(within(dialog).getAllByText("007")).toHaveLength(2);
     expect(within(dialog).getByText("Gs. 5.000")).toBeTruthy();
-    expect(within(dialog).getByText("Gs. 50.000")).toBeTruthy();
+    expect(within(dialog).getByText("Gs. 3.500.000")).toBeTruthy();
     expect(within(dialog).getByText("QL-REAL-001")).toBeTruthy();
   });
 

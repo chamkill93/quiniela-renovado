@@ -11,7 +11,7 @@ import {
 
 const command: ProductPlayCommand = {
   kind: "instant",
-  input: { gameId: "sapyaite", amount: 500, selection: "PAR" },
+  input: { gameId: "sapyaite", amount: 500, selection: "007" },
 };
 
 const response: PlayResponse = {
@@ -21,7 +21,7 @@ const response: PlayResponse = {
     family: "INSTANT",
     gameId: "sapyaite",
     gameName: "Sapy’aite",
-    selection: "PAR",
+    selection: "007",
     drawId: null,
     amount: 500,
     prize: 0,

@@ -3,7 +3,7 @@ import { CatalogPageClient } from "@/features/product/catalog-views";
 export default function TraditionalCatalogPage() {
   return (
     <CatalogPageClient
-      description="Las modalidades, reglas visibles y disponibilidad son informadas por el backoffice."
+      description="Elegí una modalidad, revisá sus reglas y participá del sorteo."
       eyebrow="Quiniela tradicional"
       family="traditional"
       limit={4}

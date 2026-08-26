@@ -30,12 +30,12 @@ function unavailableCatalogState({
   error: string | null;
   onRetry: () => void;
 }) {
-  if (loading) return <RemoteLoadingState label="Cargando catálogo del backoffice…" />;
+  if (loading) return <RemoteLoadingState label="Cargando juegos…" />;
   if (unauthorized) {
-    return <RemoteUnauthorizedState message="Iniciá sesión para recibir el catálogo habilitado por el backoffice." />;
+    return <RemoteUnauthorizedState message="Iniciá sesión para consultar los juegos disponibles." />;
   }
   if (error) return <RemoteErrorState message={error} onRetry={onRetry} />;
-  return <RemoteEmptyState message="El backoffice no publicó un catálogo disponible." />;
+  return <RemoteEmptyState message="No hay juegos disponibles en este momento." />;
 }
 
 export function CatalogPageClient({
@@ -62,7 +62,7 @@ export function CatalogPageClient({
         <>
           {error ? <RemoteErrorState message={error} onRetry={() => void refresh()} /> : null}
           {games.length === 0 ? (
-            <RemoteEmptyState message="No hay juegos habilitados por el backoffice en este momento." />
+            <RemoteEmptyState message="No hay juegos disponibles en este momento." />
           ) : (
             <div
               className={`${styles.gameGrid} ${family === "traditional" ? styles.traditionalGameGrid : ""}`.trim()}
@@ -101,7 +101,7 @@ export function HomeRemoteSections() {
 
   if (!catalog) {
     return (
-      <section aria-label="Contenido del backoffice">
+      <section aria-label="Contenido actualizado">
         {unavailableCatalogState({ loading, unauthorized, error, onRetry: () => void refresh() })}
       </section>
     );
@@ -130,7 +130,7 @@ export function HomeRemoteSections() {
           title="Sorteos publicados"
         />
         {draws.length === 0 ? (
-          <RemoteEmptyState message="Todavía no hay sorteos publicados por el backoffice." />
+          <RemoteEmptyState message="Todavía no hay sorteos publicados." />
         ) : (
           <div className={styles.drawGrid}>
             {draws.map((draw) => (
@@ -152,7 +152,7 @@ export function HomeRemoteSections() {
 
       <section aria-label="Instantáneas habilitadas">
         <SectionHeader
-          description="El catálogo, los nombres y las condiciones visibles provienen del backoffice."
+          description="Consultá los juegos disponibles y sus condiciones antes de jugar."
           eyebrow="Resultado al momento"
           headingLevel={2}
           href="/instantaneas"

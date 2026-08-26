@@ -2,17 +2,16 @@
   {
     "id": "sapyaite",
     "name": "Sapy'aite",
-    "engine": "parity",
+    "engine": "exact_three_digits",
     "reels": 1,
     "selection": {
-      "type": "enum",
-      "values": [
-        "PAR",
-        "IMPAR"
-      ]
+      "type": "integer",
+      "min": 0,
+      "max": 999,
+      "pad": 3
     },
     "rng": {
-      "min": 1,
+      "min": 0,
       "max": 999
     }
   },

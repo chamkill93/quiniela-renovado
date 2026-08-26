@@ -50,6 +50,19 @@ describe("rules page data", () => {
     expect(pyaeRule?.copy).toContain("configuración");
   });
 
+  it("explica Sapy’aite como una elección exacta entre 000 y 999", () => {
+    const sapyaiteRule = INSTANT_RULES.find((rule) => rule.id === "sapyaite");
+
+    expect(sapyaiteRule).toMatchObject({
+      tagline: "3 cifras exactas · resultado inmediato",
+      copy: "Elegí un número completo de 000 a 999.",
+    });
+    expect(sapyaiteRule?.instructions[0]).toContain("000 a 999");
+    expect(sapyaiteRule?.winCondition).toContain("mismo orden");
+    expect(sapyaiteRule?.example).toContain("007");
+    expect(sapyaiteRule?.example).not.toMatch(/PAR|IMPAR|paridad/i);
+  });
+
   it("explica acciones, forma de ganar y ejemplo para cada juego", () => {
     for (const rule of ALL_GAME_RULES) {
       expect(rule.tagline.length).toBeGreaterThan(0);
@@ -88,12 +101,12 @@ describe("rules page data", () => {
     const payout = enabled.instant[0]?.payout;
 
     expect(payout).toMatchObject({
-      headline: "Premio total actual: 2× el importe",
+      headline: "Premio total actual: 700× el importe",
       source: "catalog-preview",
     });
     expect(payout?.detail).toContain("Gs. 500");
-    expect(payout?.detail).toContain("Gs. 1.000");
-    expect(payout?.detail).toContain("ganancia neta es Gs. 500");
+    expect(payout?.detail).toContain("Gs. 350.000");
+    expect(payout?.detail).toContain("ganancia neta es Gs. 349.500");
   });
 
   it("no inventa un multiplicador para las quinielas tradicionales", () => {
@@ -108,7 +121,7 @@ describe("rules page data", () => {
     for (const rule of enabled.traditional) {
       expect(rule.payout).toMatchObject({
         headline: "Premio según tabla oficial vigente",
-        source: "backoffice",
+        source: "official",
       });
       expect(rule.payout.note).toContain("todavía no publica");
     }

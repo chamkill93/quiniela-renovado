@@ -104,13 +104,13 @@ const BASE_INSTANT_GAMES = [
   {
     id: "sapyaite",
     name: "Sapy’aite",
-    description: "Elegí PAR o IMPAR para un resultado de 001 a 999.",
+    description: "Elegí un número de tres cifras y acertá el resultado exacto.",
     iconKey: "bolt",
-    engine: "PARITY",
+    engine: "EXACT_THREE_DIGITS",
     reels: 1,
-    rng: { min: 1, max: 999 },
-    selection: { kind: "ENUM", values: ["PAR", "IMPAR"] },
-    payout: { prototype: true, kind: "MULTIPLIER", winMultiplier: 2 },
+    rng: { min: 0, max: 999 },
+    selection: { kind: "PADDED_INTEGER", min: 0, max: 999, width: 3 },
+    payout: { prototype: true, kind: "MULTIPLIER", winMultiplier: 700 },
   },
   {
     id: "poa",

@@ -18,6 +18,7 @@ import type {
   MockTicket,
   PlayResponse,
 } from "@/lib/product/api-types";
+import { publicProductErrorMessage } from "@/lib/product/public-error";
 import {
   createProductGateway,
   createProductIdempotencyKey,
@@ -61,7 +62,7 @@ export interface ProductContextValue {
 const ProductContext = createContext<ProductContextValue | null>(null);
 
 function errorMessage(reason: unknown, fallback: string) {
-  return reason instanceof Error ? reason.message : fallback;
+  return publicProductErrorMessage(reason, fallback);
 }
 
 function isAbortError(reason: unknown) {

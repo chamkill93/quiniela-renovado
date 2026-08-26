@@ -70,7 +70,7 @@ const SIMPLE_CATALOG_DESCRIPTIONS: Readonly<Record<string, string>> = {
   prizes: "Elegí 3 cifras y hasta qué posición juega.",
   invert: "Jugá las 3 cifras en distinto orden.",
   redoblona: "Combiná un número y una terminación.",
-  sapyaite: "Elegí par o impar.",
+  sapyaite: "Elegí las 3 cifras exactas.",
   poa: "Elegí una centena.",
   pyae: "Menor o mayor que 500.",
   petei: "Elegí la última cifra.",

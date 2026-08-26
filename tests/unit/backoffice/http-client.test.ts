@@ -488,6 +488,73 @@ describe("HttpBackofficeClient", () => {
     });
   });
 
+  it("rejects the legacy parity contract for Sapy’aite", async () => {
+    const invalidCatalog = {
+      ...catalog,
+      instant: catalog.instant.map((game) =>
+        game.id === "sapyaite"
+          ? {
+              ...game,
+              engine: "PARITY",
+              rng: { min: 1, max: 999 },
+              selection: { kind: "ENUM", values: ["PAR", "IMPAR"] },
+            }
+          : game,
+      ),
+    };
+    const fetchMock = createFetchMock();
+    fetchMock.mockResolvedValue(jsonResponse({ catalog: invalidCatalog }));
+    const client = createBackofficeClient({
+      baseUrl: "https://backoffice.example",
+      endpoints,
+      fetch: fetchMock,
+    });
+
+    await expect(client.getCatalog()).rejects.toMatchObject({
+      reason: "INVALID_PAYLOAD",
+    });
+  });
+
+  it("accepts an authoritative exact Sapy’aite result at the 000 boundary", async () => {
+    const exactResponse: PlacePlayResponse = {
+      ...placePlayResponse,
+      play: {
+        ...placePlayResponse.play,
+        gameId: "sapyaite",
+        gameName: "Sapy’aite",
+        selection: "000",
+        result: "000",
+        resultNumbers: ["000"],
+        ruleResult: "000",
+        matches: null,
+      },
+      ticket: {
+        ...placePlayResponse.ticket,
+        gameId: "sapyaite",
+        gameName: "Sapy’aite",
+        selection: "000",
+        result: "000",
+        resultNumbers: ["000"],
+        ruleResult: "000",
+      },
+    };
+    const fetchMock = createFetchMock();
+    fetchMock.mockResolvedValue(jsonResponse(exactResponse));
+    const client = createBackofficeClient({
+      baseUrl: "https://backoffice.example",
+      endpoints,
+      fetch: fetchMock,
+    });
+
+    await expect(
+      client.placeInstantPlay({
+        gameId: "sapyaite",
+        amount: 500,
+        selection: "000",
+      }),
+    ).resolves.toEqual(exactResponse);
+  });
+
   it("rejects an instant play without its authoritative reel results", async () => {
     const invalidResponse = {
       ...placePlayResponse,
@@ -516,7 +583,7 @@ describe("HttpBackofficeClient", () => {
       client.placeInstantPlay({
         gameId: "sapyaite",
         amount: 500,
-        selection: "PAR",
+        selection: "007",
       }),
     ).rejects.toMatchObject({ reason: "INVALID_PAYLOAD" });
   });

@@ -8,6 +8,16 @@ import {
 
 describe("server-side gaming schemas", () => {
   it("accepts canonical padded selections", () => {
+    for (const selection of ["000", "007", "999"]) {
+      expect(
+        instantPlayRequestSchema.parse({
+          gameId: "sapyaite",
+          amount: 500,
+          selection,
+        }),
+      ).toMatchObject({ gameId: "sapyaite", selection });
+    }
+
     expect(
       instantPlayRequestSchema.parse({
         gameId: "mokoi",
@@ -24,6 +34,18 @@ describe("server-side gaming schemas", () => {
         selection: { head: "007", redoblona: "00", position: 2 },
       }),
     ).toMatchObject({ gameId: "redoblona" });
+  });
+
+  it("rejects parity and malformed selections for exact Sapy’aite", () => {
+    for (const selection of ["PAR", "IMPAR", "00", "1000", "7A7"]) {
+      expect(() =>
+        instantPlayRequestSchema.parse({
+          gameId: "sapyaite",
+          amount: 500,
+          selection,
+        }),
+      ).toThrow();
+    }
   });
 
   it("rejects 000 and repeated multi-game numbers", () => {

@@ -27,14 +27,14 @@ const ticketFixture = {
   gameId: "sapyaite",
   gameName: "Sapy’aite",
   family: "INSTANT",
-  selection: "PAR",
+  selection: "007",
   drawId: null,
   amount: 500,
   currency: "PYG",
   status: "LOST",
   result: "497",
   resultNumbers: ["497"],
-  ruleResult: "ODD",
+  ruleResult: "497",
   prize: 0,
   issuedAt: "2026-08-25T12:00:00.000Z",
 };
@@ -116,7 +116,7 @@ describe("PreviewProductGateway", () => {
         family: "INSTANT",
         gameId: "sapyaite",
         gameName: "Sapy’aite",
-        selection: "PAR",
+        selection: "007",
         drawId: null,
         amount: 500,
         currency: "PYG",
@@ -124,7 +124,7 @@ describe("PreviewProductGateway", () => {
         status: "LOST",
         result: "497",
         resultNumbers: ["497"],
-        ruleResult: "ODD",
+        ruleResult: "497",
         matches: null,
         payoutMultiplier: 0,
         createdAt: "2026-08-25T12:00:00.000Z",
@@ -136,14 +136,14 @@ describe("PreviewProductGateway", () => {
         gameId: "sapyaite",
         gameName: "Sapy’aite",
         family: "INSTANT",
-        selection: "PAR",
+        selection: "007",
         drawId: null,
         amount: 500,
         currency: "PYG",
         status: "LOST",
         result: "497",
         resultNumbers: ["497"],
-        ruleResult: "ODD",
+        ruleResult: "497",
         prize: 0,
         issuedAt: "2026-08-25T12:00:00.000Z",
       },
@@ -163,7 +163,7 @@ describe("PreviewProductGateway", () => {
       gateway.requestPlay(
         {
           kind: "instant",
-          input: { gameId: "sapyaite", amount: 500, selection: "PAR" },
+          input: { gameId: "sapyaite", amount: 500, selection: "007" },
         },
         { idempotencyKey: "instant-key-001" },
       ),
@@ -175,7 +175,7 @@ describe("PreviewProductGateway", () => {
       "instant-key-001",
     );
     expect(init?.body).toBe(
-      JSON.stringify({ gameId: "sapyaite", amount: 500, selection: "PAR" }),
+      JSON.stringify({ gameId: "sapyaite", amount: 500, selection: "007" }),
     );
   });
 
@@ -287,7 +287,7 @@ describe("PreviewProductGateway", () => {
     });
     const command = {
       kind: "instant" as const,
-      input: { gameId: "sapyaite", amount: 500, selection: "PAR" },
+      input: { gameId: "sapyaite", amount: 500, selection: "007" },
     } as const;
 
     const timeoutAssertion = expect(
@@ -338,7 +338,7 @@ describe("PreviewProductGateway", () => {
     await expect(
       gateway.requestPlay({
         kind: "instant",
-        input: { gameId: "sapyaite", amount: 500, selection: "PAR" },
+        input: { gameId: "sapyaite", amount: 500, selection: "007" },
       }),
     ).rejects.toMatchObject({
       status: 200,

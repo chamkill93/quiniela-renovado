@@ -55,7 +55,7 @@ describe("mappers de vistas conectadas", () => {
     expect(games[0]).toMatchObject({
       id: "sapyaite",
       name: "Nombre entregado por API",
-      description: "Elegí par o impar.",
+      description: "Elegí las 3 cifras exactas.",
       baseAmount: 1_000,
       href: "/instantaneas/sapyaite",
       iconKey: "sapyaite",

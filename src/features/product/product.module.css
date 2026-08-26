@@ -722,8 +722,14 @@
 }
 
 .instantFormStack .numberInput {
+  width: min(100%, 210px);
   min-height: 40px;
   font-size: 1.25rem;
+  justify-self: center;
+}
+
+.instantFormStack .fieldHint {
+  text-align: center;
 }
 
 .instantFormStack .compactNumberInput {
@@ -1950,7 +1956,7 @@
   line-height: 1.45;
 }
 
-.rulePayoutBox[data-source="backoffice"] {
+.rulePayoutBox[data-source="official"] {
   border-color: color-mix(in srgb, #e1a62b 38%, var(--q-line));
   background: color-mix(in srgb, #e1a62b 7%, var(--q-panel));
 }
