@@ -3,6 +3,8 @@
 import { useProduct } from "@/providers/product-provider";
 
 import { CatalogGameCard } from "./catalog-game-card";
+import { DrawIcon } from "./draw-icon";
+import drawIconStyles from "./draw-icon.module.css";
 import {
   mapCatalogGames,
   mapPublishedResults,
@@ -63,7 +65,8 @@ export function CatalogPageClient({
             <RemoteEmptyState message="No hay juegos habilitados por el backoffice en este momento." />
           ) : (
             <div
-              className={styles.gameGrid}
+              className={`${styles.gameGrid} ${family === "traditional" ? styles.traditionalGameGrid : ""}`.trim()}
+              data-family={family}
               data-testid={isInstant ? "instant-games-grid" : "traditional-games-grid"}
             >
               {games.map((game, index) => (
@@ -105,6 +108,13 @@ export function HomeRemoteSections() {
   }
 
   const draws = mapPublishedResults(catalog, results, "DRAW", 4);
+  const drawIdsByResult = new Map(
+    results.flatMap((result) =>
+      result.source === "DRAW" && result.drawId
+        ? [[result.id, result.drawId] as const]
+        : [],
+    ),
+  );
   const instantGames = mapCatalogGames(catalog, "instant", 6);
 
   return (
@@ -125,7 +135,10 @@ export function HomeRemoteSections() {
           <div className={styles.drawGrid}>
             {draws.map((draw) => (
               <article className={styles.drawCard} data-tone={draw.tone} key={draw.id}>
-                <span>{draw.label}</span>
+                <div className={drawIconStyles.cardHeader}>
+                  <DrawIcon drawId={drawIdsByResult.get(draw.id) ?? ""} label={draw.label} />
+                  <span>{draw.label}</span>
+                </div>
                 <strong>{draw.result}</strong>
                 <div className={styles.drawMeta}>
                   <span>{formatPublishedAt(draw.occurredAt)}</span>

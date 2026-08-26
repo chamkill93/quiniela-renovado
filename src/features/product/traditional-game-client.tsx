@@ -12,6 +12,8 @@ import {
 } from "@/lib/product/catalog";
 import { useProduct } from "@/providers/product-provider";
 import { AmountChip } from "./amount-chip";
+import { DrawIcon } from "./draw-icon";
+import drawIconStyles from "./draw-icon.module.css";
 import { useSoundEffects } from "./use-sound-effects";
 import styles from "./product.module.css";
 
@@ -109,6 +111,7 @@ export function TraditionalGameClient({ game }: { game: ProductGame<TraditionalG
   const effectiveDrawId = availableDraws.some((draw) => draw.id === drawId)
     ? drawId
     : (availableDraws[0]?.id ?? "");
+  const selectedDraw = availableDraws.find((draw) => draw.id === effectiveDrawId);
 
   const update = (key: string, value: unknown) => setSelection((current) => ({ ...current, [key]: value }));
 
@@ -158,9 +161,14 @@ export function TraditionalGameClient({ game }: { game: ProductGame<TraditionalG
 
             <div className={styles.fieldGroup}>
               <label htmlFor="draw">Sorteo</label>
-              <select className={styles.select} id="draw" onChange={(event) => setDrawId(event.target.value)} value={effectiveDrawId}>
-                {availableDraws.map((draw) => <option key={draw.id} value={draw.id}>{draw.label} · {formatDrawAt(draw.drawsAt)}</option>)}
-              </select>
+              <div className={drawIconStyles.selectWithIcon}>
+                <select className={styles.select} id="draw" onChange={(event) => setDrawId(event.target.value)} value={effectiveDrawId}>
+                  {availableDraws.map((draw) => <option key={draw.id} value={draw.id}>{draw.label} · {formatDrawAt(draw.drawsAt)}</option>)}
+                </select>
+                {selectedDraw ? (
+                  <DrawIcon drawId={selectedDraw.id} label={selectedDraw.label} size="sm" />
+                ) : null}
+              </div>
             </div>
 
             <div className={styles.fieldGroup}>
@@ -191,7 +199,7 @@ export function TraditionalGameClient({ game }: { game: ProductGame<TraditionalG
           <p className={styles.eyebrow}>Resumen</p>
           <dl className={styles.summaryList}>
             <div className={styles.summaryRow}><dt>Juego</dt><dd>{remoteGame?.name ?? "—"}</dd></div>
-            <div className={styles.summaryRow}><dt>Sorteo</dt><dd>{availableDraws.find((draw) => draw.id === effectiveDrawId)?.label ?? "—"}</dd></div>
+            <div className={styles.summaryRow}><dt>Sorteo</dt><dd>{selectedDraw?.label ?? "—"}</dd></div>
             <div className={styles.summaryRow}><dt>Selección</dt><dd>{summarizeSelection(selection)}</dd></div>
             <div className={styles.summaryRow}><dt>Importe</dt><dd>{formatGs(effectiveAmount)}</dd></div>
           </dl>

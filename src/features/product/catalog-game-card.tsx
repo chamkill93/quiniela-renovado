@@ -22,7 +22,7 @@ export function CatalogGameCard({
       href={game.href}
     >
       <span aria-hidden="true" className={styles.gameVisual}>
-        <GameIcon className={styles.gameEmblem} gameId={game.iconKey} />
+        <GameIcon className={styles.gameEmblem} gameId={game.id} />
       </span>
       <span className={styles.gameCardEyebrow}>{game.eyebrow}</span>
       <strong>{game.name}</strong>

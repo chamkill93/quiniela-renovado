@@ -1,5 +1,34 @@
+import type { CSSProperties } from "react";
+
 import { formatGs } from "@/lib/product/catalog";
-import styles from "./product.module.css";
+import chipStyles from "./amount-chip.module.css";
+import productStyles from "./product.module.css";
+
+const AMOUNT_CHIP_ASSET_SLUGS = {
+  500: "500",
+  1_000: "1k",
+  2_000: "2k",
+  5_000: "5k",
+  10_000: "10k",
+  50_000: "50k",
+} as const satisfies Record<number, string>;
+
+interface AmountChipAssetStyle extends CSSProperties {
+  "--quinie-amount-chip-dark": string;
+  "--quinie-amount-chip-light": string;
+}
+
+export function getAmountChipAssetSet(value: number) {
+  const slug = AMOUNT_CHIP_ASSET_SLUGS[value as keyof typeof AMOUNT_CHIP_ASSET_SLUGS];
+  if (!slug) return null;
+
+  const basePath = "/assets/quinie-icons-v2/chips";
+  return {
+    slug,
+    dark: `${basePath}/dark/${slug}.webp`,
+    light: `${basePath}/light/${slug}.webp`,
+  } as const;
+}
 
 export function AmountChip({
   value,
@@ -10,19 +39,36 @@ export function AmountChip({
   selected: boolean;
   onSelect: (value: number) => void;
 }) {
+  const assets = getAmountChipAssetSet(value);
+  const assetStyle: AmountChipAssetStyle | undefined = assets
+    ? {
+        "--quinie-amount-chip-dark": `url("${assets.dark}")`,
+        "--quinie-amount-chip-light": `url("${assets.light}")`,
+      }
+    : undefined;
+
   return (
     <button
       aria-label={formatGs(value)}
       aria-pressed={selected}
-      className={styles.amountChip}
+      className={`${productStyles.amountChip} ${chipStyles.amountChip}`}
+      data-amount-chip-asset={assets?.slug}
       data-selected={selected}
       data-tone={amountTone(value)}
       onClick={() => onSelect(value)}
       type="button"
     >
-      <span className={styles.amountChipFace} aria-hidden="true">
-        <span>{compactAmount(value)}</span>
-      </span>
+      {assets ? (
+        <span
+          aria-hidden="true"
+          className={`${productStyles.amountChipFace} ${chipStyles.assetFace}`}
+          style={assetStyle}
+        />
+      ) : (
+        <span aria-hidden="true" className={productStyles.amountChipFace}>
+          <span>{compactAmount(value)}</span>
+        </span>
+      )}
     </button>
   );
 }

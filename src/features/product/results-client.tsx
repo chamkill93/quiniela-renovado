@@ -3,6 +3,8 @@
 import { useProduct } from "@/providers/product-provider";
 
 import { mapPublishedResults } from "./product-view-mappers";
+import { DrawIcon } from "./draw-icon";
+import drawIconStyles from "./draw-icon.module.css";
 import {
   RemoteEmptyState,
   RemoteErrorState,
@@ -30,6 +32,13 @@ export function ResultsClient() {
   const drawResults = catalog
     ? mapPublishedResults(catalog, results, "DRAW")
     : [];
+  const drawIdsByResult = new Map(
+    results.flatMap((result) =>
+      result.source === "DRAW" && result.drawId
+        ? [[result.id, result.drawId] as const]
+        : [],
+    ),
+  );
   const instantResults = catalog
     ? mapPublishedResults(catalog, results, "INSTANT")
     : [];
@@ -69,7 +78,10 @@ export function ResultsClient() {
               <div className={styles.drawGrid}>
                 {drawResults.map((result) => (
                   <article className={styles.drawCard} data-tone={result.tone} key={result.id}>
-                    <span>{result.label}</span>
+                    <div className={drawIconStyles.cardHeader}>
+                      <DrawIcon drawId={drawIdsByResult.get(result.id) ?? ""} label={result.label} />
+                      <span>{result.label}</span>
+                    </div>
                     <strong>{result.result}</strong>
                     <div className={styles.drawMeta}>
                       <span>{formatOccurredAt(result.occurredAt)}</span>

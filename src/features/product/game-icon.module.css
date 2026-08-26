@@ -1,0 +1,37 @@
+.icon {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: block;
+  aspect-ratio: 1;
+  border-radius: var(--q-r-lg);
+  background-image: var(--quinie-game-icon-dark);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+/* Keep the alternate theme asset warm so a user-triggered theme change never
+   exposes an empty frame while the second WEBP is fetched. */
+.icon::before,
+.icon::after {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  content: "";
+}
+
+.icon::before {
+  background-image: var(--quinie-game-icon-dark);
+}
+
+.icon::after {
+  background-image: var(--quinie-game-icon-light);
+}
+
+:global([data-theme="light"]) .icon {
+  background-image: var(--quinie-game-icon-light);
+}

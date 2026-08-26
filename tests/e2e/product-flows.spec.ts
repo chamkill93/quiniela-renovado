@@ -16,6 +16,7 @@ import { buildGamingCatalog } from "@/lib/gaming";
 import {
   activeNavigation,
   E2E_SELECTORS,
+  expectNoHorizontalOverflow,
   installThemePreference,
   themeFromProjectName,
 } from "../helpers/e2e-contract";
@@ -173,6 +174,76 @@ test("shows only four traditional games and retires the former direct routes", a
     const response = await page.goto(path, { waitUntil: "domcontentloaded" });
     expect(response?.status(), `${path} should be retired`).toBe(404);
   }
+});
+
+test("uses the approved 3D icon theme and responsive catalog grid", async ({
+  page,
+}, testInfo) => {
+  const initialTheme = themeFromProjectName(testInfo.project.name);
+  const nextTheme = initialTheme === "dark" ? "light" : "dark";
+
+  await page.goto("/instantaneas", { waitUntil: "domcontentloaded" });
+  const grid = page.getByTestId(E2E_SELECTORS.instantGamesGrid);
+  const icons = grid.locator("[data-game-icon]");
+  await expect(icons).toHaveCount(9);
+  await expect(icons.first()).toHaveAttribute("data-game-icon", "sapyaite");
+  await expect(icons.first()).toHaveAttribute("data-game-icon-family", "instant");
+  await expect(icons.first()).toHaveAttribute("data-game-icon-slug", "sapyaite");
+
+  const expectedInitialPath = `/assets/quinie-icons-v2/games/instant/${initialTheme}/sapyaite.webp`;
+  await expect
+    .poll(() => icons.first().evaluate((element) => getComputedStyle(element).backgroundImage))
+    .toContain(expectedInitialPath);
+
+  const columnCount = await grid.evaluate((element) =>
+    getComputedStyle(element).gridTemplateColumns.split(" ").filter(Boolean).length,
+  );
+  expect(columnCount).toBe((page.viewportSize()?.width ?? 0) >= 768 ? 3 : 2);
+  await expectNoHorizontalOverflow(page);
+
+  await page.getByTestId(E2E_SELECTORS.themeToggle).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", nextTheme);
+  const expectedNextPath = `/assets/quinie-icons-v2/games/instant/${nextTheme}/sapyaite.webp`;
+  await expect
+    .poll(() => icons.first().evaluate((element) => getComputedStyle(element).backgroundImage))
+    .toContain(expectedNextPath);
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.locator("html")).toHaveAttribute("data-theme", nextTheme);
+  await expect
+    .poll(() =>
+      page
+        .getByTestId(E2E_SELECTORS.instantGamesGrid)
+        .locator('[data-game-icon="sapyaite"]')
+        .evaluate((element) => getComputedStyle(element).backgroundImage),
+    )
+    .toContain(expectedNextPath);
+
+  await page.goto("/instantaneas/sapyaite", { waitUntil: "domcontentloaded" });
+  const amountChip = page.locator('[data-amount-chip-asset="500"] span');
+  await expect
+    .poll(() => amountChip.evaluate((element) => getComputedStyle(element).backgroundImage))
+    .toContain(`/assets/quinie-icons-v2/chips/${nextTheme}/500.webp`);
+
+  await page.goto("/quinielas/head", { waitUntil: "domcontentloaded" });
+  const drawIcon = page.locator('[data-draw-icon="early"]');
+  const activePseudoElement = nextTheme === "dark" ? "::before" : "::after";
+  await expect
+    .poll(() =>
+      drawIcon.evaluate(
+        (element, pseudoElement) => getComputedStyle(element, pseudoElement).backgroundImage,
+        activePseudoElement,
+      ),
+    )
+    .toContain(`/assets/quinie-icons-v2/draws/${nextTheme}/tempranero.webp`);
+  await expect
+    .poll(() =>
+      drawIcon.evaluate(
+        (element, pseudoElement) => getComputedStyle(element, pseudoElement).opacity,
+        activePseudoElement,
+      ),
+    )
+    .toBe("1");
 });
 
 test("accepts all six traditional games and exposes server-backed balance and Mis Jugadas", async ({

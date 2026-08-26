@@ -1,0 +1,84 @@
+.icon {
+  position: relative;
+  isolation: isolate;
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 4.25rem;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 50%;
+}
+
+.icon[data-size="sm"] {
+  width: 3.25rem;
+}
+
+.icon[data-size="lg"] {
+  width: 5.25rem;
+}
+
+.icon::before,
+.icon::after {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  content: "";
+  pointer-events: none;
+}
+
+.icon::before {
+  background-image: var(--quinie-draw-icon-dark);
+  opacity: 1;
+}
+
+.icon::after {
+  background-image: var(--quinie-draw-icon-light);
+  opacity: 0;
+}
+
+:global([data-theme="light"]) .icon::before {
+  opacity: 0;
+}
+
+:global([data-theme="light"]) .icon::after {
+  opacity: 1;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.cardHeader > :last-child {
+  min-width: 0;
+  text-align: right;
+}
+
+.cardHeader > :only-child {
+  text-align: left;
+}
+
+.selectWithIcon {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+@media (max-width: 520px) {
+  .icon {
+    width: 3.6rem;
+  }
+
+  .icon[data-size="sm"] {
+    width: 2.85rem;
+  }
+
+  .icon[data-size="lg"] {
+    width: 4.25rem;
+  }
+}

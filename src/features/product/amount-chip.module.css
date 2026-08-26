@@ -1,0 +1,40 @@
+.amountChip {
+  cursor: pointer;
+}
+
+.amountChip .assetFace {
+  overflow: hidden;
+  border-color: transparent;
+  background: var(--quinie-amount-chip-dark) center / cover no-repeat;
+  box-shadow: none;
+}
+
+.amountChip .assetFace::before,
+.amountChip .assetFace::after {
+  position: absolute;
+  z-index: -1;
+  inset: auto;
+  width: 1px;
+  height: 1px;
+  display: block;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  opacity: 0;
+  pointer-events: none;
+  content: "";
+}
+
+.amountChip .assetFace::before {
+  background-image: var(--quinie-amount-chip-dark);
+}
+
+.amountChip .assetFace::after {
+  background-image: var(--quinie-amount-chip-light);
+}
+
+:global([data-theme="light"]) .amountChip .assetFace {
+  background-image: var(--quinie-amount-chip-light);
+}
