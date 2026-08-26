@@ -2,9 +2,7 @@ export type TraditionalGameId =
   | "head"
   | "prizes"
   | "invert"
-  | "redoblona"
-  | "sapyaite-traditional"
-  | "megaloto";
+  | "redoblona";
 
 export type InstantGameId =
   | "sapyaite"
@@ -68,26 +66,6 @@ export const TRADITIONAL_GAMES: ProductGame<TraditionalGameId>[] = [
     art: "/assets/game-art/redoblona.webp",
     tone: "red",
     basePrice: 1_000,
-  },
-  {
-    id: "sapyaite-traditional",
-    name: "Sapy’aite",
-    eyebrow: "Quiniela rápida",
-    description: "La forma directa de ingresar una selección tradicional de tres cifras.",
-    icon: "/assets/icons/game/bolt.svg",
-    art: "/assets/game-art/bolt.webp",
-    tone: "purple",
-    basePrice: 500,
-  },
-  {
-    id: "megaloto",
-    name: "Megaloto",
-    eyebrow: "6 del 1 al 45",
-    description: "Armá una combinación única de seis números, manual o al azar.",
-    icon: "/assets/icons/game/mega.svg",
-    art: "/assets/game-art/mega.webp",
-    tone: "blue",
-    basePrice: 10_000,
   },
 ];
 

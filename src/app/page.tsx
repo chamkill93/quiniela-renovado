@@ -8,7 +8,7 @@ const QUICK_LINKS = [
   {
     href: "/quinielas",
     label: "Quiniela tradicional",
-    description: "Seis formas de jugar tus números.",
+    description: "Cuatro formas de jugar tus números.",
     gameId: "head",
   },
   {

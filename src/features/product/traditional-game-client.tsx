@@ -31,7 +31,6 @@ function formatDrawAt(value: string) {
 
 function initialSelection(gameId: TraditionalGameId): Record<string, unknown> {
   if (gameId === "redoblona") return { head: "001", redoblona: "01", position: 2 };
-  if (gameId === "megaloto") return { numbers: [1, 2, 3, 4, 5, 6] };
   if (gameId === "prizes" || gameId === "invert") return { number: "001", position: 2 };
   return { number: "001", position: 1 };
 }
@@ -52,17 +51,6 @@ function buildTraditionalPlayInput(
         redoblona: String(selection.redoblona ?? ""),
         position: Number(selection.position ?? 2),
       },
-    };
-  }
-  if (gameId === "megaloto") {
-    const numbers = Array.isArray(selection.numbers)
-      ? selection.numbers.map(Number)
-      : [];
-    return {
-      gameId,
-      amount,
-      drawId,
-      selection: { numbers, modality: "MEGA_FULL" },
     };
   }
   if (gameId === "prizes" || gameId === "invert") {
@@ -125,12 +113,6 @@ export function TraditionalGameClient({ game }: { game: ProductGame<TraditionalG
   const update = (key: string, value: unknown) => setSelection((current) => ({ ...current, [key]: value }));
 
   const randomize = () => {
-    if (game.id === "megaloto") {
-      const numbers = new Set<number>();
-      while (numbers.size < 6) numbers.add(secureRandom(1, 45));
-      setSelection({ numbers: [...numbers].sort((a, b) => a - b) });
-      return;
-    }
     if (game.id === "redoblona") {
       setSelection({ head: padNumber(secureRandom(1, 999)), redoblona: padNumber(secureRandom(0, 99), 2), position: selection.position ?? 2 });
       return;
@@ -232,36 +214,6 @@ function TraditionalSelection({
   update: (key: string, value: unknown) => void;
 }) {
   const contract = definition.selection;
-  if (gameId === "megaloto") {
-    const numbers = selection.numbers as number[];
-    const maxCount = contract.kind === "MEGALOTO" ? contract.count : 6;
-    const toggle = (number: number) => {
-      if (numbers.includes(number)) update("numbers", numbers.filter((value) => value !== number));
-      else if (numbers.length < maxCount) update("numbers", [...numbers, number].sort((a, b) => a - b));
-    };
-    return (
-      <div className={styles.fieldGroup}>
-        <span className={styles.fieldLabel}>Elegí {contract.kind === "MEGALOTO" ? contract.count : 6} números del {contract.kind === "MEGALOTO" ? contract.min : 1} al {contract.kind === "MEGALOTO" ? contract.max : 45}</span>
-        <div className={styles.chipGrid}>
-          {Array.from({ length: contract.kind === "MEGALOTO" ? contract.max : 45 }, (_, index) => index + 1).map((number) => (
-            <button
-              aria-pressed={numbers.includes(number)}
-              className={styles.chip}
-              data-selected={numbers.includes(number)}
-              key={number}
-              onClick={() => toggle(number)}
-              style={{ minWidth: 48, padding: 0 }}
-              type="button"
-            >
-              {number}
-            </button>
-          ))}
-        </div>
-        <p className={styles.fieldHint}>{numbers.length}/{contract.kind === "MEGALOTO" ? contract.count : 6} seleccionados.</p>
-      </div>
-    );
-  }
-
   if (gameId === "redoblona") {
     return (
       <>

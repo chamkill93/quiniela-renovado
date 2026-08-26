@@ -6,8 +6,6 @@ const RULES = [
   { title: "A los Premios", copy: "Elegí un número de 001 a 999 y una cobertura desde la posición 2 hasta la 14." },
   { title: "Invertida", copy: "Ingresá tres cifras y visualizalas por posición. La postura se configura entre las posiciones habilitadas." },
   { title: "Redoblona", copy: "Combiná un número de cabeza de tres cifras con una terminación de dos cifras y su posición." },
-  { title: "Sapy’aite tradicional", copy: "Una jugada rápida de Quiniela tradicional con un número de tres cifras." },
-  { title: "Megaloto", copy: "Seleccioná seis números únicos del 1 al 45, manualmente o mediante selección aleatoria." },
 ] as const;
 
 const INSTANT_RULES = [

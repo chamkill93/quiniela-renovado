@@ -139,6 +139,42 @@ test.beforeEach(async ({ page }, testInfo) => {
   );
 });
 
+test("shows only four traditional games and retires the former direct routes", async ({
+  page,
+}) => {
+  await page.goto("/quinielas", { waitUntil: "domcontentloaded" });
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Elegí cómo querés jugar" }),
+  ).toBeVisible();
+
+  const grid = page.getByTestId(E2E_SELECTORS.traditionalGamesGrid);
+  const cards = grid.getByTestId(E2E_SELECTORS.traditionalGameCard);
+  await expect(cards).toHaveCount(4);
+  await expect(grid.getByText("A la Cabeza", { exact: true })).toBeVisible();
+  await expect(grid.getByText("A los Premios", { exact: true })).toBeVisible();
+  await expect(grid.getByText("Invertida", { exact: true })).toBeVisible();
+  await expect(grid.getByText("Redoblona", { exact: true })).toBeVisible();
+  await expect(grid.getByText("Sapy’aite", { exact: true })).toHaveCount(0);
+  await expect(grid.getByText("Megaloto", { exact: true })).toHaveCount(0);
+
+  await page.goto("/instantaneas", { waitUntil: "domcontentloaded" });
+  const instantGrid = page.getByTestId(E2E_SELECTORS.instantGamesGrid);
+  await expect(instantGrid.getByText("Sapy’aite", { exact: true })).toBeVisible();
+
+  await page.goto("/reglas", { waitUntil: "domcontentloaded" });
+  await expect(page.getByText("Sapy’aite tradicional", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Megaloto", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Sapy’aite: par o impar.", { exact: true })).toBeVisible();
+
+  for (const path of [
+    "/quinielas/sapyaite-traditional",
+    "/quinielas/megaloto",
+  ]) {
+    const response = await page.goto(path, { waitUntil: "domcontentloaded" });
+    expect(response?.status(), `${path} should be retired`).toBe(404);
+  }
+});
+
 test("accepts all six traditional games and exposes server-backed balance and Mis Jugadas", async ({
   page,
 }) => {

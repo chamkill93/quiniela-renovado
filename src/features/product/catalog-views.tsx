@@ -1,11 +1,8 @@
 "use client";
 
-import Link from "next/link";
-
 import { useProduct } from "@/providers/product-provider";
 
 import { CatalogGameCard } from "./catalog-game-card";
-import { GameIcon } from "./game-icon";
 import {
   mapCatalogGames,
   mapPublishedResults,
@@ -67,14 +64,14 @@ export function CatalogPageClient({
           ) : (
             <div
               className={styles.gameGrid}
-              data-testid={isInstant ? "instant-games-grid" : undefined}
+              data-testid={isInstant ? "instant-games-grid" : "traditional-games-grid"}
             >
               {games.map((game, index) => (
                 <CatalogGameCard
                   eager={index < 3}
                   game={game}
                   key={game.id}
-                  testId={isInstant ? "instant-game-card" : undefined}
+                  testId={isInstant ? "instant-game-card" : "traditional-game-card"}
                 />
               ))}
             </div>
@@ -109,9 +106,6 @@ export function HomeRemoteSections() {
 
   const draws = mapPublishedResults(catalog, results, "DRAW", 4);
   const instantGames = mapCatalogGames(catalog, "instant", 6);
-  const megaloto = mapCatalogGames(catalog, "traditional").find(
-    (game) => game.id === "megaloto",
-  );
 
   return (
     <>
@@ -163,17 +157,6 @@ export function HomeRemoteSections() {
         )}
       </section>
 
-      {megaloto ? (
-        <section aria-labelledby="mega-title" className={styles.megaBanner}>
-          <div>
-            <p className={styles.eyebrow}>{megaloto.eyebrow}</p>
-            <h2 id="mega-title">{megaloto.name}</h2>
-            <p>{megaloto.description}</p>
-            <Link className={styles.primaryButton} href={megaloto.href}>Elegir números</Link>
-          </div>
-          <GameIcon className={styles.megaBannerIcon} gameId={megaloto.iconKey} />
-        </section>
-      ) : null}
     </>
   );
 }

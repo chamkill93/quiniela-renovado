@@ -39,6 +39,12 @@ const DEFAULT_VISUAL: GameVisualMetadata = {
 };
 
 const LEGACY_ICON_KEYS = new Set(["bolt", "prize", "mega", "one", "two", "three"]);
+const VISIBLE_TRADITIONAL_GAME_IDS = new Set([
+  "head",
+  "prizes",
+  "invert",
+  "redoblona",
+]);
 
 /** Presentation-only metadata. Names, rules, prices and results never live here. */
 export const GAME_VISUALS: Readonly<Record<string, GameVisualMetadata>> = {
@@ -90,7 +96,9 @@ export function mapCatalogGames(
   limit?: number,
 ): CatalogGameView[] {
   const amount = minimumAmount(catalog.amounts);
-  const games = catalog[family];
+  const games = family === "traditional"
+    ? catalog.traditional.filter((game) => VISIBLE_TRADITIONAL_GAME_IDS.has(game.id))
+    : catalog.instant;
   return games.slice(0, normalizeLimit(limit, games.length)).map((game) => {
     const visual = GAME_VISUALS[game.id] ?? DEFAULT_VISUAL;
     return {

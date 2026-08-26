@@ -6,7 +6,7 @@ export default function TraditionalCatalogPage() {
       description="Las modalidades, reglas visibles y disponibilidad son informadas por el backoffice."
       eyebrow="Quiniela tradicional"
       family="traditional"
-      limit={6}
+      limit={4}
       title="Elegí cómo querés jugar"
     />
   );

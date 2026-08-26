@@ -27,7 +27,7 @@ export function HeroVisual() {
 
         <div className={styles.lowerRow}>
           <div className={styles.gameIcons}>
-            {(["head", "megaloto", "pyae"] as const).map((gameId) => (
+            {(["head", "redoblona", "pyae"] as const).map((gameId) => (
               <span className={styles.gameIcon} key={gameId}>
                 <GameIcon gameId={gameId} />
               </span>

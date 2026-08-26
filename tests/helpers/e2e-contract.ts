@@ -7,6 +7,8 @@ export const E2E_SELECTORS = {
   soundToggle: "sound-toggle",
   instantGamesGrid: "instant-games-grid",
   instantGameCard: "instant-game-card",
+  traditionalGamesGrid: "traditional-games-grid",
+  traditionalGameCard: "traditional-game-card",
 } as const;
 
 export const THEME_STORAGE_KEY = "quinie_theme";

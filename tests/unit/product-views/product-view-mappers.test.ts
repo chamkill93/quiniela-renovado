@@ -8,6 +8,11 @@ import {
 import { buildGamingCatalog } from "@/lib/gaming/catalog";
 import type { GamingCatalog } from "@/lib/gaming/types";
 import type { MockResult } from "@/lib/product/api-types";
+import {
+  TRADITIONAL_GAMES,
+  getInstantGame,
+  getTraditionalGame,
+} from "@/lib/product/catalog";
 
 function remoteCatalog(): GamingCatalog {
   const catalog = buildGamingCatalog("REFUND", new Date("2026-08-25T12:00:00Z"));
@@ -30,6 +35,18 @@ function remoteCatalog(): GamingCatalog {
 }
 
 describe("mappers de vistas conectadas", () => {
+  it("publica cuatro rutas tradicionales y conserva Sapy’aite como instantánea", () => {
+    expect(TRADITIONAL_GAMES.map((game) => game.id)).toEqual([
+      "head",
+      "prizes",
+      "invert",
+      "redoblona",
+    ]);
+    expect(getTraditionalGame("sapyaite-traditional")).toBeUndefined();
+    expect(getTraditionalGame("megaloto")).toBeUndefined();
+    expect(getInstantGame("sapyaite")?.name).toBe("Sapy’aite");
+  });
+
   it("usa contenido y montos remotos, conservando solo presentación local", () => {
     const games = mapCatalogGames(remoteCatalog(), "instant", 6);
 
@@ -50,7 +67,12 @@ describe("mappers de vistas conectadas", () => {
 
     expect(mapCatalogGames(catalog, "instant", 6)).toHaveLength(6);
     expect(mapCatalogGames(catalog, "instant", 9)).toHaveLength(9);
-    expect(mapCatalogGames(catalog, "traditional", 6)).toHaveLength(6);
+    expect(mapCatalogGames(catalog, "traditional", 6).map((game) => game.id)).toEqual([
+      "head",
+      "prizes",
+      "invert",
+      "redoblona",
+    ]);
     expect(
       mapCatalogGames({ ...catalog, instant: catalog.instant.slice(0, 2) }, "instant", 9),
     ).toHaveLength(2);
