@@ -1,9 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildGamingCatalog } from "@/lib/gaming";
 import {
   createPreviewProductGateway,
+  DEFAULT_PREVIEW_PRODUCT_TIMEOUT_MS,
   isProductGatewayUnauthorizedError,
   ProductGatewayHttpError,
+  type ProductGatewayFetch,
 } from "@/lib/product/gateway";
 
 function jsonResponse(body: unknown, status = 200) {
@@ -36,6 +38,10 @@ const ticketFixture = {
   prize: 0,
   issuedAt: "2026-08-25T12:00:00.000Z",
 };
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe("PreviewProductGateway", () => {
   it("adapts the existing preview routes behind product operations", async () => {
@@ -240,6 +246,88 @@ describe("PreviewProductGateway", () => {
       code: "GATEWAY_NETWORK_ERROR",
       message: "No se pudo conectar con el servicio de vista previa.",
     });
+  });
+
+  it("applies the 15 second bootstrap deadline even when fetch ignores AbortSignal", async () => {
+    vi.useFakeTimers();
+    let transportSignal: AbortSignal | null | undefined;
+    const fetchMock = vi.fn(
+      (_input: RequestInfo | URL, init?: RequestInit) => {
+        transportSignal = init?.signal;
+        return new Promise<Response>(() => undefined);
+      },
+    );
+    const gateway = createPreviewProductGateway({ fetch: fetchMock });
+
+    const assertion = expect(gateway.bootstrap()).rejects.toMatchObject({
+      name: "ProductGatewayHttpError",
+      status: 0,
+      code: "GATEWAY_TIMEOUT",
+      message: `El servicio de vista previa no respondió dentro de ${DEFAULT_PREVIEW_PRODUCT_TIMEOUT_MS} ms.`,
+    });
+
+    await vi.advanceTimersByTimeAsync(DEFAULT_PREVIEW_PRODUCT_TIMEOUT_MS - 1);
+    expect(transportSignal?.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    await assertion;
+    expect(transportSignal?.aborted).toBe(true);
+  });
+
+  it("times out a stuck mutation and leaves the gateway ready for the next request", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .fn<ProductGatewayFetch>()
+      .mockImplementationOnce(
+        () => new Promise<Response>(() => undefined),
+      )
+      .mockImplementationOnce(async () => jsonResponse({ results: [] }));
+    const gateway = createPreviewProductGateway({
+      fetch: fetchMock,
+      timeoutMs: 25,
+    });
+    const command = {
+      kind: "instant" as const,
+      input: { gameId: "sapyaite", amount: 500, selection: "PAR" },
+    } as const;
+
+    const timeoutAssertion = expect(
+      gateway.requestPlay(command),
+    ).rejects.toMatchObject({
+      status: 0,
+      code: "GATEWAY_TIMEOUT",
+    });
+    await vi.advanceTimersByTimeAsync(25);
+    await timeoutAssertion;
+
+    await expect(gateway.getResults()).resolves.toEqual([]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("composes caller cancellation and settles even when fetch ignores it", async () => {
+    let transportSignal: AbortSignal | null | undefined;
+    let transportStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      transportStarted = resolve;
+    });
+    const fetchMock = vi.fn(
+      (_input: RequestInfo | URL, init?: RequestInit) => {
+        transportSignal = init?.signal;
+        transportStarted();
+        return new Promise<Response>(() => undefined);
+      },
+    );
+    const controller = new AbortController();
+    const gateway = createPreviewProductGateway({ fetch: fetchMock });
+
+    const pending = gateway.bootstrap({ signal: controller.signal });
+    await started;
+    controller.abort(new DOMException("User navigated", "AbortError"));
+
+    await expect(pending).rejects.toMatchObject({
+      name: "AbortError",
+      message: "User navigated",
+    });
+    expect(transportSignal?.aborted).toBe(true);
   });
 
   it("rejects a successful HTTP response that violates the shared contract", async () => {

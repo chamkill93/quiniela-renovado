@@ -50,6 +50,7 @@ export type {
 } from "./fixture";
 export {
   createPreviewProductGateway,
+  DEFAULT_PREVIEW_PRODUCT_TIMEOUT_MS,
   PREVIEW_PRODUCT_ENDPOINTS,
   PreviewProductGateway,
 } from "./preview";

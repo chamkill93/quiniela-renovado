@@ -8,15 +8,30 @@ import styles from "./product.module.css";
 export type ReelVariant = "classic" | "light" | "neon" | "gold";
 
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+const CONTINUOUS_REEL_INTERVAL_MS = 420;
 
 function subscribeToReducedMotion(onChange: () => void) {
   const query = window.matchMedia(REDUCED_MOTION_QUERY);
-  query.addEventListener("change", onChange);
-  return () => query.removeEventListener("change", onChange);
+  if (typeof query.addEventListener === "function") {
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
+  }
+
+  query.addListener(onChange);
+  return () => query.removeListener(onChange);
 }
 
 function readReducedMotion() {
   return window.matchMedia(REDUCED_MOTION_QUERY).matches;
+}
+
+function subscribeToPageVisibility(onChange: () => void) {
+  document.addEventListener("visibilitychange", onChange);
+  return () => document.removeEventListener("visibilitychange", onChange);
+}
+
+function readPageVisibility() {
+  return document.visibilityState !== "hidden";
 }
 
 export function NumericReels({
@@ -42,15 +57,21 @@ export function NumericReels({
     readReducedMotion,
     () => false,
   );
+  const pageVisible = useSyncExternalStore(
+    subscribeToPageVisibility,
+    readPageVisibility,
+    () => true,
+  );
   const normalized = useMemo(() => results.map((number) => padNumber(number)), [results]);
   const allStopped = !continuous && normalized.length > 0 && stopped === normalized.length;
   const reelColumns = normalized.length === 1 ? 1 : Math.min(normalized.length, 5);
+  const continuousMotionActive = continuous && pageVisible && !reducedMotion;
 
   useEffect(() => {
     if (normalized.length === 0) return;
 
     if (continuous) {
-      if (reducedMotion) {
+      if (!continuousMotionActive) {
         playSound("reelTick", "stop");
         return;
       }
@@ -60,12 +81,11 @@ export function NumericReels({
       const ticker = window.setInterval(() => {
         motionTicks += 1;
         setTick((value) => value + 1);
-        // The preview keeps moving, but only plays a short, subtle mechanical
-        // introduction instead of an endless audio loop.
-        if (motionTicks <= 12 && motionTicks % 3 === 0) {
-          playSound("reelTick");
-        }
-      }, 170);
+        playSound("reelTick");
+        // CSS keeps the preview moving. React only changes the digits during
+        // this short introduction so the page can return to an idle state.
+        if (motionTicks >= 4) window.clearInterval(ticker);
+      }, CONTINUOUS_REEL_INTERVAL_MS);
       return () => {
         window.clearInterval(ticker);
         playSound("reelTick", "stop");
@@ -99,7 +119,7 @@ export function NumericReels({
       timers.forEach((timer) => window.clearTimeout(timer));
       playSound("reelTick", "stop");
     };
-  }, [continuous, normalized, onComplete, playSound, reducedMotion]);
+  }, [continuous, continuousMotionActive, normalized, onComplete, playSound, reducedMotion]);
 
   const reelStateLabel = continuous
     ? "Rodillo activo · girando"
@@ -116,6 +136,7 @@ export function NumericReels({
       data-state={visualState}
       data-variant={variant}
       data-continuous={continuous}
+      data-motion-active={continuous ? continuousMotionActive : true}
     >
       <span aria-hidden="true" className={styles.reelStateLabel}>
         {reelStateLabel}

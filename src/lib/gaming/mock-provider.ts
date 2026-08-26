@@ -35,6 +35,7 @@ interface StoredIdempotency {
 }
 
 interface InternalSession extends MockSessionView {
+  lastAccessedAtMs: number;
   plays: GamingPlay[];
   tickets: Map<string, GamingTicket>;
   results: GamingResult[];
@@ -49,6 +50,8 @@ export interface MockGamingProviderOptions {
   now?: () => Date;
   idFactory?: () => string;
   enabledInstantGameIds?: readonly InstantGameId[];
+  sessionTtlMs?: number;
+  maxSessions?: number;
 }
 
 export interface CreateSessionInput {
@@ -61,6 +64,23 @@ export interface MockBootstrap {
   catalog: GamingCatalog;
   plays: readonly GamingPlay[];
   results: readonly GamingResult[];
+}
+
+export const MOCK_SESSION_TTL_SECONDS = 60 * 60 * 8;
+export const DEFAULT_MAX_MOCK_SESSIONS = 500;
+
+const MOCK_SESSION_TTL_MS = MOCK_SESSION_TTL_SECONDS * 1_000;
+
+function positiveIntegerOption(
+  value: number | undefined,
+  fallback: number,
+  name: string,
+): number {
+  const resolved = value ?? fallback;
+  if (!Number.isSafeInteger(resolved) || resolved <= 0) {
+    throw new RangeError(`${name} debe ser un entero positivo.`);
+  }
+  return resolved;
 }
 
 function clone<T>(value: T): T {
@@ -102,6 +122,8 @@ export class MockGamingProvider {
   private readonly idFactory: () => string;
   private readonly catalog: GamingCatalog;
   private readonly drawResults: readonly GamingResult[];
+  private readonly sessionTtlMs: number;
+  private readonly maxSessions: number;
 
   constructor(options: MockGamingProviderOptions = {}) {
     this.startingBalance = options.startingBalance ?? 250_000;
@@ -109,6 +131,16 @@ export class MockGamingProvider {
     this.randomSource = options.randomSource ?? new ServerCryptoRandomSource();
     this.now = options.now ?? (() => new Date());
     this.idFactory = options.idFactory ?? randomUUID;
+    this.sessionTtlMs = positiveIntegerOption(
+      options.sessionTtlMs,
+      MOCK_SESSION_TTL_MS,
+      "sessionTtlMs",
+    );
+    this.maxSessions = positiveIntegerOption(
+      options.maxSessions,
+      DEFAULT_MAX_MOCK_SESSIONS,
+      "maxSessions",
+    );
     const initialNow = this.now();
     this.catalog = buildGamingCatalog(
       this.neutral500Policy,
@@ -119,6 +151,8 @@ export class MockGamingProvider {
   }
 
   createSession(input: CreateSessionInput = {}): MockSessionView {
+    const accessedAtMs = this.now().getTime();
+    this.deleteExpiredSessions(accessedAtMs);
     const id = this.idFactory();
     const session: InternalSession = {
       id,
@@ -126,6 +160,7 @@ export class MockGamingProvider {
       role: input.role ?? "PLAYER",
       balance: this.startingBalance,
       currency: CURRENCY,
+      lastAccessedAtMs: accessedAtMs,
       plays: [],
       tickets: new Map(),
       results: [],
@@ -133,6 +168,7 @@ export class MockGamingProvider {
       idempotency: new Map(),
     };
     this.sessions.set(id, session);
+    this.enforceSessionCapacity(id);
     return clone(publicSession(session));
   }
 
@@ -141,7 +177,8 @@ export class MockGamingProvider {
   }
 
   hasSession(sessionId: string | undefined): boolean {
-    return Boolean(sessionId && this.sessions.has(sessionId));
+    if (!sessionId) return false;
+    return Boolean(this.findLiveSession(sessionId));
   }
 
   getSession(sessionId: string): MockSessionView {
@@ -376,7 +413,7 @@ export class MockGamingProvider {
   }
 
   private requireSession(sessionId: string): InternalSession {
-    const session = this.sessions.get(sessionId);
+    const session = this.findLiveSession(sessionId);
     if (!session) {
       throw new GamingDomainError(
         "SESSION_NOT_FOUND",
@@ -384,6 +421,50 @@ export class MockGamingProvider {
       );
     }
     return session;
+  }
+
+  private findLiveSession(sessionId: string): InternalSession | undefined {
+    const session = this.sessions.get(sessionId);
+    if (!session) return undefined;
+
+    const accessedAtMs = this.now().getTime();
+    if (accessedAtMs - session.lastAccessedAtMs >= this.sessionTtlMs) {
+      this.sessions.delete(sessionId);
+      return undefined;
+    }
+
+    session.lastAccessedAtMs = accessedAtMs;
+    // Refresh Map insertion order as a deterministic LRU tie-breaker when
+    // several requests happen within the same millisecond.
+    this.sessions.delete(sessionId);
+    this.sessions.set(sessionId, session);
+    return session;
+  }
+
+  private deleteExpiredSessions(accessedAtMs: number): void {
+    for (const [sessionId, session] of this.sessions) {
+      if (accessedAtMs - session.lastAccessedAtMs >= this.sessionTtlMs) {
+        this.sessions.delete(sessionId);
+      }
+    }
+  }
+
+  private enforceSessionCapacity(preservedSessionId: string): void {
+    while (this.sessions.size > this.maxSessions) {
+      let leastRecentlyUsedId: string | undefined;
+      let leastRecentAccess = Number.POSITIVE_INFINITY;
+
+      for (const [sessionId, session] of this.sessions) {
+        if (sessionId === preservedSessionId) continue;
+        if (session.lastAccessedAtMs < leastRecentAccess) {
+          leastRecentlyUsedId = sessionId;
+          leastRecentAccess = session.lastAccessedAtMs;
+        }
+      }
+
+      if (!leastRecentlyUsedId) return;
+      this.sessions.delete(leastRecentlyUsedId);
+    }
   }
 
   private idempotent<T extends { replayed: boolean }>(

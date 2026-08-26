@@ -1138,3 +1138,55 @@ test("offers a safe retry when the preview transport is unavailable", async ({
   await expect(alert).toContainText("No se pudo conectar con el servicio de vista previa.");
   await expect(alert.getByRole("button", { name: "Reintentar" })).toBeVisible();
 });
+
+test("stays stable through repeated Home and instant-game navigation", async ({ page }) => {
+  const clientErrors: string[] = [];
+  let bootstrapRequests = 0;
+
+  page.on("pageerror", (error) =>
+    clientErrors.push(`pageerror: ${error.stack ?? error.message}`),
+  );
+  page.on("console", (message) => {
+    if (message.type() === "error") clientErrors.push(`console: ${message.text()}`);
+  });
+  page.on("crash", () => clientErrors.push("page crash"));
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/api/mock/bootstrap") {
+      bootstrapRequests += 1;
+    }
+  });
+
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await expect(page.getByTestId("home-hero")).toBeVisible();
+  await expect(page.locator("[data-reel-row]")).toHaveCount(150);
+  await expect(page.getByTestId("home-results-section")).toHaveAttribute(
+    "aria-busy",
+    "false",
+  );
+  const initialHomeNodeCount = await page.locator("body *").count();
+
+  for (let cycle = 0; cycle < 4; cycle += 1) {
+    await page.locator('a[href="/instantaneas"]:visible').first().click();
+    await expect(page).toHaveURL(/\/instantaneas$/);
+
+    await page.locator('main a[href="/instantaneas/sapyaite"]:visible').first().click();
+    await expect(page).toHaveURL(/\/instantaneas\/sapyaite$/);
+    await expect(page.locator('[data-continuous="true"]')).toHaveAttribute(
+      "data-motion-active",
+      "true",
+    );
+
+    await page.locator('a[href="/"]:visible').first().click();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByTestId("home-hero")).toBeVisible();
+    await expect(page.getByTestId("home-results-section")).toHaveAttribute(
+      "aria-busy",
+      "false",
+    );
+  }
+
+  const finalHomeNodeCount = await page.locator("body *").count();
+  expect(Math.abs(finalHomeNodeCount - initialHomeNodeCount)).toBeLessThanOrEqual(2);
+  expect(bootstrapRequests).toBe(1);
+  expect(clientErrors).toEqual([]);
+});

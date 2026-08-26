@@ -8,6 +8,7 @@ import { useSoundEffects } from "@/features/product/use-sound-effects";
 
 let reducedMotion = false;
 let rejectPlayback = false;
+let pageVisibility: DocumentVisibilityState = "visible";
 const mediaListeners = new Set<() => void>();
 const audioInstances: MockAudio[] = [];
 
@@ -46,6 +47,7 @@ function findAudio(file: string) {
 beforeEach(() => {
   reducedMotion = false;
   rejectPlayback = false;
+  pageVisibility = "visible";
   audioInstances.length = 0;
   mediaListeners.clear();
   window.localStorage.clear();
@@ -64,12 +66,16 @@ beforeEach(() => {
       dispatchEvent: () => true,
     })),
   );
+  vi.spyOn(document, "visibilityState", "get").mockImplementation(
+    () => pageVisibility,
+  );
 });
 
 afterEach(() => {
   cleanup();
   vi.runOnlyPendingTimers();
   vi.useRealTimers();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
@@ -117,6 +123,7 @@ describe("sonido mecánico de NumericReels", () => {
     act(() => vi.advanceTimersByTime(2_100));
     const tick = findAudio("reel_tick.wav");
     expect(tick?.play).toHaveBeenCalledTimes(4);
+    expect(vi.getTimerCount()).toBe(0);
 
     act(() => vi.advanceTimersByTime(3_000));
     expect(tick?.play).toHaveBeenCalledTimes(4);
@@ -126,6 +133,53 @@ describe("sonido mecánico de NumericReels", () => {
     const playsAtUnmount = tick?.play.mock.calls.length;
     act(() => vi.advanceTimersByTime(2_000));
     expect(tick?.play).toHaveBeenCalledTimes(playsAtUnmount ?? 0);
+  });
+
+  it("pausa el rodillo en pestañas ocultas y lo reactiva al volver", () => {
+    window.localStorage.setItem("quinie_sound", "on");
+    const { container } = render(<NumericReels continuous results={["137"]} />);
+    const stage = container.querySelector("[data-motion-active]");
+
+    act(() => vi.advanceTimersByTime(840));
+    const tick = findAudio("reel_tick.wav");
+    expect(tick?.play).toHaveBeenCalledTimes(2);
+    expect(stage?.getAttribute("data-motion-active")).toBe("true");
+
+    pageVisibility = "hidden";
+    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    const playsWhenHidden = tick?.play.mock.calls.length ?? 0;
+    expect(stage?.getAttribute("data-motion-active")).toBe("false");
+
+    act(() => vi.advanceTimersByTime(2_000));
+    expect(tick?.play).toHaveBeenCalledTimes(playsWhenHidden);
+
+    pageVisibility = "visible";
+    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    act(() => vi.advanceTimersByTime(420));
+    expect(stage?.getAttribute("data-motion-active")).toBe("true");
+    expect(tick?.play).toHaveBeenCalledTimes(playsWhenHidden + 1);
+  });
+
+  it("admite WebViews con la API heredada de matchMedia", () => {
+    const addListener = vi.fn();
+    const removeListener = vi.fn();
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn(() => ({
+        matches: false,
+        media: "(prefers-reduced-motion: reduce)",
+        onchange: null,
+        addListener,
+        removeListener,
+        dispatchEvent: () => true,
+      })),
+    );
+
+    const view = render(<NumericReels continuous results={["137"]} />);
+    expect(addListener).toHaveBeenCalledTimes(1);
+
+    view.unmount();
+    expect(removeListener).toHaveBeenCalledTimes(1);
   });
 
   it("serializa los sonidos de un resultado múltiple en un único canal", () => {

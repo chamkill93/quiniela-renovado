@@ -90,7 +90,8 @@ describe("HeroVisual", () => {
       decodeURIComponent(
         view.container.querySelector<HTMLImageElement>("img")?.getAttribute("src") ?? "",
       ),
-    ).toContain("/assets/hero/rodillo-fuego/rodillo-fuego.png");
+    ).toContain("/assets/hero/rodillo-fuego/rodillo-fuego-1600.webp");
+    expect(view.container.querySelectorAll("[data-reel-row]")).toHaveLength(150);
 
     view.rerender(<HeroVisual spinKey="without-result" value={null} />);
 
@@ -105,9 +106,9 @@ describe("HeroVisual", () => {
   it("usa el timing escalonado aprobado y termina cada columna en el dígito exacto", () => {
     const { container } = render(<HeroVisual spinKey="draw-497" value="497" />);
     const expectedFinalTransforms = [
-      "translate3d(0, -740px, 0)",
-      "translate3d(0, -790px, 0)",
-      "translate3d(0, -770px, 0)",
+      "translate3d(0, -440px, 0)",
+      "translate3d(0, -490px, 0)",
+      "translate3d(0, -470px, 0)",
     ];
 
     expect(animateMock).toHaveBeenCalledTimes(3);
@@ -125,12 +126,11 @@ describe("HeroVisual", () => {
         fill: "forwards",
       });
       expect(keyframes).toHaveLength(5);
-      expect(keyframes[1]).toMatchObject({ filter: "blur(5px)" });
       expect(keyframes.at(-1)).toMatchObject({
-        filter: "blur(0)",
         offset: 1,
         transform: expectedFinalTransforms[columnIndex],
       });
+      expect(keyframes.every((keyframe) => !("filter" in keyframe))).toBe(true);
     });
 
     const strips = container.querySelectorAll<HTMLElement>("[data-reel-strip]");
@@ -140,9 +140,9 @@ describe("HeroVisual", () => {
   });
 
   it.each([
-    ["004", ["translate3d(0, -700px, 0)", "translate3d(0, -700px, 0)", "translate3d(0, -740px, 0)"]],
-    ["497", ["translate3d(0, -740px, 0)", "translate3d(0, -790px, 0)", "translate3d(0, -770px, 0)"]],
-    ["999", ["translate3d(0, -790px, 0)", "translate3d(0, -790px, 0)", "translate3d(0, -790px, 0)"]],
+    ["004", ["translate3d(0, -400px, 0)", "translate3d(0, -400px, 0)", "translate3d(0, -440px, 0)"]],
+    ["497", ["translate3d(0, -440px, 0)", "translate3d(0, -490px, 0)", "translate3d(0, -470px, 0)"]],
+    ["999", ["translate3d(0, -490px, 0)", "translate3d(0, -490px, 0)", "translate3d(0, -490px, 0)"]],
   ])("termina exactamente en el valor límite %s", (value, transforms) => {
     const { container } = render(<HeroVisual spinKey={`draw-${value}`} value={value} />);
 
@@ -191,9 +191,9 @@ describe("HeroVisual", () => {
         (strip) => strip.style.transform,
       ),
     ).toEqual([
-      "translate3d(0, -720px, 0)",
-      "translate3d(0, -700px, 0)",
-      "translate3d(0, -740px, 0)",
+      "translate3d(0, -420px, 0)",
+      "translate3d(0, -400px, 0)",
+      "translate3d(0, -440px, 0)",
     ]);
   });
 

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { GamingDomainError } from "../../../src/lib/gaming/errors";
-import { MockGamingProvider } from "../../../src/lib/gaming/mock-provider";
+import {
+  MockGamingProvider,
+  MOCK_SESSION_TTL_SECONDS,
+} from "../../../src/lib/gaming/mock-provider";
 import type { RandomSource } from "../../../src/lib/gaming/rules";
 import type { InstantGameId } from "../../../src/lib/gaming/types";
 
@@ -33,6 +36,55 @@ function providerWithResults(
 }
 
 describe("MockGamingProvider", () => {
+  it("expires idle sessions with the same sliding eight-hour lifetime as the cookie", () => {
+    let currentTimeMs = Date.parse("2026-08-25T12:00:00.000Z");
+    let id = 0;
+    const provider = new MockGamingProvider({
+      now: () => new Date(currentTimeMs),
+      idFactory: () => `session-${++id}`,
+    });
+    const idleSession = provider.createSession();
+    const activeSession = provider.createSession();
+    const ttlMs = MOCK_SESSION_TTL_SECONDS * 1_000;
+
+    currentTimeMs += ttlMs - 1;
+    expect(provider.hasSession(activeSession.id)).toBe(true);
+
+    currentTimeMs += 1;
+    expect(provider.hasSession(idleSession.id)).toBe(false);
+    expect(() => provider.getSession(idleSession.id)).toThrowError(
+      expect.objectContaining({ code: "SESSION_NOT_FOUND" }),
+    );
+    expect(provider.hasSession(activeSession.id)).toBe(true);
+
+    currentTimeMs += ttlMs;
+    expect(provider.hasSession(activeSession.id)).toBe(false);
+  });
+
+  it("evicts the least recently used session at capacity and preserves active state", () => {
+    const currentTimeMs = Date.parse("2026-08-25T12:00:00.000Z");
+    let id = 0;
+    const provider = new MockGamingProvider({
+      now: () => new Date(currentTimeMs),
+      idFactory: () => `session-${++id}`,
+      maxSessions: 2,
+    });
+    const firstSession = provider.createSession();
+    const leastRecentlyUsedSession = provider.createSession();
+
+    provider.topUp(
+      firstSession.id,
+      { amount: 50_000, method: "CARD" },
+      "keep-active-session",
+    );
+
+    const newestSession = provider.createSession();
+
+    expect(provider.hasSession(leastRecentlyUsedSession.id)).toBe(false);
+    expect(provider.getSession(firstSession.id).balance).toBe(300_000);
+    expect(provider.hasSession(newestSession.id)).toBe(true);
+  });
+
   it("keeps balance authoritative and replays an idempotent instant bet once", () => {
     const provider = providerWithResults([684]);
     const session = provider.createSession();

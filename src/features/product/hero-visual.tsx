@@ -1,17 +1,21 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useRef } from "react";
+import { memo, useEffect, useMemo, useRef, type CSSProperties } from "react";
 
 import styles from "./hero-visual.module.css";
 
-const REEL_CYCLES = 7;
+const REEL_CYCLES = 4;
 const REEL_DIGITS = Array.from(
   { length: (REEL_CYCLES + 1) * 10 },
   (_, index) => index % 10,
 );
 const REEL_DURATIONS = [1_700, 2_100, 2_500] as const;
-const HERO_REEL_ARTWORK = "/assets/hero/rodillo-fuego/rodillo-fuego.png";
+const HERO_REEL_ARTWORK = "/assets/hero/rodillo-fuego/rodillo-fuego-1600.webp";
+
+type ReelStripStyle = CSSProperties & {
+  "--hero-reel-row-count": number;
+};
 
 function normalizeResult(value: string | null) {
   if (value === null) return null;
@@ -25,7 +29,7 @@ function normalizeResult(value: string | null) {
   return candidate.padStart(3, "0");
 }
 
-export function HeroVisual({
+function HeroVisualComponent({
   value,
   spinKey,
   loading = false,
@@ -45,7 +49,6 @@ export function HeroVisual({
     strips.forEach((strip) => {
       strip?.getAnimations?.().forEach((animation) => animation.cancel());
       if (strip) {
-        strip.style.filter = "blur(0)";
         strip.style.willChange = "auto";
       }
     });
@@ -94,14 +97,14 @@ export function HeroVisual({
         return;
       }
 
-      strip.style.willChange = "transform, filter";
+      strip.style.willChange = "transform";
       const animation = strip.animate(
         [
-          { filter: "blur(0)", transform: "translate3d(0, 0, 0)", offset: 0 },
-          { filter: "blur(5px)", transform: `translate3d(0, ${finalY * 0.45}px, 0)`, offset: 0.38 },
-          { filter: "blur(3px)", transform: `translate3d(0, ${finalY * 0.78}px, 0)`, offset: 0.68 },
-          { filter: "blur(1px)", transform: `translate3d(0, ${finalY * 0.95}px, 0)`, offset: 0.88 },
-          { filter: "blur(0)", transform: finalTransform, offset: 1 },
+          { transform: "translate3d(0, 0, 0)", offset: 0 },
+          { transform: `translate3d(0, ${finalY * 0.45}px, 0)`, offset: 0.38 },
+          { transform: `translate3d(0, ${finalY * 0.78}px, 0)`, offset: 0.68 },
+          { transform: `translate3d(0, ${finalY * 0.95}px, 0)`, offset: 0.88 },
+          { transform: finalTransform, offset: 1 },
         ],
         {
           duration: REEL_DURATIONS[columnIndex],
@@ -117,7 +120,6 @@ export function HeroVisual({
           if (disposed) return;
           const settledY = finalOffset(strip, columnIndex) ?? finalY;
           strip.style.transform = `translate3d(0, ${settledY}px, 0)`;
-          strip.style.filter = "blur(0)";
           strip.style.willChange = "auto";
           settled[columnIndex] = true;
           animation.cancel();
@@ -145,7 +147,6 @@ export function HeroVisual({
       animations.forEach((animation) => animation.cancel());
       strips.forEach((strip) => {
         if (strip) {
-          strip.style.filter = "blur(0)";
           strip.style.willChange = "auto";
         }
       });
@@ -184,6 +185,7 @@ export function HeroVisual({
           priority
           sizes="(max-width: 1180px) calc(100vw - 40px), min(50vw, 760px)"
           src={HERO_REEL_ARTWORK}
+          unoptimized
         />
 
         <div className={styles.shell}>
@@ -199,11 +201,14 @@ export function HeroVisual({
                 ref={(node) => {
                   stripRefs.current[columnIndex] = node;
                 }}
-                style={safeValue
-                  ? {
-                      transform: `translate3d(0, -${((REEL_CYCLES * 10 + Number(safeValue[columnIndex])) / REEL_DIGITS.length) * 100}%, 0)`,
-                    }
-                  : undefined}
+                style={{
+                  "--hero-reel-row-count": REEL_DIGITS.length,
+                  ...(safeValue
+                    ? {
+                        transform: `translate3d(0, -${((REEL_CYCLES * 10 + Number(safeValue[columnIndex])) / REEL_DIGITS.length) * 100}%, 0)`,
+                      }
+                    : {}),
+                } as ReelStripStyle}
               >
                 {REEL_DIGITS.map((digit, rowIndex) => (
                   <span
@@ -227,3 +232,5 @@ export function HeroVisual({
     </div>
   );
 }
+
+export const HeroVisual = memo(HeroVisualComponent);

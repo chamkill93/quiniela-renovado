@@ -47,6 +47,16 @@ export interface BackofficeProductGatewayConfig {
   walletAvailable?: boolean;
 }
 
+const BACKOFFICE_HISTORY_LIMITS = {
+  plays: 50,
+  results: 100,
+  movements: 50,
+} as const;
+
+function limitHistory<T>(items: readonly T[], limit: number): readonly T[] {
+  return items.slice(0, limit);
+}
+
 function toMockSession(session: BackofficeSession): MockSession {
   return { ...session };
 }
@@ -130,18 +140,30 @@ export class BackofficeProductGateway implements ProductGateway {
     const [sessionResponse, catalogResponse, resultsResponse] = await Promise.all([
       this.client.getSession(options),
       this.client.getCatalog(options),
-      this.client.getResults({}, options),
+      this.client.getResults(
+        { limit: BACKOFFICE_HISTORY_LIMITS.results },
+        options,
+      ),
     ]);
     const playsResponse = sessionResponse.session
-      ? await this.client.getPlays({}, options)
+      ? await this.client.getPlays(
+          { limit: BACKOFFICE_HISTORY_LIMITS.plays },
+          options,
+        )
       : { plays: [] };
     return {
       session: sessionResponse.session
         ? toMockSession(sessionResponse.session)
         : null,
       catalog: catalogResponse.catalog,
-      plays: playsResponse.plays.map(toMockPlay),
-      results: resultsResponse.results.map(toMockResult),
+      plays: limitHistory(
+        playsResponse.plays,
+        BACKOFFICE_HISTORY_LIMITS.plays,
+      ).map(toMockPlay),
+      results: limitHistory(
+        resultsResponse.results,
+        BACKOFFICE_HISTORY_LIMITS.results,
+      ).map(toMockResult),
     };
   }
 
@@ -175,8 +197,14 @@ export class BackofficeProductGateway implements ProductGateway {
   }
 
   async getResults(options?: ProductGatewayRequestOptions) {
-    const data = await this.client.getResults({}, options);
-    return data.results.map(toMockResult);
+    const data = await this.client.getResults(
+      { limit: BACKOFFICE_HISTORY_LIMITS.results },
+      options,
+    );
+    return limitHistory(
+      data.results,
+      BACKOFFICE_HISTORY_LIMITS.results,
+    ).map(toMockResult);
   }
 
   async login(
@@ -201,8 +229,14 @@ export class BackofficeProductGateway implements ProductGateway {
 
   async getMovements(options?: ProductGatewayRequestOptions) {
     this.requireWallet();
-    const data = await this.client.getMovements({}, options);
-    return data.movements ?? [];
+    const data = await this.client.getMovements(
+      { limit: BACKOFFICE_HISTORY_LIMITS.movements },
+      options,
+    );
+    return limitHistory(
+      data.movements ?? [],
+      BACKOFFICE_HISTORY_LIMITS.movements,
+    );
   }
 
   async topUp(

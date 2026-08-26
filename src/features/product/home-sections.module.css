@@ -675,7 +675,6 @@
   letter-spacing: 0.025em;
   text-decoration: none;
   white-space: nowrap;
-  animation: megaCtaGlow 2.8s ease-in-out infinite;
   transition:
     filter var(--q-duration-base) var(--q-ease-standard),
     transform var(--q-duration-base) var(--q-ease-standard),
@@ -690,7 +689,6 @@
   content: "";
   pointer-events: none;
   transform: skewX(-18deg) translateX(-180%);
-  animation: megaCtaSheen 3.4s ease-in-out infinite;
 }
 
 .megaCta span,
@@ -709,34 +707,18 @@
     0 15px 34px rgb(0 0 0 / 36%);
 }
 
+.megaCta:hover::before,
+.megaCta:focus-visible::before {
+  animation: megaCtaSheen 900ms ease-out 1;
+}
+
 .megaCta:active {
   transform: translateY(0) scale(0.99);
 }
 
-@keyframes megaCtaGlow {
-  0%, 100% {
-    box-shadow:
-      inset 0 1px rgb(255 255 255 / 28%),
-      0 0 0 1px rgb(173 236 72 / 18%),
-      0 0 18px rgb(72 220 94 / 34%),
-      0 12px 28px rgb(0 0 0 / 32%);
-  }
-  50% {
-    box-shadow:
-      inset 0 1px rgb(255 255 255 / 32%),
-      0 0 0 1px rgb(220 239 78 / 31%),
-      0 0 31px rgb(78 233 101 / 58%),
-      0 13px 31px rgb(0 0 0 / 34%);
-  }
-}
-
 @keyframes megaCtaSheen {
-  0%, 48% {
-    transform: skewX(-18deg) translateX(-180%);
-  }
-  72%, 100% {
-    transform: skewX(-18deg) translateX(520%);
-  }
+  from { transform: skewX(-18deg) translateX(-180%); }
+  to { transform: skewX(-18deg) translateX(520%); }
 }
 
 @keyframes resultLoading {

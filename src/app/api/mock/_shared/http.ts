@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 
 import { GamingDomainError, type GamingErrorCode } from "@/lib/gaming/errors";
+import { MOCK_SESSION_TTL_SECONDS } from "@/lib/gaming/mock-provider";
 import { mockGamingProvider } from "@/lib/gaming/server";
 
 export const MOCK_SESSION_COOKIE = "quinie_mock_session";
@@ -86,7 +87,7 @@ export function jsonWithSession(
     sameSite: "lax",
     secure: shouldUseSecureCookie(),
     path: "/",
-    maxAge: 60 * 60 * 8,
+    maxAge: MOCK_SESSION_TTL_SECONDS,
   });
   response.headers.set("Cache-Control", "no-store");
   return response;

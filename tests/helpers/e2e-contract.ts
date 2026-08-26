@@ -37,8 +37,15 @@ export async function installThemePreference(page: Page, theme: QaTheme) {
           : initialTheme;
 
       if (!storedTheme) localStorage.setItem(storageKey, activeTheme);
-      document.documentElement.dataset.theme = activeTheme;
-      document.documentElement.style.colorScheme = activeTheme;
+      const applyTheme = () => {
+        const root = document.documentElement;
+        if (!root) return;
+        root.dataset.theme = activeTheme;
+        root.style.colorScheme = activeTheme;
+      };
+
+      if (document.documentElement) applyTheme();
+      else document.addEventListener("DOMContentLoaded", applyTheme, { once: true });
     },
     { storageKey: THEME_STORAGE_KEY, initialTheme: theme },
   );

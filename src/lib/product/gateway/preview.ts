@@ -48,10 +48,117 @@ export const PREVIEW_PRODUCT_ENDPOINTS: Readonly<PreviewProductEndpoints> = {
   walletTopUp: "/api/mock/wallet/topup",
 };
 
+export const DEFAULT_PREVIEW_PRODUCT_TIMEOUT_MS = 15_000;
+
 export interface PreviewProductGatewayConfig {
   baseUrl?: string;
   endpoints?: Partial<PreviewProductEndpoints>;
   fetch?: ProductGatewayFetch;
+  /** Hard deadline for the complete preview request, including body parsing. */
+  timeoutMs?: number;
+}
+
+interface PreviewRequestSignal {
+  readonly signal: AbortSignal;
+  readonly timedOut: () => boolean;
+  readonly cleanup: () => void;
+}
+
+function validateTimeoutMs(value: number | undefined) {
+  const timeoutMs = value ?? DEFAULT_PREVIEW_PRODUCT_TIMEOUT_MS;
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    throw new TypeError("timeoutMs debe ser un número finito mayor que 0.");
+  }
+  return timeoutMs;
+}
+
+function composeRequestSignal(
+  callerSignal: AbortSignal | null | undefined,
+  timeoutMs: number,
+): PreviewRequestSignal {
+  const controller = new AbortController();
+  let timeoutReached = false;
+
+  const abortFromCaller = () => {
+    controller.abort(
+      callerSignal?.reason ??
+        new DOMException("Preview request aborted", "AbortError"),
+    );
+  };
+
+  if (callerSignal?.aborted) {
+    abortFromCaller();
+  } else {
+    callerSignal?.addEventListener("abort", abortFromCaller, { once: true });
+  }
+
+  const timeoutHandle = setTimeout(() => {
+    timeoutReached = true;
+    controller.abort(new DOMException("Preview request timeout", "TimeoutError"));
+  }, timeoutMs);
+
+  return {
+    signal: controller.signal,
+    timedOut: () => timeoutReached,
+    cleanup: () => {
+      clearTimeout(timeoutHandle);
+      callerSignal?.removeEventListener("abort", abortFromCaller);
+    },
+  };
+}
+
+/**
+ * Races an async transport step against the composed signal. This is required
+ * even when `signal` is forwarded because injected fetch implementations and
+ * body readers are not guaranteed to honor it.
+ */
+function runWithSignal<T>(
+  operation: () => Promise<T>,
+  signal: AbortSignal,
+): Promise<T> {
+  if (signal.aborted) {
+    return Promise.reject(
+      signal.reason ?? new DOMException("Preview request aborted", "AbortError"),
+    );
+  }
+
+  return new Promise<T>((resolve, reject) => {
+    const abort = () => {
+      reject(
+        signal.reason ??
+          new DOMException("Preview request aborted", "AbortError"),
+      );
+    };
+    signal.addEventListener("abort", abort, { once: true });
+
+    let pending: Promise<T>;
+    try {
+      pending = operation();
+    } catch (reason) {
+      signal.removeEventListener("abort", abort);
+      reject(reason);
+      return;
+    }
+
+    pending.then(
+      (value) => {
+        signal.removeEventListener("abort", abort);
+        resolve(value);
+      },
+      (reason) => {
+        signal.removeEventListener("abort", abort);
+        reject(reason);
+      },
+    );
+  });
+}
+
+function callerAbortError(signal: AbortSignal) {
+  const reason = signal.reason;
+  if (reason instanceof DOMException && reason.name === "AbortError") {
+    return reason;
+  }
+  return new DOMException("Preview request aborted", "AbortError");
 }
 
 /** Explicit, deterministic and non-persistent preview registration fixture. */
@@ -118,11 +225,13 @@ export class PreviewProductGateway implements ProductGateway {
   private readonly baseUrl: string;
   private readonly endpoints: Readonly<PreviewProductEndpoints>;
   private readonly fetcher: ProductGatewayFetch;
+  private readonly timeoutMs: number;
 
   constructor(config: PreviewProductGatewayConfig = {}) {
     this.baseUrl = config.baseUrl ?? "";
     this.endpoints = { ...PREVIEW_PRODUCT_ENDPOINTS, ...config.endpoints };
     this.fetcher = config.fetch ?? ((input, init) => fetch(input, init));
+    this.timeoutMs = validateTimeoutMs(config.timeoutMs);
   }
 
   async bootstrap(options?: ProductGatewayRequestOptions): Promise<ProductSnapshot> {
@@ -272,13 +381,33 @@ export class PreviewProductGateway implements ProductGateway {
     init: RequestInit,
     parser: BackofficeResponseParser<T>,
   ) {
-    let response: Response;
+    const callerSignal = init.signal;
+    const composed = composeRequestSignal(callerSignal, this.timeoutMs);
+    const url = resolveProductEndpoint(this.baseUrl, endpoint);
+
     try {
-      response = await this.fetcher(
-        resolveProductEndpoint(this.baseUrl, endpoint),
-        init,
+      const response = await runWithSignal(
+        () =>
+          this.fetcher(url, {
+            ...init,
+            signal: composed.signal,
+          }),
+        composed.signal,
+      );
+      return await runWithSignal(
+        () => readProductJson(response, parser),
+        composed.signal,
       );
     } catch (reason) {
+      if (composed.timedOut()) {
+        throw new ProductGatewayHttpError(
+          0,
+          "GATEWAY_TIMEOUT",
+          `El servicio de vista previa no respondió dentro de ${this.timeoutMs} ms.`,
+        );
+      }
+      if (callerSignal?.aborted) throw callerAbortError(callerSignal);
+      if (reason instanceof ProductGatewayHttpError) throw reason;
       if (reason instanceof DOMException && reason.name === "AbortError") {
         throw reason;
       }
@@ -287,8 +416,9 @@ export class PreviewProductGateway implements ProductGateway {
         "GATEWAY_NETWORK_ERROR",
         "No se pudo conectar con el servicio de vista previa.",
       );
+    } finally {
+      composed.cleanup();
     }
-    return readProductJson(response, parser);
   }
 }
 

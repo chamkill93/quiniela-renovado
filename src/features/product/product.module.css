@@ -1305,7 +1305,7 @@
   font-size: clamp(0.72rem, 2.2vw, 2rem);
   font-weight: 900;
   line-height: 1;
-  animation: reelSpin 170ms linear infinite;
+  animation: reelSpin 420ms linear infinite;
 }
 
 .reelDigitTrack > span {
@@ -1328,7 +1328,11 @@
     inset 0 0 0 2px #050607,
     inset 0 0 22px rgba(227, 6, 19, 0.12),
     0 0 18px rgba(227, 6, 19, 0.26);
-  animation: reelGlow 680ms ease-in-out infinite alternate;
+}
+
+.reelStage[data-motion-active="false"] .reelDigitTrack,
+.reelStage[data-motion-active="false"] .reelStateLabel::before {
+  animation-play-state: paused;
 }
 
 .reel[data-spinning="false"] .reelDigit {
@@ -1473,14 +1477,9 @@
 .reelConfetti i:nth-child(14) { --confetti-x: 20vw; --confetti-y: 22px; --confetti-r: -190deg; animation-delay: 155ms; }
 
 @keyframes reelSpin {
-  0% { transform: translateY(-3%); filter: blur(0.4px); }
-  50% { transform: translateY(3%); filter: blur(1.1px); }
-  100% { transform: translateY(-3%); filter: blur(0.4px); }
-}
-
-@keyframes reelGlow {
-  from { filter: brightness(0.82); }
-  to { filter: brightness(1.18); }
+  0% { transform: translateY(-4%); }
+  50% { transform: translateY(4%); }
+  100% { transform: translateY(-4%); }
 }
 
 @keyframes reelActivePulse {
