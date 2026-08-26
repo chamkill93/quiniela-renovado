@@ -231,12 +231,20 @@ test("keeps the reel active and opens the receipt only from Mis Jugadas", async 
   await page.goto("/instantaneas/racha5", { waitUntil: "domcontentloaded" });
 
   const reelStage = page.getByLabel("Rodillos numéricos");
+  const playButton = page.getByRole("button", { name: "Jugar", exact: true });
   await expect(reelStage).toHaveAttribute("data-state", "preview");
+  await expect(reelStage).toHaveAttribute("data-variant", "classic");
   await expect(page.getByRole("button", { name: "Gs. 10.000", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Gs. 20.000", exact: true })).toHaveCount(0);
   await expect(page.getByText("La jugada se registra una sola vez y el resultado se define antes de animar.", { exact: true })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Jugar", exact: true }).click();
+  const viewport = page.viewportSize();
+  const playButtonBox = await playButton.boundingBox();
+  if (!viewport || !playButtonBox) throw new Error("No se pudo medir el botón Jugar.");
+  expect(playButtonBox.y).toBeGreaterThanOrEqual(0);
+  expect(playButtonBox.y + playButtonBox.height).toBeLessThanOrEqual(viewport.height);
+
+  await playButton.click();
 
   await expect(reelStage.locator('[data-spinning="false"]')).toHaveCount(5);
   await expect(page.getByRole("dialog", { name: "Jugada registrada" })).toHaveCount(0);

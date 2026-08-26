@@ -1,11 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { padNumber } from "@/lib/product/catalog";
 import { useSoundEffects } from "./use-sound-effects";
 import styles from "./product.module.css";
 
 export type ReelVariant = "classic" | "light" | "neon" | "gold";
+
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+
+function subscribeToReducedMotion(onChange: () => void) {
+  const query = window.matchMedia(REDUCED_MOTION_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+function readReducedMotion() {
+  return window.matchMedia(REDUCED_MOTION_QUERY).matches;
+}
 
 export function NumericReels({
   results,
@@ -25,47 +37,69 @@ export function NumericReels({
   const [stopped, setStopped] = useState(0);
   const [tick, setTick] = useState(0);
   const playSound = useSoundEffects();
+  const reducedMotion = useSyncExternalStore(
+    subscribeToReducedMotion,
+    readReducedMotion,
+    () => false,
+  );
   const normalized = useMemo(() => results.map((number) => padNumber(number)), [results]);
   const allStopped = !continuous && normalized.length > 0 && stopped === normalized.length;
   const reelColumns = normalized.length === 1 ? 1 : Math.min(normalized.length, 5);
 
   useEffect(() => {
     if (normalized.length === 0) return;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     if (continuous) {
-      if (reduced) return;
+      if (reducedMotion) {
+        playSound("reelTick", "stop");
+        return;
+      }
+
+      playSound("reelStart");
+      let motionTicks = 0;
       const ticker = window.setInterval(() => {
+        motionTicks += 1;
         setTick((value) => value + 1);
+        // The preview keeps moving, but only plays a short, subtle mechanical
+        // introduction instead of an endless audio loop.
+        if (motionTicks <= 12 && motionTicks % 3 === 0) {
+          playSound("reelTick");
+        }
       }, 170);
-      return () => window.clearInterval(ticker);
+      return () => {
+        window.clearInterval(ticker);
+        playSound("reelTick", "stop");
+      };
     }
 
-    playSound("reelStart");
-    const ticker = reduced
+    if (!reducedMotion) playSound("reelStart");
+    let motionTicks = 0;
+    const ticker = reducedMotion
       ? undefined
       : window.setInterval(() => {
+          motionTicks += 1;
           setTick((value) => value + 1);
-          playSound("reelTick");
+          if (motionTicks % 2 === 0) playSound("reelTick");
         }, 170);
     const timers = normalized.map((_, index) =>
       window.setTimeout(
         () => {
           setStopped(index + 1);
-          playSound("reelStop");
+          if (!reducedMotion) playSound("reelStop");
           if (index === normalized.length - 1) {
             if (ticker) window.clearInterval(ticker);
             onComplete?.();
           }
         },
-        reduced ? 90 + index * 45 : 780 + index * 260,
+        reducedMotion ? 90 + index * 45 : 780 + index * 260,
       ),
     );
     return () => {
       if (ticker) window.clearInterval(ticker);
       timers.forEach((timer) => window.clearTimeout(timer));
+      playSound("reelTick", "stop");
     };
-  }, [continuous, normalized, onComplete, playSound]);
+  }, [continuous, normalized, onComplete, playSound, reducedMotion]);
 
   const reelStateLabel = continuous
     ? "Rodillo activo · girando"

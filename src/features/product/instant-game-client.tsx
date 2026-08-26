@@ -8,7 +8,7 @@ import type { PlayResponse } from "@/lib/product/api-types";
 import { type InstantGameId, formatGs, padNumber, type ProductGame } from "@/lib/product/catalog";
 import { useProduct } from "@/providers/product-provider";
 import { AmountChip } from "./amount-chip";
-import { NumericReels, type ReelVariant } from "./numeric-reels";
+import { NumericReels } from "./numeric-reels";
 import { ResultStateCard, resultVisualState } from "./result-state";
 import { useSoundEffects } from "./use-sound-effects";
 import styles from "./product.module.css";
@@ -89,15 +89,6 @@ function selectedForMatches(gameId: InstantGameId, selection: string | string[])
   return [];
 }
 
-function reelVariantFor(gameId: InstantGameId): ReelVariant {
-  if (gameId === "poa" || gameId === "petei") return "light";
-  if (gameId === "pyae" || gameId === "mokoi" || gameId === "poa10") {
-    return "neon";
-  }
-  if (gameId === "mbohapy" || gameId === "poa5") return "gold";
-  return "classic";
-}
-
 export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }) {
   const {
     requestPlay,
@@ -137,10 +128,9 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
     if (response.play.result) return [response.play.result];
     return [];
   }, [response]);
-  const previewResults = useMemo(
-    () => Array.from({ length: remoteGame?.reels ?? 1 }, (_, index) => padNumber(String((index + 1) * 137))),
-    [remoteGame?.reels],
-  );
+  // La espera siempre se presenta como una sola máquina. Los juegos de cinco
+  // y diez resultados se despliegan en grilla recién cuando llega la jugada.
+  const previewResults = useMemo(() => [padNumber("137")], []);
   const visibleResults = response && resultNumbers.length ? resultNumbers : previewResults;
   const selectionLabel = Array.isArray(selection) ? selection.join(" · ") : selection;
 
@@ -171,25 +161,28 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
   };
 
   return (
-    <main className={`${styles.page} ${styles.pageStack}`}>
-      <div>
+    <main className={`${styles.page} ${styles.pageStack} ${styles.instantPage}`}>
+      <div className={styles.instantBackRow}>
         <Link className={styles.textLink} href="/instantaneas">← Volver a Instantáneas</Link>
       </div>
-      <section className={styles.instantGameShell}>
+      <section
+        className={styles.instantGameShell}
+        data-has-result={Boolean(response)}
+        data-tone={game.tone}
+      >
         <header className={styles.instantGameHeader}>
           <p className={styles.eyebrow}>{game.eyebrow}</p>
           <h1 className={styles.title}>{displayName}</h1>
           <p className={styles.lede}>{displayDescription}</p>
         </header>
 
-        <div className={styles.instantReelArea}>
+        <div className={styles.instantReelArea} data-has-result={Boolean(response)}>
           <NumericReels
             continuous={!response}
             key={response?.play.id ?? "active-preview"}
             results={visibleResults}
             selectedNumbers={selectedNumbers}
             selectedParity={game.id === "racha5" || game.id === "sapyaite" ? selection as "PAR" | "IMPAR" : undefined}
-            variant={reelVariantFor(game.id)}
             onComplete={response ? finishResult : undefined}
           />
           {response ? (
