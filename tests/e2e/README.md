@@ -16,7 +16,8 @@ Required shell hooks:
 - `theme-toggle`: icon-only button with `aria-pressed` and an accessible name.
 - `sound-toggle`: icon-only button with `aria-pressed` and an accessible name.
 - `instant-games-grid`: container for the complete instant-games catalog.
-- `instant-game-card`: repeated exactly nine times inside the grid.
+- `instant-game-card`: repeated once per game enabled by the backoffice; the
+  current provider exposes only Sapy’aite.
 
 Theme contract:
 

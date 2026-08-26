@@ -63,8 +63,12 @@ compatibilidad para un proveedor que lo requiera fuera de esa composición.
   `America/Asuncion`/`es-PY`.
 - Roles visibles: `PLAYER | ADMIN`; el frontend refleja la sesión, pero no
   concede permisos.
-- IDs de juegos: los 6 tradicionales y 9 instantáneos definidos en
+- IDs soportados: los 6 tradicionales y 9 instantáneos definidos en
   `src/lib/gaming/types.ts`.
+- Disponibilidad: un juego está habilitado únicamente cuando aparece en el
+  arreglo correspondiente del catálogo. No existe un campo `enabled`; el
+  backoffice debe omitir los juegos desactivados. El proveedor actual publica
+  solo `sapyaite` dentro de `catalog.instant`.
 - Resultado y premio: siempre llegan en la respuesta autoritativa; los
   rodillos solo animan esos números.
 

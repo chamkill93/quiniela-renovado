@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   ALL_GAME_RULES,
   INSTANT_RULES,
+  selectEnabledGameRules,
   TRADITIONAL_RULES,
 } from "@/features/product/rules-page-data";
+import { buildGamingCatalog } from "@/lib/gaming/catalog";
 
 describe("rules page data", () => {
   it("publica exactamente cuatro reglas tradicionales y nueve instantáneas", () => {
@@ -46,5 +48,69 @@ describe("rules page data", () => {
 
     expect(pyaeRule?.copy).toContain("500");
     expect(pyaeRule?.copy).toContain("configuración");
+  });
+
+  it("explica acciones, forma de ganar y ejemplo para cada juego", () => {
+    for (const rule of ALL_GAME_RULES) {
+      expect(rule.tagline.length).toBeGreaterThan(0);
+      expect(rule.instructions.length).toBeGreaterThanOrEqual(4);
+      expect(rule.winCondition.length).toBeGreaterThan(20);
+      expect(rule.example.length).toBeGreaterThan(20);
+    }
+  });
+
+  it("muestra únicamente las reglas habilitadas por el catálogo", () => {
+    const catalog = buildGamingCatalog(
+      "REFUND",
+      new Date("2026-08-26T10:00:00.000Z"),
+      ["sapyaite"],
+    );
+
+    const enabled = selectEnabledGameRules(catalog);
+
+    expect(enabled.traditional.map((rule) => rule.id)).toEqual([
+      "head",
+      "prizes",
+      "invert",
+      "redoblona",
+    ]);
+    expect(enabled.instant.map((rule) => rule.id)).toEqual(["sapyaite"]);
+  });
+
+  it("calcula el ejemplo de premio instantáneo desde el catálogo habilitado", () => {
+    const catalog = buildGamingCatalog(
+      "REFUND",
+      new Date("2026-08-26T10:00:00.000Z"),
+      ["sapyaite"],
+    );
+
+    const enabled = selectEnabledGameRules(catalog);
+    const payout = enabled.instant[0]?.payout;
+
+    expect(payout).toMatchObject({
+      headline: "Premio total actual: 2× el importe",
+      source: "catalog-preview",
+    });
+    expect(payout?.detail).toContain("Gs. 500");
+    expect(payout?.detail).toContain("Gs. 1.000");
+    expect(payout?.detail).toContain("ganancia neta es Gs. 500");
+  });
+
+  it("no inventa un multiplicador para las quinielas tradicionales", () => {
+    const catalog = buildGamingCatalog(
+      "REFUND",
+      new Date("2026-08-26T10:00:00.000Z"),
+      ["sapyaite"],
+    );
+
+    const enabled = selectEnabledGameRules(catalog);
+
+    for (const rule of enabled.traditional) {
+      expect(rule.payout).toMatchObject({
+        headline: "Premio según tabla oficial vigente",
+        source: "backoffice",
+      });
+      expect(rule.payout.note).toContain("todavía no publica");
+    }
   });
 });

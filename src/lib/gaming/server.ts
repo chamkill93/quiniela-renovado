@@ -1,5 +1,6 @@
 import "server-only";
 
+import { DEFAULT_ENABLED_INSTANT_GAME_IDS } from "./catalog";
 import { MockGamingProvider } from "./mock-provider";
 import type { PyaeNeutralPolicy } from "./types";
 
@@ -13,7 +14,10 @@ function neutralPolicyFromEnvironment(): PyaeNeutralPolicy {
 
 export const mockGamingProvider =
   globalThis.__quinieMockGamingProvider ??
-  new MockGamingProvider({ neutral500Policy: neutralPolicyFromEnvironment() });
+  new MockGamingProvider({
+    enabledInstantGameIds: DEFAULT_ENABLED_INSTANT_GAME_IDS,
+    neutral500Policy: neutralPolicyFromEnvironment(),
+  });
 
 if (process.env.NODE_ENV !== "production") {
   globalThis.__quinieMockGamingProvider = mockGamingProvider;

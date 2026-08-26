@@ -10,6 +10,12 @@ import { useProduct } from "@/providers/product-provider";
 import { AmountChip } from "./amount-chip";
 import { NumericReels } from "./numeric-reels";
 import { ResultStateCard, resultVisualState } from "./result-state";
+import {
+  RemoteEmptyState,
+  RemoteErrorState,
+  RemoteLoadingState,
+  RemoteUnauthorizedState,
+} from "./remote-view-state";
 import { useSoundEffects } from "./use-sound-effects";
 import styles from "./product.module.css";
 
@@ -116,7 +122,6 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
   const remoteGame = catalog?.instant.find(
     (definition) => definition.id === game.id,
   );
-  const enabledGame = Boolean(remoteGame);
   const displayName = remoteGame?.name ?? (loading ? "Cargando juego…" : "Juego no disponible");
   const displayDescription = remoteGame?.description ?? "Esperando la definición habilitada por el backoffice.";
   const effectiveAmount = availableAmounts.includes(amount)
@@ -193,6 +198,44 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
     }
   };
 
+  if (!catalog) {
+    let state = <RemoteEmptyState message="No pudimos verificar si este juego está habilitado." />;
+    if (loading) state = <RemoteLoadingState label="Verificando el catálogo del backoffice…" />;
+    else if (unauthorized) {
+      state = <RemoteUnauthorizedState message="Iniciá sesión para consultar los juegos habilitados." />;
+    } else if (gatewayError) {
+      state = <RemoteErrorState message={gatewayError} onRetry={() => void refresh()} />;
+    }
+
+    return (
+      <main className={`${styles.page} ${styles.pageStack} ${styles.instantPage}`}>
+        <div className={styles.instantBackRow}>
+          <Link className={styles.textLink} href="/instantaneas">← Volver a Instantáneas</Link>
+        </div>
+        {state}
+      </main>
+    );
+  }
+
+  if (!remoteGame) {
+    return (
+      <main className={`${styles.page} ${styles.pageStack} ${styles.instantPage}`}>
+        <div className={styles.instantBackRow}>
+          <Link className={styles.textLink} href="/instantaneas">← Volver a Instantáneas</Link>
+        </div>
+        <div className={styles.emptyState} data-testid="disabled-instant-game">
+          <div>
+            <h1>Juego no disponible</h1>
+            <p>Este juego está desactivado en el catálogo del backoffice.</p>
+            <Link className={styles.primaryButton} href="/instantaneas">
+              Ver juegos disponibles
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className={`${styles.page} ${styles.pageStack} ${styles.instantPage}`}>
       <div className={styles.instantBackRow}>
@@ -252,13 +295,12 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
               </span>
             </div>
             {loading ? <div className={styles.loadingBar} aria-label="Cargando catálogo" /> : null}
-            {catalog && !enabledGame ? <div className={styles.errorBox} role="alert">Este juego no está habilitado por el backoffice.</div> : null}
             {gatewayError ? <div className={styles.errorBox} role="alert"><p>{gatewayError}</p><button className={styles.quietButton} onClick={() => void refresh()} type="button">Reintentar conexión</button></div> : null}
             {!gatewayError && (unauthorized || (!loading && !session)) ? <div className={styles.errorBox} role="alert">Iniciá sesión para registrar una jugada. <Link className={styles.textLink} href="/cuenta">Ir a Cuenta</Link></div> : null}
             {error ? <div className={styles.errorBox} role="alert">{error}</div> : null}
             <button
               className={`${styles.primaryButton} ${styles.instantPlayButton}`}
-              disabled={pending || Boolean(response && !animationDone) || loading || Boolean(gatewayError) || !session || !enabledGame || availableAmounts.length === 0}
+              disabled={pending || Boolean(response && !animationDone) || loading || Boolean(gatewayError) || !session || availableAmounts.length === 0}
               onClick={play}
               type="button"
             >

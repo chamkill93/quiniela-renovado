@@ -9,6 +9,10 @@
   min-height: 348px;
   display: grid;
   grid-template-columns: minmax(360px, 0.95fr) minmax(440px, 1.35fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "copy reel"
+    "actions reel";
   align-items: stretch;
   overflow: hidden;
   border: 1px solid var(--hero-line);
@@ -44,12 +48,13 @@
 .copy {
   position: relative;
   z-index: 4;
+  grid-area: copy;
   min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  padding: clamp(20px, 1.65vw, 28px) clamp(26px, 2.25vw, 34px);
+  padding: clamp(20px, 1.65vw, 28px) clamp(26px, 2.25vw, 34px) 4px;
 }
 
 .eyebrow {
@@ -266,10 +271,14 @@
 }
 
 .actions {
+  position: relative;
+  z-index: 4;
+  grid-area: actions;
   display: flex;
   flex-wrap: nowrap;
   gap: 9px;
-  margin-top: 8px;
+  margin: 0;
+  padding: 8px clamp(26px, 2.25vw, 34px) clamp(20px, 1.65vw, 28px);
 }
 
 .primaryAction,
@@ -318,6 +327,7 @@
 .reelColumn {
   position: relative;
   z-index: 2;
+  grid-area: reel;
   min-width: 0;
   display: grid;
   place-items: center;
@@ -327,17 +337,27 @@
 @media (max-width: 1180px) {
   .hero {
     grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    grid-template-areas:
+      "copy"
+      "reel"
+      "actions";
     min-height: 0;
   }
 
   .copy {
     width: min(100%, 680px);
-    padding-bottom: 6px;
+    padding-bottom: 8px;
   }
 
   .reelColumn {
-    min-height: 270px;
-    padding: 0 14px 12px;
+    min-height: 0;
+    padding: 0 14px 8px;
+  }
+
+  .actions {
+    width: min(100%, 680px);
+    padding: 4px clamp(26px, 2.25vw, 34px) 24px;
   }
 
   .hero::before {
@@ -351,7 +371,7 @@
   }
 
   .copy {
-    padding: 22px 20px 6px;
+    padding: 22px 20px 8px;
   }
 
   .title {
@@ -359,8 +379,11 @@
   }
 
   .reelColumn {
-    min-height: 238px;
     padding-inline: 7px;
+  }
+
+  .actions {
+    padding: 4px 20px 22px;
   }
 }
 
@@ -386,6 +409,7 @@
     width: 100%;
     display: grid;
     grid-template-columns: 1fr 1fr;
+    padding-inline: 15px;
   }
 
   .primaryAction,

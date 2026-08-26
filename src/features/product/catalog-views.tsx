@@ -156,7 +156,7 @@ export function HomeRemoteSections() {
           eyebrow="Resultado al momento"
           headingLevel={2}
           href="/instantaneas"
-          linkLabel="Ver las 9"
+          linkLabel={instantGames.length === 1 ? "Ver juego" : "Ver todas"}
           title="Instantáneas habilitadas"
         />
         {instantGames.length === 0 ? (

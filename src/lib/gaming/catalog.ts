@@ -1,6 +1,7 @@
 import type {
   DrawDefinition,
   GamingCatalog,
+  InstantGameId,
   InstantGameDefinition,
   PyaeNeutralPolicy,
   TraditionalGameDefinition,
@@ -236,6 +237,11 @@ const BASE_INSTANT_GAMES = [
   },
 ] as const satisfies readonly InstantGameDefinition[];
 
+/** Juegos que el proveedor actual publica en el catálogo operativo. */
+export const DEFAULT_ENABLED_INSTANT_GAME_IDS = [
+  "sapyaite",
+] as const satisfies readonly InstantGameId[];
+
 function atTime(base: Date, hoursFromNow: number): string {
   return new Date(base.getTime() + hoursFromNow * 60 * 60 * 1_000).toISOString();
 }
@@ -269,12 +275,19 @@ export function buildInstantGames(
 export function buildGamingCatalog(
   neutral500Policy: PyaeNeutralPolicy = "REFUND",
   now = new Date(),
+  enabledInstantGameIds?: readonly InstantGameId[],
 ): GamingCatalog {
+  const instantGames = buildInstantGames(neutral500Policy);
+  const enabledInstantGames = enabledInstantGameIds
+    ? new Set(enabledInstantGameIds)
+    : null;
   return {
     amounts: PROTOTYPE_AMOUNTS,
     draws: buildMockDraws(now),
     traditional: TRADITIONAL_GAMES,
-    instant: buildInstantGames(neutral500Policy),
+    instant: enabledInstantGames
+      ? instantGames.filter((game) => enabledInstantGames.has(game.id))
+      : instantGames,
   };
 }
 

@@ -12,12 +12,15 @@ import {
   selectNextHeroDraw,
 } from "./home-hero-data";
 import { HeroVisual } from "./hero-visual";
+import { createRandomHeroValue } from "./home-hero-random";
 import styles from "./home-hero.module.css";
 
 type DrawIconStyle = CSSProperties & {
   "--hero-draw-icon-dark": string;
   "--hero-draw-icon-light": string;
 };
+
+const PREVIEW_HERO_STORAGE_KEY = "quinie_home_hero_random";
 
 function useCurrentTime() {
   const [now, setNow] = useState<number | null>(null);
@@ -32,6 +35,39 @@ function useCurrentTime() {
   return now;
 }
 
+function usePreviewHeroValue(enabled: boolean) {
+  const [value, setValue] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    const storeValue = (nextValue: string) => {
+      try {
+        window.sessionStorage.setItem(PREVIEW_HERO_STORAGE_KEY, nextValue);
+      } catch {
+        // The promotional reel still works when browser storage is unavailable.
+      }
+    };
+
+    let previousValue: string | null = null;
+    try {
+      previousValue = window.sessionStorage.getItem(PREVIEW_HERO_STORAGE_KEY);
+    } catch {
+      previousValue = null;
+    }
+
+    const initialTimer = window.setTimeout(() => {
+      const nextValue = createRandomHeroValue(Math.random, previousValue);
+      setValue(nextValue);
+      storeValue(nextValue);
+    }, 0);
+
+    return () => window.clearTimeout(initialTimer);
+  }, [enabled]);
+
+  return value;
+}
+
 function ClockIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 32 32">
@@ -43,8 +79,10 @@ function ClockIcon() {
 }
 
 export function HomeHero() {
-  const { catalog, results, loading, error } = useProduct();
+  const { catalog, results, loading, error, gatewayMode } = useProduct();
   const now = useCurrentTime();
+  const isPromotionalReel = gatewayMode === "preview";
+  const previewHeroValue = usePreviewHeroValue(isPromotionalReel);
 
   const latestResult = useMemo(
     () => (catalog ? selectLatestHeroResult(results, catalog) : null),
@@ -65,6 +103,14 @@ export function HomeHero() {
       })
     : undefined;
   const waitingForData = loading || now === null;
+  const heroValue = isPromotionalReel
+    ? previewHeroValue
+    : latestResult?.value ?? null;
+  const heroSpinKey = isPromotionalReel
+    ? previewHeroValue
+      ? `preview-${previewHeroValue}`
+      : undefined
+    : latestResult?.spinKey;
 
   let unavailableMessage = "Próximo sorteo no publicado";
   if (waitingForData) unavailableMessage = "Consultando próximo sorteo…";
@@ -143,28 +189,30 @@ export function HomeHero() {
           <div aria-hidden="true" className={styles.drawState}>Esperando programación</div>
         )}
 
-        <div className={styles.actions}>
-          <Link className={styles.primaryAction} href="/quinielas">
-            Jugar Quiniela
-            <svg aria-hidden="true" className={styles.actionIcon} viewBox="0 0 24 24">
-              <path d="m8 5 11 7-11 7Z" fill="currentColor" />
-            </svg>
-          </Link>
-          <Link className={styles.secondaryAction} href="/instantaneas">
-            <svg aria-hidden="true" className={styles.actionIcon} viewBox="0 0 24 24">
-              <path d="m13.4 2-8 11h6l-.8 9 8-12h-5.8Z" fill="currentColor" />
-            </svg>
-            Ver Instantáneas
-          </Link>
-        </div>
       </div>
 
       <div className={styles.reelColumn}>
         <HeroVisual
-          loading={loading && !latestResult}
-          spinKey={latestResult?.spinKey}
-          value={latestResult?.value ?? null}
+          loading={isPromotionalReel ? previewHeroValue === null : loading && !latestResult}
+          source={isPromotionalReel ? "promotional" : "published"}
+          spinKey={heroSpinKey}
+          value={heroValue}
         />
+      </div>
+
+      <div className={styles.actions}>
+        <Link className={styles.primaryAction} href="/quinielas">
+          Jugar Quiniela
+          <svg aria-hidden="true" className={styles.actionIcon} viewBox="0 0 24 24">
+            <path d="m8 5 11 7-11 7Z" fill="currentColor" />
+          </svg>
+        </Link>
+        <Link className={styles.secondaryAction} href="/instantaneas">
+          <svg aria-hidden="true" className={styles.actionIcon} viewBox="0 0 24 24">
+            <path d="m13.4 2-8 11h6l-.8 9 8-12h-5.8Z" fill="currentColor" />
+          </svg>
+          Ver Instantáneas
+        </Link>
       </div>
     </section>
   );

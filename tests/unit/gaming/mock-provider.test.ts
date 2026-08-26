@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { GamingDomainError } from "../../../src/lib/gaming/errors";
 import { MockGamingProvider } from "../../../src/lib/gaming/mock-provider";
 import type { RandomSource } from "../../../src/lib/gaming/rules";
+import type { InstantGameId } from "../../../src/lib/gaming/types";
 
 class SequenceRandomSource implements RandomSource {
   private index = 0;
@@ -16,13 +17,18 @@ class SequenceRandomSource implements RandomSource {
   }
 }
 
-function providerWithResults(values: readonly number[], startingBalance = 250_000) {
+function providerWithResults(
+  values: readonly number[],
+  startingBalance = 250_000,
+  enabledInstantGameIds?: readonly InstantGameId[],
+) {
   let id = 0;
   return new MockGamingProvider({
     startingBalance,
     randomSource: new SequenceRandomSource(values),
     now: () => new Date("2026-08-25T12:00:00.000Z"),
     idFactory: () => `test-id-${++id}`,
+    enabledInstantGameIds,
   });
 }
 
@@ -71,6 +77,26 @@ describe("MockGamingProvider", () => {
       ),
     ).toThrowError(GamingDomainError);
     expect(provider.listPlays(session.id)).toHaveLength(1);
+  });
+
+  it("rechaza juegos instantáneos omitidos por el catálogo sin debitar saldo", () => {
+    const provider = providerWithResults([684], 250_000, ["sapyaite"]);
+    const session = provider.createSession();
+    const initialResults = provider.listResults(session.id);
+
+    expect(provider.getCatalog().instant.map((game) => game.id)).toEqual([
+      "sapyaite",
+    ]);
+    expect(() =>
+      provider.placeInstantBet(
+        session.id,
+        { gameId: "poa", amount: 500, selection: "001-099" },
+        "instant-disabled-001",
+      ),
+    ).toThrowError(expect.objectContaining({ code: "GAME_NOT_FOUND" }));
+    expect(provider.getSession(session.id).balance).toBe(250_000);
+    expect(provider.listPlays(session.id)).toHaveLength(0);
+    expect(provider.listResults(session.id)).toEqual(initialResults);
   });
 
   it("registers a traditional bet as pending and creates a recoverable ticket", () => {

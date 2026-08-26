@@ -15,7 +15,7 @@ test.beforeEach(async ({ page }, testInfo) => {
 
 test("renders the accessible product shell without horizontal overflow", async ({
   page,
-}) => {
+}, testInfo) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await expect(page).toHaveTitle(/quinie\.LA/i);
   await expect(page.locator("html")).toHaveAttribute("lang", /^es(?:-|$)/i);
@@ -44,11 +44,51 @@ test("renders the accessible product shell without horizontal overflow", async (
   await expect(soundToggle).toHaveAccessibleName(/sonido|audio/i);
   await expect(soundToggle).toHaveAttribute("aria-pressed", /^(true|false)$/);
 
+  const hero = page.getByTestId("home-hero");
+  const reel = hero.locator("[data-reel-source]");
+  const artwork = reel.locator('img[src*="rodillo-fuego"]');
+  await expect(hero).toBeVisible();
+  await expect(artwork).toBeVisible();
+  await expect.poll(() => artwork.evaluate(
+    (element) => (element as HTMLImageElement).naturalWidth,
+  )).toBeGreaterThan(0);
+  const artworkMetrics = await artwork.evaluate((element) => ({
+    height: (element as HTMLImageElement).naturalHeight,
+    objectFit: getComputedStyle(element).objectFit,
+    width: (element as HTMLImageElement).naturalWidth,
+  }));
+  expect(artworkMetrics.objectFit).toBe("contain");
+  expect(artworkMetrics.width / artworkMetrics.height).toBeCloseTo(2162 / 727, 1);
+
+  const heroMetrics = await hero.evaluate((element) => {
+    const [, reelColumn, actions] = Array.from(element.children);
+    const reelBox = reelColumn.getBoundingClientRect();
+    const actionsBox = actions.getBoundingClientRect();
+    const visual = element.querySelector<HTMLElement>("[data-reel-source]")!;
+    const visualStyle = getComputedStyle(visual);
+    const visualBox = visual.getBoundingClientRect();
+    return {
+      actionsY: actionsBox.y,
+      fireAlpha: Number.parseFloat(visualStyle.getPropertyValue("--hero-fire-alpha")),
+      reelBottom: reelBox.bottom,
+      visualRight: visualBox.right,
+      visualWidth: visualBox.width,
+    };
+  });
+  const theme = themeFromProjectName(testInfo.project.name);
+  expect(heroMetrics.fireAlpha).toBeGreaterThanOrEqual(theme === "dark" ? 0.75 : 0.25);
+  expect(heroMetrics.fireAlpha).toBeLessThanOrEqual(theme === "dark" ? 1 : 0.45);
+  expect(heroMetrics.visualWidth).toBeLessThanOrEqual(761);
+  expect(heroMetrics.visualRight).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
+  if (page.viewportSize()!.width <= 1180) {
+    expect(heroMetrics.actionsY).toBeGreaterThanOrEqual(heroMetrics.reelBottom - 1);
+  }
+
   await expectInsideHorizontalViewport(shell, page);
   await expectNoHorizontalOverflow(page);
 });
 
-test("shows the nine instant games in the required responsive grid", async ({
+test("shows only the instant game enabled by the backoffice", async ({
   page,
 }) => {
   await page.goto("/instantaneas", { waitUntil: "domcontentloaded" });
@@ -61,28 +101,10 @@ test("shows the nine instant games in the required responsive grid", async ({
   const cards = grid.getByTestId(E2E_SELECTORS.instantGameCard);
 
   await expect(grid).toBeVisible();
-  await expect(cards).toHaveCount(9);
-  for (let index = 0; index < 9; index += 1) {
-    await expect(cards.nth(index)).toBeVisible();
-    await expectInsideHorizontalViewport(cards.nth(index), page);
-  }
-
-  const viewportWidth = page.viewportSize()?.width ?? 0;
-  if (viewportWidth >= 1366) {
-    const boxes = await Promise.all(
-      Array.from({ length: 9 }, (_, index) => cards.nth(index).boundingBox()),
-    );
-    expect(boxes.every(Boolean)).toBe(true);
-
-    const columns = new Set(
-      boxes.map((box) => Math.round((box?.x ?? 0) / 4) * 4),
-    );
-    const rows = new Set(
-      boxes.map((box) => Math.round((box?.y ?? 0) / 4) * 4),
-    );
-    expect(columns.size).toBe(3);
-    expect(rows.size).toBe(3);
-  }
+  await expect(cards).toHaveCount(1);
+  await expect(cards.first()).toBeVisible();
+  await expect(cards.first().getByText("Sapy’aite", { exact: true })).toBeVisible();
+  await expectInsideHorizontalViewport(cards.first(), page);
 
   await expectNoHorizontalOverflow(page);
 });

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { buildGamingCatalog, findInstantGame, findTraditionalGame } from "./catalog";
+import { buildGamingCatalog, findTraditionalGame } from "./catalog";
 import { GamingDomainError } from "./errors";
 import {
   idempotencyKeySchema,
@@ -17,6 +17,7 @@ import {
 import {
   CURRENCY,
   type GamingCatalog,
+  type InstantGameId,
   type GamingPlay,
   type GamingResult,
   type GamingTicket,
@@ -47,6 +48,7 @@ export interface MockGamingProviderOptions {
   randomSource?: RandomSource;
   now?: () => Date;
   idFactory?: () => string;
+  enabledInstantGameIds?: readonly InstantGameId[];
 }
 
 export interface CreateSessionInput {
@@ -108,7 +110,11 @@ export class MockGamingProvider {
     this.now = options.now ?? (() => new Date());
     this.idFactory = options.idFactory ?? randomUUID;
     const initialNow = this.now();
-    this.catalog = buildGamingCatalog(this.neutral500Policy, initialNow);
+    this.catalog = buildGamingCatalog(
+      this.neutral500Policy,
+      initialNow,
+      options.enabledInstantGameIds,
+    );
     this.drawResults = this.buildDrawResults(initialNow);
   }
 
@@ -165,15 +171,17 @@ export class MockGamingProvider {
     const session = this.requireSession(sessionId);
 
     return this.idempotent(session, "instant", idempotencyKey, input, () => {
+      const game = this.catalog.instant.find(
+        (definition) => definition.id === input.gameId,
+      );
+      if (!game) throw new GamingDomainError("GAME_NOT_FOUND", "Juego no disponible.");
+
       if (session.balance < input.amount) {
         throw new GamingDomainError(
           "INSUFFICIENT_BALANCE",
           "Saldo insuficiente para registrar la jugada.",
         );
       }
-
-      const game = findInstantGame(input.gameId, this.neutral500Policy);
-      if (!game) throw new GamingDomainError("GAME_NOT_FOUND", "Juego no disponible.");
 
       // El resultado completo se genera y evalúa antes de crear la respuesta que animará la UI.
       const resultNumbers = generateResultNumbers(game, this.randomSource);

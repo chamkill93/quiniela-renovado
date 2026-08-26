@@ -86,6 +86,11 @@ describe("HeroVisual", () => {
 
     expect(visual.getAttribute("data-reel-result")).toBe("007");
     expect(animateMock).toHaveBeenCalledTimes(3);
+    expect(
+      decodeURIComponent(
+        view.container.querySelector<HTMLImageElement>("img")?.getAttribute("src") ?? "",
+      ),
+    ).toContain("/assets/hero/rodillo-fuego/rodillo-fuego.png");
 
     view.rerender(<HeroVisual spinKey="without-result" value={null} />);
 
@@ -114,13 +119,15 @@ describe("HeroVisual", () => {
       ];
 
       expect(options).toMatchObject({
-        delay: columnIndex * 150,
-        duration: [1_250, 1_450, 1_670][columnIndex],
-        easing: "cubic-bezier(.14,.72,.16,1)",
+        delay: 0,
+        duration: [1_700, 2_100, 2_500][columnIndex],
+        easing: "cubic-bezier(.12,.74,.12,1)",
         fill: "forwards",
       });
-      expect(keyframes).toHaveLength(4);
+      expect(keyframes).toHaveLength(5);
+      expect(keyframes[1]).toMatchObject({ filter: "blur(5px)" });
       expect(keyframes.at(-1)).toMatchObject({
+        filter: "blur(0)",
         offset: 1,
         transform: expectedFinalTransforms[columnIndex],
       });
@@ -130,6 +137,21 @@ describe("HeroVisual", () => {
     expect(Array.from(strips, (strip) => strip.style.transform)).toEqual(
       expectedFinalTransforms,
     );
+  });
+
+  it.each([
+    ["004", ["translate3d(0, -700px, 0)", "translate3d(0, -700px, 0)", "translate3d(0, -740px, 0)"]],
+    ["497", ["translate3d(0, -740px, 0)", "translate3d(0, -790px, 0)", "translate3d(0, -770px, 0)"]],
+    ["999", ["translate3d(0, -790px, 0)", "translate3d(0, -790px, 0)", "translate3d(0, -790px, 0)"]],
+  ])("termina exactamente en el valor límite %s", (value, transforms) => {
+    const { container } = render(<HeroVisual spinKey={`draw-${value}`} value={value} />);
+
+    expect(
+      Array.from(
+        container.querySelectorAll<HTMLElement>("[data-reel-strip]"),
+        (strip) => strip.style.transform,
+      ),
+    ).toEqual(transforms);
   });
 
   it("vuelve a girar cuando cambia spinKey aunque el número sea el mismo", () => {
@@ -143,6 +165,16 @@ describe("HeroVisual", () => {
       expect(animation.cancel).toHaveBeenCalledTimes(1);
     });
     expect(view.container.querySelector("[data-reel-result='381']")).toBeTruthy();
+  });
+
+  it("distingue una combinación promocional de un resultado publicado", () => {
+    const { container } = render(
+      <HeroVisual source="promotional" spinKey="preview-381" value="381" />,
+    );
+
+    const visual = screen.getByRole("img", { name: "Combinación aleatoria 381" });
+    expect(visual.getAttribute("data-reel-source")).toBe("promotional");
+    expect(container.querySelector("[data-testid='home-hero-fire']")).toBeTruthy();
   });
 
   it("fija el resultado sin WAAPI cuando se prefiere movimiento reducido", () => {

@@ -79,29 +79,6 @@ const TRADITIONAL_NAMES = [
   "Megaloto",
 ] as const;
 
-const MULTI_REEL_CASES = [
-  {
-    request: {
-      gameId: "poa5",
-      amount: 500,
-      selection: { numbers: ["001", "002", "003"] },
-    },
-    reels: 5,
-  },
-  {
-    request: {
-      gameId: "poa10",
-      amount: 500,
-      selection: { numbers: ["001", "002", "003"] },
-    },
-    reels: 10,
-  },
-  {
-    request: { gameId: "racha5", amount: 500, selection: "PAR" },
-    reels: 5,
-  },
-] satisfies readonly { request: InstantPlayRequest; reels: 5 | 10 }[];
-
 const ADMIN_PASSWORD = "ficticia-2026";
 
 async function readOkJson<T>(response: APIResponse): Promise<T> {
@@ -140,7 +117,7 @@ test.beforeEach(async ({ page }, testInfo) => {
   );
 });
 
-test("renders the authoritative Home hero in dark, light and responsive layouts", async ({
+test("renders the promotional Home hero in dark, light and responsive layouts", async ({
   page,
 }, testInfo) => {
   const now = new Date();
@@ -205,11 +182,26 @@ test("renders the authoritative Home hero in dark, light and responsive layouts"
     "/instantaneas",
   );
   await expect(hero.locator("[data-reel-column]")).toHaveCount(3);
-  await expect(hero.locator('[data-reel-result="246"]')).toHaveAttribute(
-    "aria-label",
-    "Último resultado publicado 246",
-  );
-  await expect(hero.getByTestId("home-hero-fire")).toBeVisible();
+  const promotionalReel = hero.locator('[data-reel-source="promotional"]');
+  await expect(promotionalReel).toHaveAttribute("data-reel-result", /^\d{3}$/);
+  await expect(promotionalReel).toHaveAttribute("aria-label", /^Combinación aleatoria \d{3}$/);
+  const firstPromotionalResult = await promotionalReel.getAttribute("data-reel-result");
+  expect(firstPromotionalResult).not.toBe("000");
+
+  const fire = hero.getByTestId("home-hero-fire");
+  await expect(fire).toBeVisible();
+  const reelArtwork = hero.locator('img[src*="rodillo-fuego"]');
+  await expect(reelArtwork).toBeVisible();
+  await expect.poll(() => reelArtwork.evaluate(
+    (element) => (element as HTMLImageElement).naturalWidth,
+  )).toBeGreaterThan(0);
+  const artworkMetrics = await reelArtwork.evaluate((element) => ({
+    naturalHeight: (element as HTMLImageElement).naturalHeight,
+    naturalWidth: (element as HTMLImageElement).naturalWidth,
+    objectFit: getComputedStyle(element).objectFit,
+  }));
+  expect(artworkMetrics.objectFit).toBe("contain");
+  expect(artworkMetrics.naturalWidth / artworkMetrics.naturalHeight).toBeCloseTo(2162 / 727, 1);
   await expect(hero.getByText("En vivo", { exact: false })).toHaveCount(0);
   await expect(hero.getByText("Ganaste", { exact: false })).toHaveCount(0);
   await expect(page.locator('[aria-label="Accesos rápidos"]')).toHaveCount(0);
@@ -219,14 +211,18 @@ test("renders the authoritative Home hero in dark, light and responsive layouts"
   );
 
   const layout = await hero.evaluate((element) => {
-    const [copy, reel] = Array.from(element.children);
+    const [copy, reel, actions] = Array.from(element.children);
     const heroBox = element.getBoundingClientRect();
     const copyBox = copy.getBoundingClientRect();
     const reelBox = reel.getBoundingClientRect();
+    const actionsBox = actions.getBoundingClientRect();
     return {
       heroHeight: heroBox.height,
       copyRight: copyBox.right,
       copyBottom: copyBox.bottom,
+      reelBottom: reelBox.bottom,
+      reelRight: reelBox.right,
+      actionsY: actionsBox.y,
       reelX: reelBox.x,
       reelY: reelBox.y,
     };
@@ -237,13 +233,20 @@ test("renders the authoritative Home hero in dark, light and responsive layouts"
     expect(layout.heroHeight).toBeLessThanOrEqual(380);
   } else {
     expect(layout.reelY).toBeGreaterThanOrEqual(layout.copyBottom - 1);
+    expect(layout.actionsY).toBeGreaterThanOrEqual(layout.reelBottom - 1);
   }
+  expect(layout.reelRight).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
   await expectNoHorizontalOverflow(page);
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect
+    .poll(() => promotionalReel.getAttribute("data-reel-result"))
+    .not.toBe(firstPromotionalResult);
 });
 
-test("completes Home with four draws, Quiniela results and the official Mega Loto banner", async ({
+test("completes Home with scheduled draws, tabbed results and the official Mega Loto banner", async ({
   page,
-}, testInfo) => {
+}) => {
   const now = new Date();
   const catalog = buildGamingCatalog("REFUND", now);
   const publishedResults: GamingResult[] = [
@@ -252,6 +255,9 @@ test("completes Home with four draws, Quiniela results and the official Mega Lot
     ["home-result-731", "731", "evening", 3],
     ["home-result-044", "044", "night", 4],
     ["home-result-912", "912", "early", 5],
+    ["home-result-083", "83", "morning", 6],
+    ["home-result-006", "6", "evening", 7],
+    ["home-result-325", "325", "night", 8],
   ].map(([id, result, drawId, hoursAgo]) => ({
     id: String(id),
     source: "DRAW",
@@ -264,6 +270,38 @@ test("completes Home with four draws, Quiniela results and the official Mega Lot
       now.getTime() - Number(hoursAgo) * 3_600_000,
     ).toISOString(),
   }));
+  publishedResults.push(
+    {
+      id: "home-prizes-all",
+      source: "DRAW",
+      gameId: "prizes",
+      gameName: "A los Premios",
+      drawId: "morning",
+      result: "44",
+      resultNumbers: ["44", "208", "7", "83", "731"],
+      occurredAt: new Date(now.getTime() - 9 * 3_600_000).toISOString(),
+    },
+    {
+      id: "home-redoblona",
+      source: "DRAW",
+      gameId: "redoblona",
+      gameName: "Redoblona",
+      drawId: "evening",
+      result: "12",
+      resultNumbers: ["12"],
+      occurredAt: new Date(now.getTime() - 10 * 3_600_000).toISOString(),
+    },
+    {
+      id: "home-invert",
+      source: "DRAW",
+      gameId: "invert",
+      gameName: "Invertida",
+      drawId: "night",
+      result: "8",
+      resultNumbers: ["8"],
+      occurredAt: new Date(now.getTime() - 11 * 3_600_000).toISOString(),
+    },
+  );
   publishedResults.unshift({
     id: "home-megaloto-excluded",
     source: "DRAW",
@@ -314,47 +352,46 @@ test("completes Home with four draws, Quiniela results and the official Mega Lot
   const drawsSection = page.getByTestId("home-draws-section");
   const resultsSection = page.getByTestId("home-results-section");
   const megaBanner = page.getByTestId("home-megaloto-banner");
+  const megaCta = megaBanner.getByRole("link", { name: /sitio oficial de Mega Loto/i });
   const siteFooter = page.locator(".q-site-footer");
   const drawCards = page.getByTestId("home-draw-card");
   const resultCards = page.getByTestId("home-result-card");
 
   await expect(drawCards).toHaveCount(4);
-  await expect(resultCards).toHaveCount(4);
+  await expect(resultCards).toHaveCount(8);
   await expect(
     page.getByRole("heading", { name: "Instantáneas habilitadas" }),
   ).toHaveCount(0);
 
   const expectedDraws = [
-    ["early", "tempranero", "Tempranero"],
-    ["morning", "matutino", "Matutino"],
-    ["evening", "vespertino", "Vespertino"],
-    ["night", "nocturno", "Nocturno"],
+    ["early", "tempranero", "Tempranero", "10:30"],
+    ["morning", "matutino", "Matutino", "13:00"],
+    ["evening", "vespertino", "Vespertino", "16:30"],
+    ["night", "nocturno", "Nocturno", "20:30"],
   ] as const;
-  const initialTheme = themeFromProjectName(testInfo.project.name);
-  const activePseudoElement = initialTheme === "dark" ? "::before" : "::after";
 
   for (let index = 0; index < expectedDraws.length; index += 1) {
-    const [drawId, slug, label] = expectedDraws[index];
+    const [drawId, slug, label, time] = expectedDraws[index];
     const card = drawCards.nth(index);
     await expect(card).toHaveAttribute("data-draw-id", drawId);
     await expect(card).toHaveAttribute("data-draw-slug", slug);
     await expect(card).toHaveAttribute("href", `/sorteos/${slug}`);
     await expect(card.getByText(label, { exact: true })).toBeVisible();
-    await expect
-      .poll(() =>
-        card.locator("span").first().evaluate(
-          (element, pseudoElement) =>
-            getComputedStyle(element, pseudoElement).backgroundImage,
-          activePseudoElement,
-        ),
-      )
-      .toContain(`/assets/quinie-home-v3/draws/${initialTheme}/${slug}.webp`);
+    await expect(card.getByText(time, { exact: true })).toBeVisible();
+    const icon = card.getByRole("img", { name: `Sorteo ${label}` });
+    await expect(icon).toHaveAttribute("data-draw-icon", drawId);
+    await expect(icon).toHaveAttribute("data-draw-icon-slug", slug);
   }
   await expect(
     page.locator('[data-testid="home-draw-card"][data-active="true"]'),
   ).toHaveCount(1);
+  await expect(drawsSection.getByText("PRÓXIMO", { exact: true })).toHaveCount(1);
+  await expect(
+    page.locator('[data-testid="home-draw-card"][data-active="true"] time'),
+  ).toHaveText(/^EN \d{2}H \d{2}M \d{2}S$/);
+  await expect(drawsSection.locator("time")).toHaveCount(1);
 
-  for (const [index, value] of ["497", "208", "731", "044"].entries()) {
+  for (const [index, value] of ["497", "208", "731", "044", "912", "083", "006", "325"].entries()) {
     await expect(resultCards.nth(index).getByText(value, { exact: true })).toBeVisible();
   }
   await expect(resultsSection.getByText("999", { exact: true })).toHaveCount(0);
@@ -363,14 +400,48 @@ test("completes Home with four draws, Quiniela results and the official Mega Lot
     "/resultados",
   );
 
-  await expect(megaBanner).toHaveAttribute(
+  const tabs = resultsSection.getByRole("tab");
+  await expect(tabs).toHaveCount(4);
+  await expect(tabs.nth(0)).toHaveText("A LA CABEZA");
+  await expect(tabs.nth(1)).toHaveText("A LOS PREMIOS");
+  await expect(tabs.nth(2)).toHaveText("REDOBLONA");
+  await expect(tabs.nth(3)).toHaveText("INVERTIDA");
+
+  await tabs.nth(1).click();
+  await expect(tabs.nth(1)).toHaveAttribute("aria-selected", "true");
+  await expect(resultCards).toHaveCount(5);
+  for (const value of ["044", "208", "007", "083", "731"]) {
+    await expect(resultsSection.getByText(value, { exact: true })).toBeVisible();
+  }
+  await expect(resultsSection.getByText(/POSICIÓN \d+/)).toHaveCount(0);
+
+  await tabs.nth(1).press("ArrowRight");
+  await expect(tabs.nth(2)).toHaveAttribute("aria-selected", "true");
+  await expect(resultCards).toHaveCount(1);
+  await expect(resultsSection.getByText("012", { exact: true })).toBeVisible();
+  await tabs.nth(0).click();
+  await expect(resultCards).toHaveCount(8);
+
+  await expect(megaCta).toHaveAttribute(
     "href",
     "https://lotoqr.megaloto.com.py/",
   );
-  await expect(megaBanner).toHaveAttribute("target", "_blank");
-  await expect(megaBanner).toHaveAttribute("rel", /noopener/);
-  await expect(megaBanner).toHaveAttribute("rel", /noreferrer/);
-  await expect(megaBanner.getByRole("img", { name: "Mega Loto" })).toBeVisible();
+  await expect(megaCta).toHaveAttribute("target", "_blank");
+  await expect(megaCta).toHaveAttribute("rel", /noopener/);
+  await expect(megaCta).toHaveAttribute("rel", /noreferrer/);
+  await expect(megaBanner.getByText("Sorteo exclusivo con 6 números.", { exact: true })).toBeVisible();
+  await expect(megaBanner.getByText(/Un producto de Lotería Mega Loto/i)).toHaveCount(0);
+  await expect(megaBanner.getByText(/1 al 45/i)).toHaveCount(0);
+  await expect(megaBanner.getByRole("img", { name: "Logo oficial de Mega Loto" })).toHaveAttribute(
+    "src",
+    "/assets/quinie-home-final/megaloto/logo-mega-loto-circular-transparente.png",
+  );
+  const megaBalls = megaBanner.getByRole("img", { name: "Bolillas de Mega Loto" });
+  await expect(megaBalls).toHaveAttribute(
+    "src",
+    "/assets/quinie-home-final/megaloto/bolillas-visual-mockup.png",
+  );
+  await expect(megaBalls).toBeVisible();
   await expect(megaBanner.getByText("IR A MEGA LOTO", { exact: true })).toBeVisible();
 
   const verticalOrder = await Promise.all(
@@ -380,10 +451,36 @@ test("completes Home with four draws, Quiniela results and the official Mega Lot
   );
   expect(verticalOrder).toEqual([...verticalOrder].sort((a, b) => a - b));
 
-  const drawColumns = await drawsSection.locator("div").first().evaluate((element) =>
-    getComputedStyle(element).gridTemplateColumns.split(" ").filter(Boolean).length,
-  );
-  expect(drawColumns).toBe((page.viewportSize()?.width ?? 0) > 1_100 ? 4 : 2);
+  const viewportWidth = page.viewportSize()?.width ?? 0;
+  if (viewportWidth >= 1_280) {
+    const drawColumns = await drawsSection.locator("div").nth(1).evaluate((element) =>
+      getComputedStyle(element).gridTemplateColumns.split(" ").filter(Boolean).length,
+    );
+    expect(drawColumns).toBe(4);
+  } else if (viewportWidth < 768) {
+    const activePosition = await page.locator('[data-testid="home-draw-card"][data-active="true"]').evaluate(
+      (element) => {
+        const card = element.getBoundingClientRect();
+        const scroller = element.parentElement?.parentElement?.getBoundingClientRect();
+        return scroller ? card.left - scroller.left : Number.POSITIVE_INFINITY;
+      },
+    );
+    expect(activePosition).toBeLessThanOrEqual(18);
+  }
+
+  if (viewportWidth >= 768) {
+    const nextButton = resultsSection.getByRole("button", { name: "Ver más resultados" });
+    await expect(nextButton).toBeEnabled();
+    const initialScroll = await resultsSection.locator('[role="tabpanel"]').evaluate((element) => element.scrollLeft);
+    await nextButton.click();
+    await expect.poll(() => resultsSection.locator('[role="tabpanel"]').evaluate((element) => element.scrollLeft)).toBeGreaterThan(initialScroll);
+  } else {
+    const widths = await Promise.all([
+      megaBanner.evaluate((element) => element.getBoundingClientRect().width),
+      megaCta.evaluate((element) => element.getBoundingClientRect().width),
+    ]);
+    expect(Math.abs(widths[0] - widths[1])).toBeLessThan(35);
+  }
   await expectNoHorizontalOverflow(page);
 
   await drawCards.first().click();
@@ -424,14 +521,34 @@ test("shows only four traditional games and retires the former direct routes", a
   await expect(instantGrid.getByText("Sapy’aite", { exact: true })).toBeVisible();
 
   await page.goto("/reglas", { waitUntil: "domcontentloaded" });
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Reglas claras, paso a paso" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Cómo registrar una jugada" }),
+  ).toBeVisible();
   await expect(page.getByText("Sapy’aite tradicional", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Megaloto", { exact: true })).toHaveCount(0);
-  await expect(page.locator('main a[href^="/quinielas/"], main a[href^="/instantaneas/"]')).toHaveCount(13);
+  await expect(page.locator('main a[href^="/quinielas/"], main a[href^="/instantaneas/"]')).toHaveCount(5);
   const headRule = page.getByRole("link", { name: "Jugar A la Cabeza", exact: true });
   const sapyaiteRule = page.getByRole("link", { name: "Jugar Sapy’aite", exact: true });
   await expect(headRule).toHaveAttribute("href", "/quinielas/head");
   await expect(sapyaiteRule).toHaveAttribute("href", "/instantaneas/sapyaite");
-  await expect(page.getByText("Elegí par o impar.", { exact: true })).toBeVisible();
+  await expect(page.getByText("Qué tenés que hacer", { exact: true })).toHaveCount(5);
+  await expect(page.getByText("Cuánto ganás", { exact: true })).toHaveCount(5);
+  await expect(page.getByText("Premio según tabla oficial vigente", { exact: true })).toHaveCount(4);
+  await expect(page.getByText("Premio total actual: 2× el importe", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Ejemplo con Gs. 500: recibís Gs. 1.000 en total y la ganancia neta es Gs. 500.", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Elegí si el resultado de 001 a 999 será par o impar.", { exact: true }),
+  ).toBeVisible();
+  const ruleColumns = await page.getByTestId("traditional-rules-grid").evaluate(
+    (element) => getComputedStyle(element).gridTemplateColumns.split(" ").filter(Boolean).length,
+  );
+  expect(ruleColumns).toBe((page.viewportSize()?.width ?? 0) <= 820 ? 1 : 2);
+  await expectNoHorizontalOverflow(page);
 
   await headRule.click();
   await expect(page).toHaveURL(/\/quinielas\/head$/);
@@ -484,7 +601,7 @@ test("uses the approved 3D icon theme and responsive catalog grid", async ({
   await page.goto("/instantaneas", { waitUntil: "domcontentloaded" });
   const grid = page.getByTestId(E2E_SELECTORS.instantGamesGrid);
   const icons = grid.locator("[data-game-icon]");
-  await expect(icons).toHaveCount(9);
+  await expect(icons).toHaveCount(1);
   await expect(icons.first()).toHaveAttribute("data-game-icon", "sapyaite");
   await expect(icons.first()).toHaveAttribute("data-game-icon-family", "instant");
   await expect(icons.first()).toHaveAttribute("data-game-icon-slug", "sapyaite");
@@ -599,11 +716,11 @@ test("accepts all six traditional games and exposes server-backed balance and Mi
   ).toBeVisible();
 });
 
-test("publishes exactly nine instant games and returns 5, 10, and 5 reel results", async ({
+test("publishes only Sapy’aite and rejects disabled instant games", async ({
   page,
 }) => {
-  const state = await bootstrap(page);
-  expect(state.catalog.instant).toHaveLength(9);
+  const initial = await bootstrap(page);
+  expect(initial.catalog.instant.map((game) => game.id)).toEqual(["sapyaite"]);
 
   await page.goto("/instantaneas", { waitUntil: "domcontentloaded" });
   await expect(
@@ -613,23 +730,38 @@ test("publishes exactly nine instant games and returns 5, 10, and 5 reel results
     page
       .getByTestId(E2E_SELECTORS.instantGamesGrid)
       .getByTestId(E2E_SELECTORS.instantGameCard),
-  ).toHaveCount(9);
+  ).toHaveCount(1);
 
-  for (const [index, { request, reels }] of MULTI_REEL_CASES.entries()) {
-    const definition = state.catalog.instant.find(
-      (game) => game.id === request.gameId,
-    );
-    expect(definition, `${request.gameId} must exist in the catalog`).toBeDefined();
-    expect(definition?.reels).toBe(reels);
+  const activePlay = await postPlay(
+    page,
+    "/api/mock/instant",
+    { gameId: "sapyaite", amount: 500, selection: "PAR" },
+    "e2e-sapyaite-active-001",
+  );
+  expect(activePlay.body.play.gameId).toBe("sapyaite");
+  const afterActivePlay = await bootstrap(page);
 
-    const { body } = await postPlay(
-      page,
-      "/api/mock/instant",
-      request,
-      `e2e-multi-reel-${index + 1}`,
-    );
-    expect(body.play.resultNumbers).toHaveLength(reels);
-  }
+  const disabledResponse = await page.request.post("/api/mock/instant", {
+    data: { gameId: "poa", amount: 500, selection: "001-099" },
+    headers: { "Idempotency-Key": "e2e-disabled-poa-001" },
+  });
+  expect(disabledResponse.status()).toBe(404);
+  const disabledBody = await disabledResponse.json();
+  expect(disabledBody).toMatchObject({
+    error: { code: "GAME_NOT_FOUND" },
+  });
+
+  const afterDisabledPlay = await bootstrap(page);
+  expect(afterDisabledPlay.session.balance).toBe(afterActivePlay.session.balance);
+  expect(afterDisabledPlay.plays).toHaveLength(afterActivePlay.plays.length);
+
+  await page.goto("/instantaneas/poa", { waitUntil: "domcontentloaded" });
+  await expect(page.getByTestId("disabled-instant-game")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Juego no disponible" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Rodillos numéricos")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Jugar", exact: true })).toHaveCount(0);
 });
 
 test("keeps the reel active and opens the receipt only from Mis Jugadas", async ({
@@ -637,7 +769,7 @@ test("keeps the reel active and opens the receipt only from Mis Jugadas", async 
 }) => {
   test.slow();
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/instantaneas/racha5", { waitUntil: "domcontentloaded" });
+  await page.goto("/instantaneas/sapyaite", { waitUntil: "domcontentloaded" });
 
   const reelStage = page.getByLabel("Rodillos numéricos");
   const playButton = page.getByRole("button", { name: "Jugar", exact: true });
@@ -655,13 +787,13 @@ test("keeps the reel active and opens the receipt only from Mis Jugadas", async 
 
   await playButton.click();
 
-  await expect(reelStage.locator('[data-spinning="false"]')).toHaveCount(5);
+  await expect(reelStage.locator('[data-spinning="false"]')).toHaveCount(1);
   await expect(page.getByRole("dialog", { name: "Jugada registrada" })).toHaveCount(0);
   await expect(page.getByText("Comprobante en 5 s", { exact: true })).toHaveCount(0);
 
   await page.goto("/mis-jugadas", { waitUntil: "domcontentloaded" });
   const playItem = page.getByRole("article").filter({
-    has: page.getByRole("heading", { level: 3, name: "Racha 5", exact: true }),
+    has: page.getByRole("heading", { level: 3, name: "Sapy’aite", exact: true }),
   });
   await playItem.getByRole("button", { name: "Ver mi comprobante" }).click();
 
@@ -676,7 +808,7 @@ test("keeps the reel active and opens the receipt only from Mis Jugadas", async 
     page.getByRole("heading", { level: 1, name: "Resultados" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { level: 3, name: "Racha 5", exact: true }),
+    page.getByRole("heading", { level: 3, name: "Sapy’aite", exact: true }),
   ).toBeVisible();
 });
 

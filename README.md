@@ -1,6 +1,6 @@
 # quinie.LA
 
-Frontend web de Quiniela para Paraguay, construido con Next.js App Router y preparado para consumir un backoffice externo. La FASE 1 conserva los flujos del HTML v25 y las nueve Instantáneas; la FASE 2 desacopla toda la experiencia detrás de conectores tipados e incorpora login y registro.
+Frontend web de Quiniela para Paraguay, construido con Next.js App Router y preparado para consumir un backoffice externo. La FASE 1 conserva los flujos del HTML v25 y los conectores de nueve Instantáneas; la FASE 2 desacopla toda la experiencia detrás de conectores tipados e incorpora login y registro. El proveedor actual habilita únicamente Sapy’aite.
 
 ## Estado
 
@@ -64,8 +64,8 @@ Quiniela tradicional:
 
 Instantáneas:
 
-- Sapy’aite, Po’a, Pya’e, Peteĩ, Mokõi y Mbohapy
-- Po’a 5, Po’a 10 y Racha 5
+- Sapy’aite es el único juego publicado por el proveedor actual.
+- Los conectores de Po’a, Pya’e, Peteĩ, Mokõi, Mbohapy, Po’a 5, Po’a 10 y Racha 5 se conservan deshabilitados para una futura activación desde el catálogo.
 - Rodillos numéricos de 001 a 999; cinco y diez rodillos responsive
 - Resultado definido en servidor antes de la animación
 - Rodillo activo antes de jugar, fichas limitadas a Gs. 10.000 y formulario compacto
@@ -110,7 +110,7 @@ La matriz visual cubre dark y light en:
 
 `360×800`, `390×844`, `430×932`, `768×1024`, `1024×768`, `1366×768`, `1440×900` y `1920×1080`.
 
-Los flujos E2E validan los seis juegos tradicionales, las nueve Instantáneas, rodillos 5/10, comprobantes consultados desde Mis Jugadas, saldo autoritativo, recarga, idempotencia, historiales, login/logout, registro preview no persistente, sesión expirada y error de red con reintento.
+Los flujos E2E validan los seis conectores tradicionales, Sapy’aite como única Instantánea habilitada, el rechazo de juegos omitidos por el catálogo, comprobantes consultados desde Mis Jugadas, saldo autoritativo, recarga, idempotencia, historiales, login/logout, registro preview no persistente, sesión expirada y error de red con reintento.
 
 Playwright instala Chromium en CI. En una estación nueva, ejecutá una vez `npx playwright install chromium`; también podés usar Chrome con `PLAYWRIGHT_CHANNEL=chrome`.
 

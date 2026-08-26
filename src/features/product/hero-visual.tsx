@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useRef } from "react";
 
 import styles from "./hero-visual.module.css";
@@ -9,7 +10,8 @@ const REEL_DIGITS = Array.from(
   { length: (REEL_CYCLES + 1) * 10 },
   (_, index) => index % 10,
 );
-const REEL_DURATIONS = [1_250, 1_450, 1_670] as const;
+const REEL_DURATIONS = [1_700, 2_100, 2_500] as const;
+const HERO_REEL_ARTWORK = "/assets/hero/rodillo-fuego/rodillo-fuego.png";
 
 function normalizeResult(value: string | null) {
   if (value === null) return null;
@@ -27,10 +29,12 @@ export function HeroVisual({
   value,
   spinKey,
   loading = false,
+  source = "published",
 }: {
   value: string | null;
   spinKey?: string;
   loading?: boolean;
+  source?: "promotional" | "published";
 }) {
   const safeValue = useMemo(() => normalizeResult(value), [value]);
   const stripRefs = useRef<Array<HTMLDivElement | null>>([]);
@@ -40,7 +44,10 @@ export function HeroVisual({
 
     strips.forEach((strip) => {
       strip?.getAnimations?.().forEach((animation) => animation.cancel());
-      if (strip) strip.style.willChange = "auto";
+      if (strip) {
+        strip.style.filter = "blur(0)";
+        strip.style.willChange = "auto";
+      }
     });
 
     if (!safeValue) {
@@ -87,18 +94,19 @@ export function HeroVisual({
         return;
       }
 
-      strip.style.willChange = "transform";
+      strip.style.willChange = "transform, filter";
       const animation = strip.animate(
         [
-          { transform: "translate3d(0, 0, 0)", offset: 0 },
-          { transform: `translate3d(0, ${finalY * 0.72}px, 0)`, offset: 0.63 },
-          { transform: `translate3d(0, ${finalY * 0.94}px, 0)`, offset: 0.86 },
-          { transform: finalTransform, offset: 1 },
+          { filter: "blur(0)", transform: "translate3d(0, 0, 0)", offset: 0 },
+          { filter: "blur(5px)", transform: `translate3d(0, ${finalY * 0.45}px, 0)`, offset: 0.38 },
+          { filter: "blur(3px)", transform: `translate3d(0, ${finalY * 0.78}px, 0)`, offset: 0.68 },
+          { filter: "blur(1px)", transform: `translate3d(0, ${finalY * 0.95}px, 0)`, offset: 0.88 },
+          { filter: "blur(0)", transform: finalTransform, offset: 1 },
         ],
         {
           duration: REEL_DURATIONS[columnIndex],
-          delay: columnIndex * 150,
-          easing: "cubic-bezier(.14,.72,.16,1)",
+          delay: 0,
+          easing: "cubic-bezier(.12,.74,.12,1)",
           fill: "forwards",
         },
       );
@@ -109,6 +117,7 @@ export function HeroVisual({
           if (disposed) return;
           const settledY = finalOffset(strip, columnIndex) ?? finalY;
           strip.style.transform = `translate3d(0, ${settledY}px, 0)`;
+          strip.style.filter = "blur(0)";
           strip.style.willChange = "auto";
           settled[columnIndex] = true;
           animation.cancel();
@@ -135,16 +144,25 @@ export function HeroVisual({
       observer?.disconnect();
       animations.forEach((animation) => animation.cancel());
       strips.forEach((strip) => {
-        if (strip) strip.style.willChange = "auto";
+        if (strip) {
+          strip.style.filter = "blur(0)";
+          strip.style.willChange = "auto";
+        }
       });
     };
   }, [safeValue, spinKey]);
 
-  const accessibleLabel = safeValue
-    ? `Último resultado publicado ${safeValue}`
-    : loading
-      ? "Cargando último resultado publicado"
-      : "Último resultado todavía no disponible";
+  const accessibleLabel = source === "promotional"
+    ? safeValue
+      ? `Combinación aleatoria ${safeValue}`
+      : loading
+        ? "Preparando combinación aleatoria"
+        : "Combinación aleatoria no disponible"
+    : safeValue
+      ? `Último resultado publicado ${safeValue}`
+      : loading
+        ? "Cargando último resultado publicado"
+        : "Último resultado todavía no disponible";
 
   return (
     <div
@@ -153,11 +171,21 @@ export function HeroVisual({
       className={styles.visual}
       data-loading={loading ? "true" : "false"}
       data-reel-result={safeValue ?? ""}
+      data-reel-source={source}
       role="img"
     >
       <div aria-hidden="true" className={styles.fire} data-testid="home-hero-fire" />
 
       <div aria-hidden="true" className={styles.reelHero}>
+        <Image
+          alt=""
+          className={styles.artwork}
+          fill
+          priority
+          sizes="(max-width: 1180px) calc(100vw - 40px), min(50vw, 760px)"
+          src={HERO_REEL_ARTWORK}
+        />
+
         <div className={styles.shell}>
           {[0, 1, 2].map((columnIndex) => (
             <div
@@ -171,6 +199,11 @@ export function HeroVisual({
                 ref={(node) => {
                   stripRefs.current[columnIndex] = node;
                 }}
+                style={safeValue
+                  ? {
+                      transform: `translate3d(0, -${((REEL_CYCLES * 10 + Number(safeValue[columnIndex])) / REEL_DIGITS.length) * 100}%, 0)`,
+                    }
+                  : undefined}
               >
                 {REEL_DIGITS.map((digit, rowIndex) => (
                   <span
@@ -188,13 +221,9 @@ export function HeroVisual({
             </div>
           ))}
         </div>
-
-        <div className={styles.dots}>
-          <span data-active="true" />
-          <span />
-          <span />
-        </div>
       </div>
+
+      <span className={styles.srOnly}>{accessibleLabel}</span>
     </div>
   );
 }
