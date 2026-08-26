@@ -2,6 +2,42 @@ import type { NextConfig } from "next";
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 
+function configuredBackofficeOrigin(value: string | undefined) {
+  if (!value?.trim()) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:"
+      ? url.origin
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+const connectSources = ["'self'"];
+if (isDevelopment) connectSources.push("ws:", "wss:");
+const backofficeOrigins = new Set(
+  [
+    process.env.NEXT_PUBLIC_BACKOFFICE_BASE_URL,
+    process.env.NEXT_PUBLIC_BACKOFFICE_ENDPOINT_SESSION,
+    process.env.NEXT_PUBLIC_BACKOFFICE_ENDPOINT_BOOTSTRAP,
+    process.env.NEXT_PUBLIC_BACKOFFICE_ENDPOINT_LOGIN,
+    process.env.NEXT_PUBLIC_BACKOFFICE_ENDPOINT_REGISTER,
+    process.env.NEXT_PUBLIC_BACKOFFICE_ENDPOINT_LOGOUT,
+    process.env.NEXT_PUBLIC_BACKOFFICE_ENDPOINT_CATALOG,
+    process.env.NEXT_PUBLIC_BACKOFFICE_ENDPOINT_PLAYS,
+    process.env.NEXT_PUBLIC_BACKOFFICE_ENDPOINT_TRADITIONAL_PLAYS,
+    process.env.NEXT_PUBLIC_BACKOFFICE_ENDPOINT_INSTANT_PLAYS,
+    process.env.NEXT_PUBLIC_BACKOFFICE_ENDPOINT_RESULTS,
+    process.env.NEXT_PUBLIC_BACKOFFICE_ENDPOINT_TICKET,
+    process.env.NEXT_PUBLIC_BACKOFFICE_ENDPOINT_WALLET_MOVEMENTS,
+    process.env.NEXT_PUBLIC_BACKOFFICE_ENDPOINT_WALLET_TOPUP,
+  ]
+    .map(configuredBackofficeOrigin)
+    .filter((origin): origin is string => Boolean(origin)),
+);
+connectSources.push(...backofficeOrigins);
+
 const contentSecurityPolicy = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""}`,
@@ -9,7 +45,7 @@ const contentSecurityPolicy = [
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
   "media-src 'self' data: blob:",
-  `connect-src 'self'${isDevelopment ? " ws: wss:" : ""}`,
+  `connect-src ${connectSources.join(" ")}`,
   "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",

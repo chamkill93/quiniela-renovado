@@ -10,6 +10,8 @@ export interface RuntimeBackofficeClientConfig {
   baseUrl?: string;
   headers?: HeadersInit | BackofficeHeadersFactory;
   fetch?: BackofficeFetch;
+  /** Default transport timeout in milliseconds. `0` disables it. */
+  timeoutMs?: number;
 }
 
 /**
@@ -27,5 +29,6 @@ export function createRuntimeBackofficeClient(config: RuntimeBackofficeClientCon
     endpoints: config.endpoints,
     headers: config.headers,
     fetch: config.fetch,
+    timeoutMs: config.timeoutMs,
   });
 }

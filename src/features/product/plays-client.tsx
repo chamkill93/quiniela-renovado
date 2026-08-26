@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useProduct } from "@/providers/product-provider";
 import { formatGs } from "@/lib/product/catalog";
 import { SectionHeader } from "./section-header";
+import { RemoteUnauthorizedState } from "./remote-view-state";
 import styles from "./product.module.css";
 
 function statusLabel(status: string) {
@@ -11,7 +12,7 @@ function statusLabel(status: string) {
 }
 
 export function PlaysClient() {
-  const { plays, loading, error, refresh } = useProduct();
+  const { plays, session, loading, error, unauthorized, refresh } = useProduct();
   return (
     <main className={styles.page}>
       <SectionHeader
@@ -21,7 +22,9 @@ export function PlaysClient() {
       />
       {loading ? <div className={styles.loadingBar} aria-label="Cargando jugadas" /> : null}
       {error ? <div className={styles.errorBox} role="alert">{error} <button className={styles.quietButton} onClick={() => void refresh()} type="button">Reintentar</button></div> : null}
-      {!loading && !error && plays.length === 0 ? (
+      {!loading && !error && (unauthorized || !session) ? (
+        <RemoteUnauthorizedState message="Iniciá sesión para consultar tus jugadas." />
+      ) : !loading && !error && plays.length === 0 ? (
         <div className={styles.emptyState}>
           <div>
             <h2>Todavía no registraste jugadas</h2>
@@ -36,7 +39,7 @@ export function PlaysClient() {
               <div>
                 <p className={styles.eyebrow}>{play.family === "INSTANT" ? "Instantánea" : "Quiniela"}</p>
                 <h3>{play.gameName ?? play.gameId}</h3>
-                <p>{new Intl.DateTimeFormat("es-PY", { dateStyle: "medium", timeStyle: "short" }).format(new Date(play.createdAt))} · {statusLabel(play.status)}</p>
+                <p>{new Intl.DateTimeFormat("es-PY", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Asuncion" }).format(new Date(play.createdAt))} · {statusLabel(play.status)}</p>
               </div>
               <div className={styles.listAmount}>
                 {formatGs(play.amount)}

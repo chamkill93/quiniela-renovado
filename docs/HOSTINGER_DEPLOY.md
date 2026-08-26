@@ -1,36 +1,34 @@
-# Hostinger - despliegue recomendado
+# Hostinger — diferido hasta la fase de despliegue
 
-## Plataforma
-Usar Hostinger Node.js Web App en Business o Cloud. El proyecto esta preparado para un unico despliegue Next.js full-stack.
+## Estado
 
-## Configuracion
-- Node.js: 22.x
-- Framework: Next.js (autodetectado)
-- Install: `npm ci`
-- Build: `npm run build`
-- Start: `npm start`
-- Output: `.next` si hPanel lo solicita
-- Base de datos: MySQL administrada de Hostinger o MySQL externo compatible
+Fase 2 entrega únicamente el frontend integrable. No autoriza ni configura un
+despliegue productivo. El runbook full-stack anterior (MySQL, Prisma,
+`SESSION_SECRET`, `PROVIDER_MODE` o credenciales Kodexa) no corresponde a la
+arquitectura vigente y no debe utilizarse.
 
-## Flujo GitHub
-1. hPanel -> Websites -> Add Website -> Deploy Web App.
-2. Import Git Repository.
-3. Autorizar GitHub y seleccionar repo privado.
-4. Confirmar Node 22 y comandos.
-5. Cargar variables de entorno en hPanel.
-6. Deploy.
-7. Verificar SSL, health, DB, logs y smoke test.
-8. Activar redeploy automatico desde `main`.
+## Base técnica preparada
 
-## Variables minimas
-- DATABASE_URL
-- APP_URL
-- SESSION_SECRET
-- PROVIDER_MODE=MOCK|UAT|PROD
-- KODEXA_BASE_URL
-- KODEXA_CLIENT_ID
-- KODEXA_CLIENT_SECRET
-- LOG_LEVEL
+- Node.js 22.x.
+- Instalación reproducible con `npm ci`.
+- Verificación con `npm run verify` y `npm run test:e2e`.
+- Build Next.js con `npm run build` y arranque con `npm start`.
+- Modo productivo obligatorio:
+  `NEXT_PUBLIC_PRODUCT_GATEWAY_MODE=backoffice`.
+- URL y endpoints externos configurados mediante
+  `NEXT_PUBLIC_BACKOFFICE_BASE_URL` y
+  `NEXT_PUBLIC_BACKOFFICE_ENDPOINT_*`.
 
-## Importante
-No subir secretos a GitHub. En modo showcase usar `PROVIDER_MODE=MOCK`. Al pasar a UAT/PROD solo cambia el adapter/configuracion, no el frontend.
+## Antes de desplegar
+
+La fase de despliegue deberá confirmar con el proveedor real:
+
+- contrato HTTP y ambiente UAT;
+- dominio, CORS, CSRF y cookies de sesión;
+- orígenes CSP definitivos;
+- capacidades opcionales de billetera y comprobantes;
+- aprobación de Negocio, Seguridad y Legal.
+
+No se requiere una base de datos ni secretos de identidad en este repositorio
+frontend. Las credenciales y reglas de negocio pertenecen al backoffice
+externo.

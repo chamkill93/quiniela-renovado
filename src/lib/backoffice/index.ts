@@ -1,13 +1,20 @@
 export type {
   AuthenticationResponse,
+  AuthGateway,
+  BackofficeApiError,
+  BackofficeApiErrorEnvelope,
+  BackofficeApiIssue,
   BackofficeClient,
   BackofficeEndpoints,
+  BackofficeGateway,
   BackofficeMutationOptions,
   BackofficeRequestOptions,
   BackofficeSession,
   BackofficeUserRole,
   BootstrapResponse,
   CatalogResponse,
+  CursorPage,
+  GamingGateway,
   LoginRequest,
   PlaceInstantPlayRequest,
   PlacePlayResult,
@@ -18,17 +25,31 @@ export type {
   ResultsQuery,
   ResultsResponse,
   SessionResponse,
+  TicketResponse,
+  WalletGateway,
+  WalletMovementsQuery,
+  WalletMovementsResponse,
+  WalletTopUpRequest,
+  WalletTopUpResponse,
 } from "./contracts";
 export {
+  BackofficeAbortError,
+  BackofficeCapabilityError,
   BackofficeHttpError,
+  BackofficeNetworkError,
   BackofficeProtocolError,
+  BackofficeTimeoutError,
   createBackofficeClient,
   HttpBackofficeClient,
 } from "./http-client";
 export type {
   BackofficeFetch,
+  BackofficeFailureKind,
   BackofficeHeadersFactory,
+  BackofficeProtocolFailureReason,
   HttpBackofficeClientConfig,
 } from "./http-client";
 export { createRuntimeBackofficeClient } from "./runtime";
 export type { RuntimeBackofficeClientConfig } from "./runtime";
+export { backofficeResponseParsers } from "./validation";
+export type { BackofficeResponseParser } from "./validation";

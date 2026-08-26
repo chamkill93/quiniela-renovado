@@ -184,15 +184,6 @@ export const INSTANT_GAMES: ProductGame<InstantGameId>[] = [
   },
 ];
 
-export const MOCK_DRAWS = [
-  { id: "early", label: "Tempranero", time: "10:00", result: "353", tone: "orange" },
-  { id: "morning", label: "Matutino", time: "13:00", result: "487", tone: "blue" },
-  { id: "evening", label: "Vespertino", time: "17:00", result: "619", tone: "red" },
-  { id: "night", label: "Nocturno", time: "21:00", result: "842", tone: "purple" },
-] as const;
-
-export const BET_AMOUNTS = [500, 1_000, 2_000, 5_000, 10_000, 50_000] as const;
-
 export function getTraditionalGame(id: string) {
   return TRADITIONAL_GAMES.find((game) => game.id === id);
 }

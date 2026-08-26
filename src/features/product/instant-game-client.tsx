@@ -2,20 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import type { InstantPlayRequest } from "@/lib/gaming/schemas";
+import type { InstantGameDefinition } from "@/lib/gaming/types";
 import type { PlayResponse } from "@/lib/product/api-types";
-import { BET_AMOUNTS, type InstantGameId, formatGs, padNumber, type ProductGame } from "@/lib/product/catalog";
+import { type InstantGameId, formatGs, padNumber, type ProductGame } from "@/lib/product/catalog";
 import { useProduct } from "@/providers/product-provider";
 import { AmountChip } from "./amount-chip";
 import { NumericReels } from "./numeric-reels";
 import { TicketDialog } from "./ticket-dialog";
 import { useSoundEffects } from "./use-sound-effects";
 import styles from "./product.module.css";
-
-const ENUM_OPTIONS: Partial<Record<InstantGameId, string[]>> = {
-  sapyaite: ["PAR", "IMPAR"],
-  pyae: ["MENOR", "MAYOR"],
-  racha5: ["PAR", "IMPAR"],
-};
 
 function buildInitialSelection(gameId: InstantGameId) {
   if (gameId === "poa5" || gameId === "poa10") return ["001", "002", "003"];
@@ -27,14 +23,62 @@ function buildInitialSelection(gameId: InstantGameId) {
   return "001";
 }
 
-function normalizeSelection(gameId: InstantGameId, selection: string | string[]) {
-  if (gameId === "poa5" || gameId === "poa10") {
-    return { numbers: (selection as string[]).map((number) => padNumber(number)) };
+function paritySelection(value: string | string[]) {
+  if (value === "IMPAR") return "IMPAR" as const;
+  return "PAR" as const;
+}
+
+function hundredRangeSelection(value: string | string[]) {
+  switch (value) {
+    case "100-199":
+    case "200-299":
+    case "300-399":
+    case "400-499":
+    case "500-599":
+    case "600-699":
+    case "700-799":
+    case "800-899":
+    case "900-999":
+      return value;
+    default:
+      return "001-099" as const;
   }
-  if (gameId === "petei") return padNumber(selection as string, 1);
-  if (gameId === "mokoi") return padNumber(selection as string, 2);
-  if (gameId === "mbohapy") return padNumber(selection as string, 3);
-  return selection;
+}
+
+function buildInstantPlayInput(
+  gameId: InstantGameId,
+  amount: number,
+  selection: string | string[],
+): InstantPlayRequest {
+  if (gameId === "sapyaite" || gameId === "racha5") {
+    return { gameId, amount, selection: paritySelection(selection) };
+  }
+  if (gameId === "poa") {
+    return { gameId, amount, selection: hundredRangeSelection(selection) };
+  }
+  if (gameId === "pyae") {
+    return {
+      gameId,
+      amount,
+      selection: selection === "MAYOR" ? "MAYOR" : "MENOR",
+    };
+  }
+  if (gameId === "petei") {
+    return { gameId, amount, selection: padNumber(String(selection), 1) };
+  }
+  if (gameId === "mokoi") {
+    return { gameId, amount, selection: padNumber(String(selection), 2) };
+  }
+  if (gameId === "mbohapy") {
+    return { gameId, amount, selection: padNumber(String(selection), 3) };
+  }
+  const numbers = Array.isArray(selection)
+    ? selection.map((number) => padNumber(number))
+    : [];
+  if (gameId === "poa5") {
+    return { gameId, amount, selection: { numbers } };
+  }
+  return { gameId: "poa10", amount, selection: { numbers } };
 }
 
 function selectedForMatches(gameId: InstantGameId, selection: string | string[]) {
@@ -44,7 +88,15 @@ function selectedForMatches(gameId: InstantGameId, selection: string | string[])
 }
 
 export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }) {
-  const { requestPlay } = useProduct();
+  const {
+    requestPlay,
+    catalog,
+    session,
+    loading,
+    unauthorized,
+    error: gatewayError,
+    refresh,
+  } = useProduct();
   const [selection, setSelection] = useState<string | string[]>(() => buildInitialSelection(game.id));
   const [amount, setAmount] = useState<number>(10_000);
   const [pending, setPending] = useState(false);
@@ -55,6 +107,16 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
   const [showTicket, setShowTicket] = useState(false);
   const countdownTimer = useRef<number | null>(null);
   const playSound = useSoundEffects();
+  const availableAmounts = catalog?.amounts ?? [];
+  const remoteGame = catalog?.instant.find(
+    (definition) => definition.id === game.id,
+  );
+  const enabledGame = Boolean(remoteGame);
+  const displayName = remoteGame?.name ?? (loading ? "Cargando juego…" : "Juego no disponible");
+  const displayDescription = remoteGame?.description ?? "Esperando la definición habilitada por el backoffice.";
+  const effectiveAmount = availableAmounts.includes(amount)
+    ? amount
+    : (availableAmounts[0] ?? 0);
 
   useEffect(() => () => {
     if (countdownTimer.current !== null) window.clearInterval(countdownTimer.current);
@@ -96,10 +158,9 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
     setShowTicket(false);
     playSound("confirm");
     try {
-      const data = await requestPlay("/api/mock/instant", {
-        gameId: game.id,
-        amount,
-        selection: normalizeSelection(game.id, selection),
+      const data = await requestPlay({
+        kind: "instant",
+        input: buildInstantPlayInput(game.id, effectiveAmount, selection),
       });
       setResponse(data);
     } catch (reason) {
@@ -126,26 +187,30 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
       <section className={styles.splitLayout}>
         <div className={styles.contentCard}>
           <p className={styles.eyebrow}>{game.eyebrow}</p>
-          <h1 className={styles.title}>{game.name}</h1>
-          <p className={styles.lede}>{game.description}</p>
+          <h1 className={styles.title}>{displayName}</h1>
+          <p className={styles.lede}>{displayDescription}</p>
 
           <div className={styles.formStack} style={{ marginTop: 28 }}>
-            <SelectionControl gameId={game.id} selection={selection} onChange={setSelection} />
+            <SelectionControl definition={remoteGame} gameId={game.id} selection={selection} onChange={setSelection} />
             <div className={styles.fieldGroup}>
               <span className={styles.fieldLabel}>Importe de la jugada</span>
               <div className={styles.chipGrid}>
-                {BET_AMOUNTS.map((value) => (
+                {availableAmounts.map((value) => (
                   <AmountChip
                     key={value}
                     onSelect={setAmount}
-                    selected={amount === value}
+                    selected={effectiveAmount === value}
                     value={value}
                   />
                 ))}
               </div>
             </div>
+            {loading ? <div className={styles.loadingBar} aria-label="Cargando catálogo" /> : null}
+            {catalog && !enabledGame ? <div className={styles.errorBox} role="alert">Este juego no está habilitado por el backoffice.</div> : null}
+            {gatewayError ? <div className={styles.errorBox} role="alert"><p>{gatewayError}</p><button className={styles.quietButton} onClick={() => void refresh()} type="button">Reintentar conexión</button></div> : null}
+            {!gatewayError && (unauthorized || (!loading && !session)) ? <div className={styles.errorBox} role="alert">Iniciá sesión para registrar una jugada. <Link className={styles.textLink} href="/cuenta">Ir a Cuenta</Link></div> : null}
             {error ? <div className={styles.errorBox} role="alert">{error}</div> : null}
-            <button className={styles.primaryButton} disabled={pending || response !== null} onClick={play} type="button">
+            <button className={styles.primaryButton} disabled={pending || response !== null || loading || Boolean(gatewayError) || !session || !enabledGame || availableAmounts.length === 0} onClick={play} type="button">
               {pending ? "Registrando…" : response ? "Jugada registrada" : "Jugar ahora"}
             </button>
             <p className={styles.fieldHint}>La jugada se registra una sola vez y el resultado se define antes de animar.</p>
@@ -155,10 +220,10 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
         <aside className={styles.contentCard} aria-label="Resumen de la jugada">
           <p className={styles.eyebrow}>Tu selección</p>
           <dl className={styles.summaryList}>
-            <div className={styles.summaryRow}><dt>Juego</dt><dd>{game.name}</dd></div>
+            <div className={styles.summaryRow}><dt>Juego</dt><dd>{remoteGame?.name ?? "—"}</dd></div>
             <div className={styles.summaryRow}><dt>Selección</dt><dd>{Array.isArray(selection) ? selection.join(" · ") : selection}</dd></div>
-            <div className={styles.summaryRow}><dt>Importe</dt><dd>{formatGs(amount)}</dd></div>
-            <div className={styles.summaryRow}><dt>Rodillos</dt><dd>{game.id === "poa10" ? 10 : game.id === "poa5" || game.id === "racha5" ? 5 : 1}</dd></div>
+            <div className={styles.summaryRow}><dt>Importe</dt><dd>{formatGs(effectiveAmount)}</dd></div>
+            <div className={styles.summaryRow}><dt>Rodillos</dt><dd>{remoteGame?.reels ?? "—"}</dd></div>
           </dl>
         </aside>
       </section>
@@ -197,21 +262,24 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
 }
 
 function SelectionControl({
+  definition,
   gameId,
   selection,
   onChange,
 }: {
+  definition: InstantGameDefinition | undefined;
   gameId: InstantGameId;
   selection: string | string[];
   onChange: (value: string | string[]) => void;
 }) {
-  const options = ENUM_OPTIONS[gameId];
-  if (options) {
+  if (!definition) return null;
+  const contract = definition.selection;
+  if (contract.kind === "ENUM") {
     return (
       <div className={styles.fieldGroup}>
         <span className={styles.fieldLabel}>Tu elección</span>
         <div className={styles.chipGrid}>
-          {options.map((option) => (
+          {contract.values.map((option) => (
             <button className={styles.chip} data-selected={selection === option} key={option} onClick={() => onChange(option)} type="button">
               {option}
             </button>
@@ -221,23 +289,22 @@ function SelectionControl({
     );
   }
 
-  if (gameId === "poa") {
-    const hundreds = ["001-099", "100-199", "200-299", "300-399", "400-499", "500-599", "600-699", "700-799", "800-899", "900-999"];
+  if (contract.kind === "HUNDRED_RANGE") {
     return (
       <div className={styles.fieldGroup}>
         <label htmlFor="hundred">Centena</label>
         <select className={styles.select} id="hundred" onChange={(event) => onChange(event.target.value)} value={selection as string}>
-          {hundreds.map((hundred) => <option key={hundred} value={hundred}>{hundred}</option>)}
+          {contract.values.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
       </div>
     );
   }
 
-  if (gameId === "poa5" || gameId === "poa10") {
+  if (contract.kind === "UNIQUE_THREE_DIGIT_NUMBERS") {
     const numbers = selection as string[];
     return (
       <div className={styles.fieldGroup}>
-        <span className={styles.fieldLabel}>Tres números distintos</span>
+        <span className={styles.fieldLabel}>{contract.count} números distintos</span>
         <div className={styles.chipGrid}>
           {numbers.map((number, index) => (
             <input
@@ -263,12 +330,12 @@ function SelectionControl({
             />
           ))}
         </div>
-        <p className={styles.fieldHint}>Cada valor debe estar entre 001 y 999 y no puede repetirse.</p>
+        <p className={styles.fieldHint}>Cada valor debe estar entre {padNumber(contract.min)} y {padNumber(contract.max)} y no puede repetirse.</p>
       </div>
     );
   }
 
-  const digits = gameId === "petei" ? 1 : gameId === "mokoi" ? 2 : 3;
+  const digits = contract.width;
   const label = gameId === "petei" ? "Última cifra" : gameId === "mokoi" ? "Últimas dos cifras" : "Número exacto";
   return (
     <div className={styles.fieldGroup}>

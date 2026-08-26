@@ -1,6 +1,9 @@
-# quinie.LA - Proyecto listo para Codex
+# quinie.LA — frontend integrable
 
-Este paquete NO parte de cero. La raiz ya contiene el starter tecnico del proyecto y los recursos necesarios para reconstruir quinie.LA de forma modular.
+Este repositorio contiene la interfaz de quinie.LA reconstruida con Next.js. No
+incluye un backend de negocio: identidad, catálogo, saldo, jugadas, resultados y
+comprobantes deben provenir del backoffice externo mediante los gateways
+tipados de `src/lib/backoffice` y `src/lib/product/gateway`.
 
 ## Fuente de verdad
 1. `reference/original-v25/quinie_v25_SOURCE_OF_TRUTH.html` = fuente funcional obligatoria.
@@ -8,41 +11,35 @@ Este paquete NO parte de cero. La raiz ya contiene el starter tecnico del proyec
 3. `reference/fernando-secondary/` = referencia secundaria de recursos. No sustituye reglas ni flujos de v25.
 4. Aposta.LA = marca madre para lenguaje visual, componentes y contenidos corporativos aplicables.
 
-## Que ya esta incluido
-- Next.js + React + TypeScript starter.
-- Prisma + MySQL schema y seed.
-- Docker Compose para MySQL local.
-- GitHub Actions.
-- Playwright/Vitest.
-- Kodexa provider abstraction.
-- Design tokens iniciales.
-- Logo quinie.LA.
-- Game art WebP.
-- Iconos SVG de juegos y UI.
-- Sonidos WAV.
-- Mockups de rodillos, desktop/mobile e iconografia.
-- Pantallas de referencia.
-- 9 Instantaneas documentadas.
-- Flujos UX.
-- OpenAPI.
-- Seguridad y QA.
-- Prompts de Codex por 3 fases.
-- Guia GitHub y Hostinger.
+## Qué ya está incluido
+
+- Next.js, React y TypeScript strict.
+- Interfaz responsive, temas, sonido, iconos y rodillos.
+- Las 6 quinielas tradicionales y 9 Instantáneas.
+- Login, registro, sesión y cierre de sesión detrás de `AuthGateway`.
+- Catálogo, jugadas, resultados y billetera detrás de gateways sustituibles.
+- Cliente HTTP validado, gateway preview y fixtures deterministas para QA.
+- GitHub Actions, Vitest y Playwright.
 
 ## Primer uso
-1. Descomprimir esta carpeta.
-2. Crear repositorio vacio en GitHub.
-3. Copiar todo el contenido de esta carpeta al repositorio.
-4. Ejecutar `git init`, agregar remoto y hacer primer commit/push.
-5. Copiar `.env.example` a `.env.local` y completar solo variables locales.
-6. Ejecutar `docker compose up -d` para MySQL local.
-7. Ejecutar `npm install`.
-8. Ejecutar `npx prisma generate` y migraciones segun el README.
-9. Ejecutar `npm run dev`.
-10. Abrir `CODEX_PROMPTS/00_MASTER_PROMPT_CODEX_SOL_ULTRA.md` y usarlo como contexto principal en Codex.
 
-## Regla de implementacion
-No convertir literalmente el HTML gigante a componentes sin limpiar. Usar v25 para conservar funcionalidad, pero reconstruir la UI con componentes, design tokens, assets independientes y APIs server-side.
+1. Instalar Node.js 22.
+2. Ejecutar `npm ci`.
+3. Copiar `.env.example` a `.env.local`.
+4. Mantener `NEXT_PUBLIC_PRODUCT_GATEWAY_MODE=preview` solo para desarrollo/QA.
+5. Ejecutar `npm run dev` y abrir `http://localhost:3000`.
+
+No hace falta MySQL, Prisma ni Docker. Para conectar el backoffice real, usar
+modo `backoffice` y completar los endpoints públicos descriptos en
+`docs/BACKOFFICE_INTEGRATION.md`; nunca colocar secretos en variables
+`NEXT_PUBLIC_*`.
+
+## Regla de implementación
+
+La UI no genera resultados, calcula premios ni modifica saldos. Los rodillos
+solo animan el resultado autoritativo recibido del gateway. Las rutas
+`/api/mock/*` son una vista previa heredada y quedan bloqueadas fuera del modo
+preview explícito.
 
 ## Recursos visuales
 - `public/assets/brand/`
@@ -57,8 +54,10 @@ No convertir literalmente el HTML gigante a componentes sin limpiar. Usar v25 pa
 - `node_modules/`
 - `.next/`
 - `.env*` reales
-- backups de base de datos
-- credenciales Kodexa
+- tokens, contraseñas o credenciales del backoffice
 
-## Deploy
-Leer `project-docs/HOSTINGER_DEPLOY.md` y `project-docs/PREDEPLOY_CHECKLIST.md` antes de publicar.
+## Verificación y despliegue
+
+Ejecutar `npm run verify` y `npm run test:e2e`. El despliegue productivo queda
+diferido hasta disponer del contrato real, dominios/cookies/CORS y ambiente UAT
+del backoffice. Consultar `project-docs/HOSTINGER_DEPLOY.md`.

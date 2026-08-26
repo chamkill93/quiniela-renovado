@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type {
   BackofficeEndpoints,
@@ -6,10 +6,22 @@ import type {
   BackofficeSession,
 } from "@/lib/backoffice";
 import {
+  BackofficeAbortError,
+  BackofficeCapabilityError,
   BackofficeHttpError,
+  BackofficeNetworkError,
   BackofficeProtocolError,
+  BackofficeTimeoutError,
   createBackofficeClient,
 } from "@/lib/backoffice";
+import { buildGamingCatalog } from "@/lib/gaming";
+import type {
+  GamingPlay,
+  GamingTicket,
+  PlacePlayResponse,
+  TopupResponse,
+  WalletMovement,
+} from "@/lib/gaming/types";
 
 const endpoints = {
   session: "auth/session",
@@ -32,6 +44,102 @@ const session: BackofficeSession = {
   currency: "PYG",
 };
 
+const catalog = buildGamingCatalog("REFUND", new Date("2026-08-25T12:00:00Z"));
+
+const play: GamingPlay = {
+  id: "play-1",
+  ticketId: "ticket-1",
+  family: "INSTANT",
+  gameId: "mbohapy",
+  gameName: "Mbohapy",
+  selection: "497",
+  drawId: null,
+  amount: 500,
+  currency: "PYG",
+  status: "WON",
+  result: "497",
+  resultNumbers: ["497"],
+  ruleResult: "EXACT",
+  matches: 1,
+  payoutMultiplier: 700,
+  prize: 350_000,
+  createdAt: "2026-08-25T12:00:00Z",
+};
+
+const ticket: GamingTicket = {
+  id: "ticket-1",
+  code: "QL-TICKET1",
+  playId: "play-1",
+  gameId: "mbohapy",
+  gameName: "Mbohapy",
+  family: "INSTANT",
+  selection: "497",
+  drawId: null,
+  amount: 500,
+  currency: "PYG",
+  status: "WON",
+  result: "497",
+  resultNumbers: ["497"],
+  ruleResult: "EXACT",
+  prize: 350_000,
+  issuedAt: "2026-08-25T12:00:00Z",
+};
+
+const placePlayResponse: PlacePlayResponse = {
+  play,
+  ticket,
+  session: { balance: 374_500, currency: "PYG" },
+  replayed: false,
+};
+
+const traditionalPlacePlayResponse: PlacePlayResponse = {
+  play: {
+    ...play,
+    family: "TRADITIONAL",
+    gameId: "head",
+    gameName: "A la Cabeza",
+    drawId: "early",
+    status: "PENDING",
+    result: null,
+    resultNumbers: null,
+    ruleResult: null,
+    matches: null,
+    payoutMultiplier: 0,
+    prize: 0,
+  },
+  ticket: {
+    ...ticket,
+    family: "TRADITIONAL",
+    gameId: "head",
+    gameName: "A la Cabeza",
+    drawId: "early",
+    status: "PENDING",
+    result: null,
+    resultNumbers: null,
+    ruleResult: null,
+    prize: 0,
+  },
+  session: { balance: 24_500, currency: "PYG" },
+  replayed: false,
+};
+
+const movement: WalletMovement = {
+  id: "movement-1",
+  type: "TOPUP",
+  amount: 50_000,
+  currency: "PYG",
+  balanceAfter: 75_000,
+  referenceId: "topup-1",
+  method: "CARD",
+  createdAt: "2026-08-25T12:00:00Z",
+};
+
+const topUpResponse: TopupResponse = {
+  session: { ...session, balance: 75_000 },
+  balanceEntry: movement,
+  replayed: false,
+};
+
 function jsonResponse(body: unknown, init?: ResponseInit) {
   return new Response(JSON.stringify(body), {
     ...init,
@@ -43,8 +151,32 @@ function createFetchMock() {
   return vi.fn<BackofficeFetch>();
 }
 
+function validResponseFor(url: RequestInfo | URL, init?: RequestInit) {
+  const value = String(url);
+  if (value.includes("app/bootstrap")) {
+    return jsonResponse({ session, catalog, plays: [], results: [] });
+  }
+  if (value.includes("gaming/catalog")) return jsonResponse({ catalog });
+  if (value.includes("gaming/plays?") || value.endsWith("gaming/plays")) {
+    return jsonResponse({ plays: [] });
+  }
+  if (value.includes("gaming/plays/traditional")) {
+    return jsonResponse(traditionalPlacePlayResponse);
+  }
+  if (value.includes("gaming/plays/instant")) return jsonResponse(placePlayResponse);
+  if (value.includes("gaming/results")) return jsonResponse({ results: [] });
+  if (init?.method === "POST" && !init.body) {
+    return new Response(null, { status: 204 });
+  }
+  return jsonResponse({ session });
+}
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 describe("HttpBackofficeClient", () => {
-  it("uses the configured base URL, includes credentials and forwards AbortSignal", async () => {
+  it("uses the configured base URL, credentials and composed AbortSignal", async () => {
     const fetchMock = createFetchMock();
     fetchMock.mockResolvedValue(jsonResponse({ session }));
     const controller = new AbortController();
@@ -69,8 +201,9 @@ describe("HttpBackofficeClient", () => {
       method: "GET",
       cache: "no-store",
       credentials: "include",
-      signal: controller.signal,
     });
+    expect(init?.signal).toBeInstanceOf(AbortSignal);
+    expect(init?.signal).not.toBe(controller.signal);
     const headers = new Headers(init?.headers);
     expect(headers.get("Accept")).toBe("application/json");
     expect(headers.get("X-Tenant")).toBe("quinie-la");
@@ -121,10 +254,8 @@ describe("HttpBackofficeClient", () => {
 
   it("covers catalog, history, play submission, results and logout endpoints", async () => {
     const fetchMock = createFetchMock();
-    fetchMock.mockImplementation(async (_input, init) =>
-      init?.method === "POST" && !init.body
-        ? new Response(null, { status: 204 })
-        : jsonResponse({ ok: true }),
+    fetchMock.mockImplementation(async (input, init) =>
+      validResponseFor(input, init),
     );
     const client = createBackofficeClient({
       baseUrl: "/backoffice-gateway",
@@ -141,7 +272,12 @@ describe("HttpBackofficeClient", () => {
       limit: 20,
     });
     await client.placeTraditionalPlay(
-      { gameId: "head", drawId: "draw-1", amount: 500, selection: "497" },
+      {
+        gameId: "head",
+        drawId: "draw-1",
+        amount: 500,
+        selection: { number: "497" },
+      },
       { idempotencyKey: "traditional-1" },
     );
     await client.placeInstantPlay(
@@ -171,12 +307,14 @@ describe("HttpBackofficeClient", () => {
     expect(
       new Headers(fetchMock.mock.calls[4][1]?.headers).get("Idempotency-Key"),
     ).toBe("instant-1");
-    expect(fetchMock.mock.calls.every(([, init]) => init?.credentials === "include")).toBe(true);
+    expect(
+      fetchMock.mock.calls.every(([, init]) => init?.credentials === "include"),
+    ).toBe(true);
   });
 
-  it("normalizes structured HTTP failures into BackofficeHttpError", async () => {
+  it("normalizes structured HTTP failures and preserves session error codes", async () => {
     const fetchMock = createFetchMock();
-    fetchMock.mockResolvedValue(
+    fetchMock.mockResolvedValueOnce(
       jsonResponse(
         {
           error: {
@@ -188,6 +326,8 @@ describe("HttpBackofficeClient", () => {
         { status: 401, headers: { "X-Request-Id": "request-42" } },
       ),
     );
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 401 }));
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 419 }));
     const client = createBackofficeClient({
       baseUrl: "https://backoffice.example",
       endpoints,
@@ -201,6 +341,7 @@ describe("HttpBackofficeClient", () => {
     expect(failure).toBeInstanceOf(BackofficeHttpError);
     expect(failure).toMatchObject({
       name: "BackofficeHttpError",
+      kind: "HTTP",
       status: 401,
       code: "INVALID_CREDENTIALS",
       message: "Credenciales inválidas.",
@@ -208,6 +349,14 @@ describe("HttpBackofficeClient", () => {
       requestId: "request-42",
       method: "POST",
       url: "https://backoffice.example/auth/login",
+    });
+    await expect(client.getSession()).rejects.toMatchObject({
+      status: 401,
+      code: "UNAUTHORIZED",
+    });
+    await expect(client.getSession()).rejects.toMatchObject({
+      status: 419,
+      code: "SESSION_EXPIRED",
     });
   });
 
@@ -229,14 +378,16 @@ describe("HttpBackofficeClient", () => {
     });
   });
 
-  it("distinguishes a successful but malformed payload from an HTTP error", async () => {
+  it("rejects invalid JSON, empty bodies and valid JSON with an invalid DTO", async () => {
     const fetchMock = createFetchMock();
-    fetchMock.mockResolvedValue(
+    fetchMock.mockResolvedValueOnce(
       new Response("not-json", {
         status: 200,
         headers: { "X-Correlation-Id": "correlation-7" },
       }),
     );
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 200 }));
+    fetchMock.mockResolvedValueOnce(jsonResponse({ session: { id: 7 } }));
     const client = createBackofficeClient({
       baseUrl: "https://backoffice.example",
       endpoints,
@@ -245,23 +396,391 @@ describe("HttpBackofficeClient", () => {
 
     await expect(client.bootstrap()).rejects.toMatchObject({
       name: "BackofficeProtocolError",
+      kind: "PROTOCOL",
       code: "INVALID_BACKOFFICE_RESPONSE",
+      reason: "INVALID_JSON",
       status: 200,
       requestId: "correlation-7",
     } satisfies Partial<BackofficeProtocolError>);
+    await expect(client.getSession()).rejects.toMatchObject({
+      reason: "EMPTY_PAYLOAD",
+    });
+    const invalidDto = await client
+      .getSession()
+      .catch((error: unknown) => error);
+    expect(invalidDto).toBeInstanceOf(BackofficeProtocolError);
+    expect(invalidDto).toMatchObject({ reason: "INVALID_PAYLOAD" });
+    expect((invalidDto as BackofficeProtocolError).details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: expect.arrayContaining(["session"]) }),
+      ]),
+    );
   });
 
-  it("accepts an absolute endpoint override and rejects an empty base URL", async () => {
-    const fetchMock = createFetchMock();
-    fetchMock.mockResolvedValue(jsonResponse({ results: [] }));
-    const absoluteEndpoints = {
-      ...endpoints,
-      results: "https://results.example/public/latest",
+  it("rejects non-ISO dates before they reach date formatting in the UI", async () => {
+    const invalidCatalog = {
+      ...catalog,
+      draws: catalog.draws.map((draw, index) =>
+        index === 0 ? { ...draw, closesAt: "mañana" } : draw,
+      ),
     };
+    const fetchMock = createFetchMock();
+    fetchMock.mockResolvedValue(
+      jsonResponse({ session, catalog: invalidCatalog, plays: [], results: [] }),
+    );
+    const client = createBackofficeClient({
+      baseUrl: "https://backoffice.example",
+      endpoints,
+      fetch: fetchMock,
+    });
+
+    const failure = await client.bootstrap().catch((reason: unknown) => reason);
+    expect(failure).toMatchObject({ reason: "INVALID_PAYLOAD" });
+    expect((failure as BackofficeProtocolError).details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: expect.arrayContaining(["catalog", "draws", 0, "closesAt"]),
+        }),
+      ]),
+    );
+  });
+
+  it("rejects fractional or non-positive PYG amounts from the catalog", async () => {
+    const fetchMock = createFetchMock();
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({ catalog: { ...catalog, amounts: [-500] } }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ catalog: { ...catalog, amounts: [500.5] } }),
+      );
+    const client = createBackofficeClient({
+      baseUrl: "https://backoffice.example",
+      endpoints,
+      fetch: fetchMock,
+    });
+
+    await expect(client.getCatalog()).rejects.toMatchObject({
+      reason: "INVALID_PAYLOAD",
+    });
+    await expect(client.getCatalog()).rejects.toMatchObject({
+      reason: "INVALID_PAYLOAD",
+    });
+  });
+
+  it("rejects catalog definitions incompatible with the rendered game", async () => {
+    const invalidCatalog = {
+      ...catalog,
+      instant: catalog.instant.map((game) =>
+        game.id === "poa10" ? { ...game, reels: 5 } : game,
+      ),
+    };
+    const fetchMock = createFetchMock();
+    fetchMock.mockResolvedValue(jsonResponse({ catalog: invalidCatalog }));
+    const client = createBackofficeClient({
+      baseUrl: "https://backoffice.example",
+      endpoints,
+      fetch: fetchMock,
+    });
+
+    await expect(client.getCatalog()).rejects.toMatchObject({
+      reason: "INVALID_PAYLOAD",
+    });
+  });
+
+  it("rejects an instant play without its authoritative reel results", async () => {
+    const invalidResponse = {
+      ...placePlayResponse,
+      play: {
+        ...placePlayResponse.play,
+        status: "PENDING",
+        result: null,
+        resultNumbers: null,
+      },
+      ticket: {
+        ...placePlayResponse.ticket,
+        status: "PENDING",
+        result: null,
+        resultNumbers: null,
+      },
+    };
+    const fetchMock = createFetchMock();
+    fetchMock.mockResolvedValue(jsonResponse(invalidResponse));
+    const client = createBackofficeClient({
+      baseUrl: "https://backoffice.example",
+      endpoints,
+      fetch: fetchMock,
+    });
+
+    await expect(
+      client.placeInstantPlay({
+        gameId: "sapyaite",
+        amount: 500,
+        selection: "PAR",
+      }),
+    ).rejects.toMatchObject({ reason: "INVALID_PAYLOAD" });
+  });
+
+  it("supports optional wallet and ticket contracts without assuming their paths", async () => {
+    const fetchMock = createFetchMock();
+    fetchMock.mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("wallet/movements")) {
+        return jsonResponse({ movements: [movement], nextCursor: "next" });
+      }
+      if (url.includes("wallet/top-up")) return jsonResponse(topUpResponse);
+      return jsonResponse({ ticket });
+    });
     const client = createBackofficeClient({
       baseUrl: "https://backoffice.example/v2",
-      endpoints: absoluteEndpoints,
+      endpoints: {
+        ...endpoints,
+        walletMovements: "wallet/movements",
+        walletTopUp: "wallet/top-up",
+        ticket: "gaming/tickets/{ticketId}",
+      },
       fetch: fetchMock,
+    });
+
+    await expect(
+      client.getMovements({ cursor: "page 2", limit: 10 }),
+    ).resolves.toEqual({ movements: [movement], nextCursor: "next" });
+    await expect(
+      client.topUp(
+        { amount: 50_000, method: "CARD" },
+        { idempotencyKey: "topup-key" },
+      ),
+    ).resolves.toEqual(topUpResponse);
+    await expect(client.getTicket("ticket / 1")).resolves.toEqual({ ticket });
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "https://backoffice.example/v2/wallet/movements?cursor=page+2&limit=10",
+      "https://backoffice.example/v2/wallet/top-up",
+      "https://backoffice.example/v2/gaming/tickets/ticket%20%2F%201",
+    ]);
+    expect(
+      new Headers(fetchMock.mock.calls[1][1]?.headers).get("Idempotency-Key"),
+    ).toBe("topup-key");
+  });
+
+  it("fails locally when an optional capability or ticket template is absent", async () => {
+    const fetchMock = createFetchMock();
+    const client = createBackofficeClient({
+      baseUrl: "https://backoffice.example",
+      endpoints,
+      fetch: fetchMock,
+    });
+    await expect(client.getMovements()).rejects.toBeInstanceOf(
+      BackofficeCapabilityError,
+    );
+    await expect(client.topUp({ amount: 500, method: "CARD" })).rejects.toMatchObject({
+      endpoint: "walletTopUp",
+    });
+    await expect(client.getTicket("ticket-1")).rejects.toMatchObject({
+      endpoint: "ticket",
+    });
+
+    const invalidTemplateClient = createBackofficeClient({
+      baseUrl: "https://backoffice.example",
+      endpoints: { ...endpoints, ticket: "gaming/tickets" },
+      fetch: fetchMock,
+    });
+    await expect(invalidTemplateClient.getTicket("ticket-1")).rejects.toThrow(
+      "{ticketId}",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("normalizes network failures", async () => {
+    const fetchMock = createFetchMock();
+    fetchMock.mockRejectedValue(new TypeError("fetch failed"));
+    const client = createBackofficeClient({
+      baseUrl: "https://backoffice.example",
+      endpoints,
+      fetch: fetchMock,
+    });
+
+    await expect(client.getSession()).rejects.toMatchObject({
+      name: "BackofficeNetworkError",
+      kind: "NETWORK",
+      code: "BACKOFFICE_NETWORK_ERROR",
+      method: "GET",
+      url: "https://backoffice.example/auth/session",
+    } satisfies Partial<BackofficeNetworkError>);
+  });
+
+  it("forwards caller cancellation and normalizes it separately from timeout", async () => {
+    const fetchMock = createFetchMock();
+    let transportSignal: AbortSignal | null | undefined;
+    let markTransportStarted: (() => void) | undefined;
+    const transportStarted = new Promise<void>((resolve) => {
+      markTransportStarted = resolve;
+    });
+    fetchMock.mockImplementation(async (_input, init) => {
+      transportSignal = init?.signal;
+      markTransportStarted?.();
+      return await new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener(
+          "abort",
+          () => reject(init.signal?.reason),
+          { once: true },
+        );
+      });
+    });
+    const controller = new AbortController();
+    const client = createBackofficeClient({
+      baseUrl: "https://backoffice.example",
+      endpoints,
+      fetch: fetchMock,
+    });
+
+    const result = client.getSession({ signal: controller.signal });
+    await transportStarted;
+    controller.abort(new DOMException("User navigated", "AbortError"));
+
+    await expect(result).rejects.toMatchObject({
+      name: "BackofficeAbortError",
+      kind: "ABORT",
+      code: "BACKOFFICE_ABORTED",
+    } satisfies Partial<BackofficeAbortError>);
+    expect(transportSignal?.aborted).toBe(true);
+  });
+
+  it("enforces configurable timeout and keeps it distinct from abort", async () => {
+    vi.useFakeTimers();
+    const fetchMock = createFetchMock();
+    fetchMock.mockImplementation(async (_input, init) => {
+      return await new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener(
+          "abort",
+          () => reject(init.signal?.reason),
+          { once: true },
+        );
+      });
+    });
+    const client = createBackofficeClient({
+      baseUrl: "https://backoffice.example",
+      endpoints,
+      fetch: fetchMock,
+      timeoutMs: 25,
+    });
+
+    const assertion = expect(client.getSession()).rejects.toMatchObject({
+      name: "BackofficeTimeoutError",
+      kind: "TIMEOUT",
+      code: "BACKOFFICE_TIMEOUT",
+      timeoutMs: 25,
+    } satisfies Partial<BackofficeTimeoutError>);
+    await vi.advanceTimersByTimeAsync(25);
+    await assertion;
+  });
+
+  it("includes an asynchronous header factory in the request timeout", async () => {
+    vi.useFakeTimers();
+    const fetchMock = createFetchMock();
+    const client = createBackofficeClient({
+      baseUrl: "https://backoffice.example",
+      endpoints,
+      fetch: fetchMock,
+      headers: () => new Promise<HeadersInit>(() => undefined),
+      timeoutMs: 25,
+    });
+
+    const assertion = expect(client.getSession()).rejects.toMatchObject({
+      name: "BackofficeTimeoutError",
+      kind: "TIMEOUT",
+      code: "BACKOFFICE_TIMEOUT",
+      timeoutMs: 25,
+    } satisfies Partial<BackofficeTimeoutError>);
+    await vi.advanceTimersByTimeAsync(25);
+    await assertion;
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps timeout classification while reading an HTTP error body", async () => {
+    vi.useFakeTimers();
+    const fetchMock = createFetchMock();
+    fetchMock.mockImplementation(async (_input, init) => {
+      const response = new Response(null, { status: 503 });
+      vi.spyOn(response, "text").mockImplementation(
+        () =>
+          new Promise<string>((_resolve, reject) => {
+            init?.signal?.addEventListener(
+              "abort",
+              () => reject(init.signal?.reason),
+              { once: true },
+            );
+          }),
+      );
+      return response;
+    });
+    const client = createBackofficeClient({
+      baseUrl: "https://backoffice.example",
+      endpoints,
+      fetch: fetchMock,
+      timeoutMs: 25,
+    });
+
+    const assertion = expect(client.getSession()).rejects.toMatchObject({
+      name: "BackofficeTimeoutError",
+      kind: "TIMEOUT",
+      code: "BACKOFFICE_TIMEOUT",
+      timeoutMs: 25,
+    } satisfies Partial<BackofficeTimeoutError>);
+    await vi.advanceTimersByTimeAsync(25);
+    await assertion;
+  });
+
+  it("keeps caller abort classification while reading an HTTP error body", async () => {
+    const fetchMock = createFetchMock();
+    let bodyReadStarted: (() => void) | undefined;
+    const readingBody = new Promise<void>((resolve) => {
+      bodyReadStarted = resolve;
+    });
+    fetchMock.mockImplementation(async (_input, init) => {
+      const response = new Response(null, { status: 503 });
+      vi.spyOn(response, "text").mockImplementation(
+        () =>
+          new Promise<string>((_resolve, reject) => {
+            bodyReadStarted?.();
+            init?.signal?.addEventListener(
+              "abort",
+              () => reject(init.signal?.reason),
+              { once: true },
+            );
+          }),
+      );
+      return response;
+    });
+    const controller = new AbortController();
+    const client = createBackofficeClient({
+      baseUrl: "https://backoffice.example",
+      endpoints,
+      fetch: fetchMock,
+    });
+
+    const result = client.getSession({ signal: controller.signal });
+    await readingBody;
+    controller.abort(new DOMException("User navigated", "AbortError"));
+
+    await expect(result).rejects.toMatchObject({
+      name: "BackofficeAbortError",
+      kind: "ABORT",
+      code: "BACKOFFICE_ABORTED",
+    } satisfies Partial<BackofficeAbortError>);
+  });
+
+  it("accepts an absolute endpoint and validates timeout configuration", async () => {
+    const fetchMock = createFetchMock();
+    fetchMock.mockResolvedValue(jsonResponse({ results: [] }));
+    const client = createBackofficeClient({
+      baseUrl: "https://backoffice.example/v2",
+      endpoints: {
+        ...endpoints,
+        results: "https://results.example/public/latest",
+      },
+      fetch: fetchMock,
+      timeoutMs: 0,
     });
 
     await client.getResults();
@@ -271,5 +790,13 @@ describe("HttpBackofficeClient", () => {
     expect(() =>
       createBackofficeClient({ baseUrl: " ", endpoints, fetch: fetchMock }),
     ).toThrow(TypeError);
+    expect(() =>
+      createBackofficeClient({
+        baseUrl: "https://backoffice.example",
+        endpoints,
+        fetch: fetchMock,
+        timeoutMs: -1,
+      }),
+    ).toThrow("timeoutMs");
   });
 });

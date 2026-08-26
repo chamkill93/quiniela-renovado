@@ -12,6 +12,7 @@ import type {
   InstantPlayRequest,
   TraditionalPlayRequest,
 } from "@/lib/gaming/schemas";
+import { buildGamingCatalog } from "@/lib/gaming";
 import {
   activeNavigation,
   E2E_SELECTORS,
@@ -251,6 +252,126 @@ test("shows the five-second countdown, ticket, and persisted instant result", as
   ).toBeVisible();
 });
 
+test("renders an authoritative fixture result without invoking local game logic", async ({
+  page,
+}) => {
+  const occurredAt = "2026-08-25T15:00:00.000Z";
+  const session = {
+    id: "external-fixture-player",
+    displayName: "Jugador Fixture",
+    role: "PLAYER" as const,
+    balance: 250_000,
+    currency: "PYG" as const,
+  };
+  const catalog = buildGamingCatalog(
+    "REFUND",
+    new Date("2026-08-25T12:00:00.000Z"),
+  );
+  const play = {
+    id: "external-play-246",
+    ticketId: "external-ticket-246",
+    family: "INSTANT" as const,
+    gameId: "sapyaite" as const,
+    gameName: "Sapy’aite",
+    selection: "PAR",
+    drawId: null,
+    amount: 10_000,
+    currency: "PYG" as const,
+    status: "WON" as const,
+    result: "246",
+    resultNumbers: ["246"],
+    ruleResult: "PAR",
+    matches: 1,
+    payoutMultiplier: 2,
+    prize: 20_000,
+    createdAt: occurredAt,
+  };
+  const ticket = {
+    id: play.ticketId,
+    code: "FIXTURE-246",
+    playId: play.id,
+    gameId: play.gameId,
+    gameName: play.gameName,
+    family: play.family,
+    selection: play.selection,
+    drawId: null,
+    amount: play.amount,
+    currency: play.currency,
+    status: play.status,
+    result: play.result,
+    resultNumbers: play.resultNumbers,
+    ruleResult: play.ruleResult,
+    prize: play.prize,
+    issuedAt: occurredAt,
+  };
+  const result = {
+    id: "external-result-246",
+    source: "INSTANT" as const,
+    gameId: play.gameId,
+    gameName: play.gameName,
+    drawId: null,
+    result: play.result,
+    resultNumbers: play.resultNumbers,
+    occurredAt,
+  };
+  let acceptedPlays = 0;
+
+  await page.route("**/api/mock/bootstrap", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ session, catalog, plays: [], results: [] }),
+    });
+  });
+  await page.route("**/api/mock/wallet/movements", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ movements: [] }),
+    });
+  });
+  await page.route("**/api/mock/results", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ results: [result] }),
+    });
+  });
+  await page.route("**/api/mock/instant", async (route) => {
+    const request = route.request();
+    expect(request.headers()["idempotency-key"]).toBeTruthy();
+    expect(request.postDataJSON()).toEqual({
+      gameId: "sapyaite",
+      amount: 10_000,
+      selection: "PAR",
+    });
+    acceptedPlays += 1;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        play,
+        ticket,
+        session: { balance: 240_000, currency: "PYG" },
+        replayed: false,
+      }),
+    });
+  });
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/instantaneas/sapyaite", {
+    waitUntil: "domcontentloaded",
+  });
+  await page.getByRole("button", { name: "Jugar ahora", exact: true }).click();
+
+  await expect(page.getByLabel("Rodillo 1: 246")).toBeVisible();
+  await expect(page.getByText("Premio Gs. 20.000", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("dialog", { name: "Jugada registrada" }),
+  ).toBeVisible({ timeout: 8_000 });
+  expect(acceptedPlays).toBe(1);
+});
+
 test("replays the same Idempotency-Key without a second debit", async ({
   page,
 }) => {
@@ -323,15 +444,12 @@ test("credits a top-up through the UI and confirms the server balance", async ({
   expect(after.session.balance).toBe(initial.session.balance + 50_000);
 });
 
-test("hides Gestión from PLAYER, authenticates ADMIN, and logs out", async ({
+test("keeps administration outside the frontend, authenticates, and logs out", async ({
   page,
 }) => {
   expect(ADMIN_PASSWORD.length).toBeGreaterThanOrEqual(8);
 
-  await page.goto("/gestion", { waitUntil: "domcontentloaded" });
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Acceso restringido" }),
-  ).toBeVisible();
+  await page.goto("/", { waitUntil: "domcontentloaded" });
   const playerNavigation = activeNavigation(page);
   await expect(playerNavigation).toBeVisible();
   await expect(
@@ -354,23 +472,73 @@ test("hides Gestión from PLAYER, authenticates ADMIN, and logs out", async ({
   await expect(
     page.getByRole("heading", { level: 1, name: "Cuenta" }),
   ).toBeVisible();
-  await expect(page.getByText("Gestión habilitada", { exact: true })).toBeVisible();
+  await expect(page.getByText("Sesión de operador", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("link", {
       name: "Gestión",
       exact: true,
       includeHidden: true,
     }),
-  ).toHaveCount(1);
-
-  await page.goto("/gestion", { waitUntil: "domcontentloaded" });
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Gestión de juegos" }),
-  ).toBeVisible();
+  ).toHaveCount(0);
 
   await page.goto("/cuenta", { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "Cerrar sesión", exact: true }).click();
   await expect(
     page.getByRole("heading", { level: 1, name: "Ingresá a tu cuenta" }),
   ).toBeVisible();
+});
+
+test("registers through the explicit non-persistent preview fixture", async ({
+  page,
+}) => {
+  await page.goto("/cuenta", { waitUntil: "domcontentloaded" });
+  const logout = page.getByRole("button", { name: "Cerrar sesión", exact: true });
+  await expect(logout).toBeVisible();
+  await logout.click();
+
+  await page.getByRole("button", { name: "Registrarme", exact: true }).click();
+  await page.getByLabel("Nombre visible").fill("Ana Preview");
+  await page.getByLabel("Documento o teléfono").fill("0981000000");
+  await page.getByLabel("Contraseña").fill("segura-2026");
+  await page
+    .getByLabel("Acepto los términos de uso y la política de privacidad.")
+    .check();
+  await page.getByRole("button", { name: "Crear cuenta", exact: true }).click();
+
+  await expect(page.getByRole("heading", { level: 1, name: "Cuenta" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Ana Preview" })).toBeVisible();
+  await expect(page.getByRole("status")).toContainText("Registro simulado");
+});
+
+test("renders an unauthorized state when the backoffice session expires", async ({
+  page,
+}) => {
+  await page.route("**/api/mock/bootstrap", async (route) => {
+    await route.fulfill({
+      status: 401,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error: { code: "SESSION_EXPIRED", message: "Sesión vencida" },
+      }),
+    });
+  });
+
+  await page.goto("/mis-jugadas", { waitUntil: "domcontentloaded" });
+  await expect(page.getByText("Iniciá sesión para consultar tus jugadas.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Ir a iniciar sesión" })).toBeVisible();
+});
+
+test("offers a safe retry when the preview transport is unavailable", async ({
+  page,
+}) => {
+  await page.route("**/api/mock/bootstrap", async (route) => {
+    await route.abort("failed");
+  });
+
+  await page.goto("/instantaneas", { waitUntil: "domcontentloaded" });
+  const alert = page.getByRole("alert").filter({
+    hasText: "No se pudo conectar con el servicio de vista previa.",
+  });
+  await expect(alert).toContainText("No se pudo conectar con el servicio de vista previa.");
+  await expect(alert.getByRole("button", { name: "Reintentar" })).toBeVisible();
 });

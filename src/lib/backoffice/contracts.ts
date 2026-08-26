@@ -3,10 +3,18 @@ import type {
   GamingCatalog,
   GamingPlay,
   GamingResult,
+  GamingTicket,
   InstantGameId,
   PlacePlayResponse,
+  TopupMethod,
+  TopupResponse,
   TraditionalGameId,
+  WalletMovement,
 } from "@/lib/gaming/types";
+import type {
+  InstantPlayRequest,
+  TraditionalPlayRequest,
+} from "@/lib/gaming/schemas";
 
 /** The roles currently understood by the frontend. */
 export type BackofficeUserRole = "PLAYER" | "ADMIN";
@@ -46,6 +54,28 @@ export interface AuthenticationResponse {
   session: BackofficeSession;
 }
 
+export interface CursorPage {
+  nextCursor?: string | null;
+}
+
+export interface BackofficeApiIssue {
+  code?: string;
+  field?: string;
+  path?: readonly (string | number)[];
+  message?: string;
+}
+
+export interface BackofficeApiError {
+  code: string;
+  message: string;
+  details?: unknown;
+  issues?: readonly BackofficeApiIssue[] | unknown;
+}
+
+export interface BackofficeApiErrorEnvelope {
+  error: BackofficeApiError;
+}
+
 export interface BootstrapResponse {
   session: BackofficeSession | null;
   catalog: GamingCatalog;
@@ -57,18 +87,11 @@ export interface CatalogResponse {
   catalog: GamingCatalog;
 }
 
-export interface PlaceTraditionalPlayRequest {
-  gameId: TraditionalGameId;
-  drawId: string;
-  amount: number;
-  selection: unknown;
-}
+/** Canonical discriminated request consumed by the current frontend forms. */
+export type PlaceTraditionalPlayRequest = TraditionalPlayRequest;
 
-export interface PlaceInstantPlayRequest {
-  gameId: InstantGameId;
-  amount: number;
-  selection: unknown;
-}
+/** Canonical discriminated request consumed by the current frontend forms. */
+export type PlaceInstantPlayRequest = InstantPlayRequest;
 
 export interface PlaysQuery {
   family?: "TRADITIONAL" | "INSTANT";
@@ -77,9 +100,8 @@ export interface PlaysQuery {
   limit?: number;
 }
 
-export interface PlaysResponse {
+export interface PlaysResponse extends CursorPage {
   plays: readonly GamingPlay[];
-  nextCursor?: string | null;
 }
 
 export interface ResultsQuery {
@@ -90,17 +112,41 @@ export interface ResultsQuery {
   limit?: number;
 }
 
-export interface ResultsResponse {
+export interface ResultsResponse extends CursorPage {
   results: readonly GamingResult[];
-  nextCursor?: string | null;
 }
 
 export type PlacePlayResult = PlacePlayResponse;
 
+export interface WalletMovementsQuery {
+  cursor?: string;
+  limit?: number;
+}
+
+export interface WalletMovementsResponse extends CursorPage {
+  movements: readonly WalletMovement[];
+}
+
+/**
+ * Minimal wallet command forwarded to the external backoffice. Limits,
+ * payment authorization and accepted methods remain backoffice concerns.
+ */
+export interface WalletTopUpRequest {
+  amount: number;
+  method: TopupMethod;
+}
+
+export type WalletTopUpResponse = TopupResponse;
+
+export interface TicketResponse {
+  ticket: GamingTicket;
+}
+
 /** All paths are supplied by environment-specific composition code. */
 export interface BackofficeEndpoints {
   session: string;
-  bootstrap: string;
+  /** Optional compatibility endpoint; product hydration composes capabilities. */
+  bootstrap?: string;
   login: string;
   register: string;
   logout: string;
@@ -109,11 +155,22 @@ export interface BackofficeEndpoints {
   traditionalPlays: string;
   instantPlays: string;
   results: string;
+  /** Optional because the external wallet contract has not been supplied. */
+  walletMovements?: string;
+  /** Optional because the external wallet contract has not been supplied. */
+  walletTopUp?: string;
+  /**
+   * Optional path template for ticket lookup. When configured it must contain
+   * the literal `{ticketId}` token; the client URL-encodes its replacement.
+   */
+  ticket?: string;
 }
 
 export interface BackofficeRequestOptions {
   signal?: AbortSignal;
   headers?: HeadersInit;
+  /** Per-request timeout in milliseconds. `0` disables the client timeout. */
+  timeoutMs?: number;
 }
 
 export interface BackofficeMutationOptions extends BackofficeRequestOptions {
@@ -121,9 +178,8 @@ export interface BackofficeMutationOptions extends BackofficeRequestOptions {
   idempotencyKey?: string;
 }
 
-export interface BackofficeClient {
+export interface AuthGateway {
   getSession(options?: BackofficeRequestOptions): Promise<SessionResponse>;
-  bootstrap(options?: BackofficeRequestOptions): Promise<BootstrapResponse>;
   login(
     input: LoginRequest,
     options?: BackofficeRequestOptions,
@@ -133,6 +189,10 @@ export interface BackofficeClient {
     options?: BackofficeRequestOptions,
   ): Promise<AuthenticationResponse>;
   logout(options?: BackofficeRequestOptions): Promise<void>;
+}
+
+export interface GamingGateway {
+  bootstrap(options?: BackofficeRequestOptions): Promise<BootstrapResponse>;
   getCatalog(options?: BackofficeRequestOptions): Promise<CatalogResponse>;
   getPlays(
     query?: PlaysQuery,
@@ -150,4 +210,28 @@ export interface BackofficeClient {
     query?: ResultsQuery,
     options?: BackofficeRequestOptions,
   ): Promise<ResultsResponse>;
+  getTicket(
+    ticketId: string,
+    options?: BackofficeRequestOptions,
+  ): Promise<TicketResponse>;
 }
+
+export interface WalletGateway {
+  getMovements(
+    query?: WalletMovementsQuery,
+    options?: BackofficeRequestOptions,
+  ): Promise<WalletMovementsResponse>;
+  topUp(
+    input: WalletTopUpRequest,
+    options?: BackofficeMutationOptions,
+  ): Promise<WalletTopUpResponse>;
+}
+
+/** Complete frontend-facing boundary implemented by the external backoffice. */
+export interface BackofficeGateway
+  extends AuthGateway,
+    GamingGateway,
+    WalletGateway {}
+
+/** @deprecated Compatibility name; use `BackofficeGateway` in new code. */
+export type BackofficeClient = BackofficeGateway;

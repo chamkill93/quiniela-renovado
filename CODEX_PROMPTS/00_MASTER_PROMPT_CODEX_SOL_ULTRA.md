@@ -1,5 +1,12 @@
 # MASTER PROMPT - CODEX SOL ULTRA - quinie.LA
 
+> **Actualización de alcance vigente:** la indicación posterior del propietario
+> reemplaza la arquitectura full-stack de este documento. quinie.LA se entrega
+> como frontend conectado a un backoffice externo. No implementar backend
+> local, MySQL/Prisma, RNG, payouts, ledger, Kodexa, panel administrativo ni
+> despliegue salvo nueva autorización explícita. Para Fase 2 rige
+> `02_PHASE_BACKEND_SECURITY.md`.
+
 Actua como arquitecto full-stack senior, product engineer, UX engineer, especialista en seguridad web y QA. Debes construir quinie.LA desde cero en este repositorio y dejarlo ejecutable, testeado, versionable en GitHub y desplegable en Hostinger.
 
 ## FUENTES Y PRIORIDAD

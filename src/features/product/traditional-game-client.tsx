@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { PlayResponse } from "@/lib/product/api-types";
+import type { TraditionalPlayRequest } from "@/lib/gaming/schemas";
+import type { TraditionalGameDefinition } from "@/lib/gaming/types";
 import {
-  BET_AMOUNTS,
-  MOCK_DRAWS,
   type ProductGame,
   type TraditionalGameId,
   formatGs,
@@ -23,6 +23,14 @@ function secureRandom(min: number, max: number) {
   return min + (buffer[0] % (max - min + 1));
 }
 
+function formatDrawAt(value: string) {
+  return new Intl.DateTimeFormat("es-PY", {
+    dateStyle: "short",
+    timeStyle: "short",
+    timeZone: "America/Asuncion",
+  }).format(new Date(value));
+}
+
 function initialSelection(gameId: TraditionalGameId): Record<string, unknown> {
   if (gameId === "redoblona") return { head: "001", redoblona: "01", position: 2 };
   if (gameId === "megaloto") return { numbers: [1, 2, 3, 4, 5, 6] };
@@ -30,15 +38,91 @@ function initialSelection(gameId: TraditionalGameId): Record<string, unknown> {
   return { number: "001", position: 1 };
 }
 
+function buildTraditionalPlayInput(
+  gameId: TraditionalGameId,
+  amount: number,
+  drawId: string,
+  selection: Record<string, unknown>,
+): TraditionalPlayRequest {
+  if (gameId === "redoblona") {
+    return {
+      gameId,
+      amount,
+      drawId,
+      selection: {
+        head: String(selection.head ?? ""),
+        redoblona: String(selection.redoblona ?? ""),
+        position: Number(selection.position ?? 2),
+      },
+    };
+  }
+  if (gameId === "megaloto") {
+    const numbers = Array.isArray(selection.numbers)
+      ? selection.numbers.map(Number)
+      : [];
+    return {
+      gameId,
+      amount,
+      drawId,
+      selection: { numbers, modality: "MEGA_FULL" },
+    };
+  }
+  if (gameId === "prizes" || gameId === "invert") {
+    return {
+      gameId,
+      amount,
+      drawId,
+      selection: {
+        number: String(selection.number ?? ""),
+        position: Number(selection.position ?? 2),
+      },
+    };
+  }
+  return {
+    gameId,
+    amount,
+    drawId,
+    selection: { number: String(selection.number ?? "") },
+  };
+}
+
 export function TraditionalGameClient({ game }: { game: ProductGame<TraditionalGameId> }) {
-  const { requestPlay } = useProduct();
+  const {
+    requestPlay,
+    catalog,
+    session,
+    loading,
+    unauthorized,
+    error: gatewayError,
+    refresh,
+  } = useProduct();
   const [selection, setSelection] = useState<Record<string, unknown>>(() => initialSelection(game.id));
-  const [drawId, setDrawId] = useState<string>(MOCK_DRAWS[0].id);
+  const [drawId, setDrawId] = useState<string>("");
   const [amount, setAmount] = useState<number>(10_000);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [response, setResponse] = useState<PlayResponse | null>(null);
   const playSound = useSoundEffects();
+  const availableAmounts = catalog?.amounts ?? [];
+  const remoteGame = catalog?.traditional.find(
+    (definition) => definition.id === game.id,
+  );
+  const enabledGame = Boolean(remoteGame);
+  const displayName = remoteGame?.name ?? (loading ? "Cargando juego…" : "Juego no disponible");
+  const displayDescription = remoteGame?.description ?? "Esperando la definición habilitada por el backoffice.";
+  const availableDraws = useMemo(() => {
+    if (!catalog) return [];
+    const definition = catalog.traditional.find((item) => item.id === game.id);
+    if (!definition) return [];
+    const allowed = new Set(definition.drawIds);
+    return catalog.draws.filter((draw) => allowed.has(draw.id));
+  }, [catalog, game.id]);
+  const effectiveAmount = availableAmounts.includes(amount)
+    ? amount
+    : (availableAmounts[0] ?? 0);
+  const effectiveDrawId = availableDraws.some((draw) => draw.id === drawId)
+    ? drawId
+    : (availableDraws[0]?.id ?? "");
 
   const update = (key: string, value: unknown) => setSelection((current) => ({ ...current, [key]: value }));
 
@@ -62,7 +146,15 @@ export function TraditionalGameClient({ game }: { game: ProductGame<TraditionalG
     setError(null);
     playSound("confirm");
     try {
-      const data = await requestPlay("/api/mock/traditional", { gameId: game.id, amount, drawId, selection });
+      const data = await requestPlay({
+        kind: "traditional",
+        input: buildTraditionalPlayInput(
+          game.id,
+          effectiveAmount,
+          effectiveDrawId,
+          selection,
+        ),
+      });
       setResponse(data);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No pudimos registrar la jugada.");
@@ -77,29 +169,33 @@ export function TraditionalGameClient({ game }: { game: ProductGame<TraditionalG
       <section className={styles.splitLayout}>
         <div className={styles.contentCard}>
           <p className={styles.eyebrow}>{game.eyebrow}</p>
-          <h1 className={styles.title}>{game.name}</h1>
-          <p className={styles.lede}>{game.description}</p>
+          <h1 className={styles.title}>{displayName}</h1>
+          <p className={styles.lede}>{displayDescription}</p>
           <div className={styles.formStack} style={{ marginTop: 28 }}>
-            <TraditionalSelection gameId={game.id} selection={selection} update={update} />
+            {remoteGame ? <TraditionalSelection definition={remoteGame} gameId={game.id} selection={selection} update={update} /> : null}
             <button className={styles.quietButton} onClick={randomize} type="button">Selección al azar</button>
 
             <div className={styles.fieldGroup}>
               <label htmlFor="draw">Sorteo</label>
-              <select className={styles.select} id="draw" onChange={(event) => setDrawId(event.target.value)} value={drawId}>
-                {MOCK_DRAWS.map((draw) => <option key={draw.id} value={draw.id}>{draw.label} · {draw.time}</option>)}
+              <select className={styles.select} id="draw" onChange={(event) => setDrawId(event.target.value)} value={effectiveDrawId}>
+                {availableDraws.map((draw) => <option key={draw.id} value={draw.id}>{draw.label} · {formatDrawAt(draw.drawsAt)}</option>)}
               </select>
             </div>
 
             <div className={styles.fieldGroup}>
               <span className={styles.fieldLabel}>Importe</span>
               <div className={styles.chipGrid}>
-                {BET_AMOUNTS.map((value) => (
-                  <AmountChip key={value} onSelect={setAmount} selected={amount === value} value={value} />
+                {availableAmounts.map((value) => (
+                  <AmountChip key={value} onSelect={setAmount} selected={effectiveAmount === value} value={value} />
                 ))}
               </div>
             </div>
+            {loading ? <div className={styles.loadingBar} aria-label="Cargando catálogo" /> : null}
+            {catalog && !enabledGame ? <div className={styles.errorBox} role="alert">Este juego no está habilitado por el backoffice.</div> : null}
+            {gatewayError ? <div className={styles.errorBox} role="alert"><p>{gatewayError}</p><button className={styles.quietButton} onClick={() => void refresh()} type="button">Reintentar conexión</button></div> : null}
+            {!gatewayError && (unauthorized || (!loading && !session)) ? <div className={styles.errorBox} role="alert">Iniciá sesión para registrar una jugada. <Link className={styles.textLink} href="/cuenta">Ir a Cuenta</Link></div> : null}
             {error ? <div className={styles.errorBox} role="alert">{error}</div> : null}
-            <button className={styles.primaryButton} disabled={pending} onClick={submit} type="button">
+            <button className={styles.primaryButton} disabled={pending || loading || Boolean(gatewayError) || !session || !enabledGame || !effectiveDrawId || availableAmounts.length === 0} onClick={submit} type="button">
               {pending ? "Confirmando…" : "Confirmar jugada"}
             </button>
           </div>
@@ -108,10 +204,10 @@ export function TraditionalGameClient({ game }: { game: ProductGame<TraditionalG
         <aside className={styles.contentCard} aria-label="Resumen de jugada">
           <p className={styles.eyebrow}>Resumen</p>
           <dl className={styles.summaryList}>
-            <div className={styles.summaryRow}><dt>Juego</dt><dd>{game.name}</dd></div>
-            <div className={styles.summaryRow}><dt>Sorteo</dt><dd>{MOCK_DRAWS.find((draw) => draw.id === drawId)?.label}</dd></div>
+            <div className={styles.summaryRow}><dt>Juego</dt><dd>{remoteGame?.name ?? "—"}</dd></div>
+            <div className={styles.summaryRow}><dt>Sorteo</dt><dd>{availableDraws.find((draw) => draw.id === effectiveDrawId)?.label ?? "—"}</dd></div>
             <div className={styles.summaryRow}><dt>Selección</dt><dd>{summarizeSelection(selection)}</dd></div>
-            <div className={styles.summaryRow}><dt>Importe</dt><dd>{formatGs(amount)}</dd></div>
+            <div className={styles.summaryRow}><dt>Importe</dt><dd>{formatGs(effectiveAmount)}</dd></div>
           </dl>
           <p className={styles.fieldHint} style={{ marginTop: 16 }}>Revisá los datos antes de confirmar. La aceptación final siempre ocurre en el servidor.</p>
         </aside>
@@ -122,25 +218,29 @@ export function TraditionalGameClient({ game }: { game: ProductGame<TraditionalG
 }
 
 function TraditionalSelection({
+  definition,
   gameId,
   selection,
   update,
 }: {
+  definition: TraditionalGameDefinition;
   gameId: TraditionalGameId;
   selection: Record<string, unknown>;
   update: (key: string, value: unknown) => void;
 }) {
+  const contract = definition.selection;
   if (gameId === "megaloto") {
     const numbers = selection.numbers as number[];
+    const maxCount = contract.kind === "MEGALOTO" ? contract.count : 6;
     const toggle = (number: number) => {
       if (numbers.includes(number)) update("numbers", numbers.filter((value) => value !== number));
-      else if (numbers.length < 6) update("numbers", [...numbers, number].sort((a, b) => a - b));
+      else if (numbers.length < maxCount) update("numbers", [...numbers, number].sort((a, b) => a - b));
     };
     return (
       <div className={styles.fieldGroup}>
-        <span className={styles.fieldLabel}>Elegí 6 números del 1 al 45</span>
+        <span className={styles.fieldLabel}>Elegí {contract.kind === "MEGALOTO" ? contract.count : 6} números del {contract.kind === "MEGALOTO" ? contract.min : 1} al {contract.kind === "MEGALOTO" ? contract.max : 45}</span>
         <div className={styles.chipGrid}>
-          {Array.from({ length: 45 }, (_, index) => index + 1).map((number) => (
+          {Array.from({ length: contract.kind === "MEGALOTO" ? contract.max : 45 }, (_, index) => index + 1).map((number) => (
             <button
               aria-pressed={numbers.includes(number)}
               className={styles.chip}
@@ -154,7 +254,7 @@ function TraditionalSelection({
             </button>
           ))}
         </div>
-        <p className={styles.fieldHint}>{numbers.length}/6 seleccionados.</p>
+        <p className={styles.fieldHint}>{numbers.length}/{contract.kind === "MEGALOTO" ? contract.count : 6} seleccionados.</p>
       </div>
     );
   }
@@ -164,7 +264,7 @@ function TraditionalSelection({
       <>
         <NumberField id="head-number" label="Número de cabeza" digits={3} value={String(selection.head)} onChange={(value) => update("head", value)} />
         <NumberField id="double-number" label="Número redoblona" digits={2} value={String(selection.redoblona)} onChange={(value) => update("redoblona", value)} />
-        <PositionField value={Number(selection.position)} onChange={(value) => update("position", value)} />
+        <PositionField min={contract.kind === "REDOBLONA" ? contract.position.min : 2} max={contract.kind === "REDOBLONA" ? contract.position.max : 14} value={Number(selection.position)} onChange={(value) => update("position", value)} />
       </>
     );
   }
@@ -173,7 +273,7 @@ function TraditionalSelection({
     <>
       <NumberField id="traditional-number" label="Número de tres cifras" digits={3} value={String(selection.number)} onChange={(value) => update("number", value)} />
       {gameId === "prizes" || gameId === "invert" ? (
-        <PositionField min={gameId === "invert" ? 1 : 2} value={Number(selection.position)} onChange={(value) => update("position", value)} />
+        <PositionField min={contract.kind === "THREE_DIGIT" && contract.position ? contract.position.min : gameId === "invert" ? 1 : 2} max={contract.kind === "THREE_DIGIT" && contract.position ? contract.position.max : 14} value={Number(selection.position)} onChange={(value) => update("position", value)} />
       ) : null}
       {gameId === "invert" ? <p className={styles.fieldHint}>Vista por cifras: {String(selection.number).padStart(3, "0").split("").join(" · ")}</p> : null}
     </>
@@ -198,12 +298,12 @@ function NumberField({ id, label, digits, value, onChange }: { id: string; label
   );
 }
 
-function PositionField({ value, onChange, min = 2 }: { value: number; onChange: (value: number) => void; min?: 1 | 2 }) {
+function PositionField({ value, onChange, min = 2, max = 14 }: { value: number; onChange: (value: number) => void; min?: number; max?: number }) {
   return (
     <div className={styles.fieldGroup}>
       <label htmlFor="position">Hasta la posición</label>
       <select className={styles.select} id="position" onChange={(event) => onChange(Number(event.target.value))} value={value}>
-        {Array.from({ length: 15 - min }, (_, index) => index + min).map((position) => <option key={position} value={position}>{position}</option>)}
+        {Array.from({ length: max - min + 1 }, (_, index) => index + min).map((position) => <option key={position} value={position}>{position}</option>)}
       </select>
     </div>
   );

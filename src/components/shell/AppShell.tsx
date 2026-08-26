@@ -85,14 +85,6 @@ export const defaultShellNavItems: ShellNavItem[] = [
     match: ["/cuenta", "/profile", "/saldos"],
     mobile: true,
   },
-  {
-    href: "/gestion",
-    label: "Gestión",
-    icon: "settings",
-    section: "admin",
-    match: ["/gestion", "/admin"],
-    adminOnly: true,
-  },
 ];
 
 const sectionLabels: Record<ShellNavSection, string> = {

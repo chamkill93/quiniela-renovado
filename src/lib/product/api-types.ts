@@ -18,7 +18,7 @@ export interface MockPlay {
   prize: number;
   status: "PENDING" | "WON" | "LOST" | "REFUNDED" | string;
   createdAt: string;
-  drawId?: string;
+  drawId?: string | null;
   selection?: unknown;
   result?: string | null;
   resultNumbers?: string[] | null;
@@ -29,8 +29,12 @@ export interface MockTicket {
   id: string;
   code?: string;
   playId: string;
+  gameId?: string;
   gameName?: string;
+  family?: "INSTANT" | "TRADITIONAL";
+  drawId?: string | null;
   amount: number;
+  currency?: "PYG" | string;
   prize?: number;
   status?: string;
   selection?: unknown;
@@ -41,7 +45,7 @@ export interface MockTicket {
 
 export interface MockResult {
   id: string;
-  drawId?: string;
+  drawId?: string | null;
   label?: string;
   gameId?: string;
   gameName?: string;

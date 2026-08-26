@@ -1,8 +1,6 @@
 import Link from "next/link";
-import { GameCard } from "@/features/product/game-card";
+import { HomeRemoteSections } from "@/features/product/catalog-views";
 import { GameIcon } from "@/features/product/game-icon";
-import { SectionHeader } from "@/features/product/section-header";
-import { INSTANT_GAMES, MOCK_DRAWS } from "@/lib/product/catalog";
 import styles from "@/features/product/product.module.css";
 
 const QUICK_LINKS = [
@@ -19,10 +17,10 @@ const QUICK_LINKS = [
     gameId: "sapyaite",
   },
   {
-    href: "/quinielas/megaloto",
-    label: "Megaloto",
-    description: "Elegí seis números del 1 al 45.",
-    gameId: "megaloto",
+    href: "/resultados",
+    label: "Resultados",
+    description: "Publicaciones recibidas del backoffice.",
+    gameId: "prizes",
   },
 ] as const;
 
@@ -56,50 +54,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section aria-labelledby="draws-title">
-        <SectionHeader
-          eyebrow="Resultados recientes"
-          title="Sorteos del día"
-          description="Consultá cada horario de manera simple y verificable."
-          href="/resultados"
-          linkLabel="Ver resultados"
-          headingLevel={2}
-        />
-        <div className={styles.drawGrid}>
-          {MOCK_DRAWS.map((draw) => (
-            <article className={styles.drawCard} data-tone={draw.tone} key={draw.id}>
-              <span>{draw.label}</span>
-              <strong>{draw.result}</strong>
-              <div className={styles.drawMeta}><span>{draw.time}</span><span>Publicado</span></div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section aria-labelledby="instant-title">
-        <SectionHeader
-          eyebrow="Resultado al momento"
-          title="Instantáneas para cada intuición"
-          description="Números, paridad y coincidencias en una experiencia rápida con resultado autoritativo."
-          href="/instantaneas"
-          linkLabel="Ver las 9"
-          headingLevel={2}
-        />
-        <div className={styles.gameGrid}>
-          {INSTANT_GAMES.slice(0, 6).map((game, index) => (
-            <GameCard eager={index < 3} game={game} href={`/instantaneas/${game.id}`} key={game.id} />
-          ))}
-        </div>
-      </section>
-
-      <section className={styles.megaBanner} aria-labelledby="mega-title">
-        <div>
-          <p className={styles.eyebrow}>Seis números · 1 al 45</p>
-          <h2 id="mega-title">Megaloto</h2>
-          <p>Armá tu combinación manualmente o dejá que el selector la prepare por vos.</p>
-          <Link className={styles.primaryButton} href="/quinielas/megaloto">Elegir números</Link>
-        </div>
-      </section>
+      <HomeRemoteSections />
     </main>
   );
 }

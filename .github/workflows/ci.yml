@@ -13,9 +13,7 @@ concurrency:
 
 env:
   APP_URL: http://127.0.0.1:3000
-  DATABASE_URL: mysql://quinie:quinie@127.0.0.1:3306/quinie_ci
-  SESSION_SECRET: ci-only-session-secret-at-least-32-bytes-long
-  PROVIDER_MODE: MOCK
+  NEXT_PUBLIC_PRODUCT_GATEWAY_MODE: preview
   NEXT_TELEMETRY_DISABLED: 1
 
 jobs:
