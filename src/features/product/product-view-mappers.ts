@@ -5,11 +5,16 @@ import type {
 } from "@/lib/gaming/types";
 import type { MockResult } from "@/lib/product/api-types";
 
+import {
+  isQuinieGameIconId,
+  type QuinieGameIconId,
+} from "./game-icon-map";
+
 export type CatalogFamily = "instant" | "traditional";
 export type GameTone = "red" | "orange" | "blue" | "purple" | "green";
 
 interface GameVisualMetadata {
-  iconKey: string;
+  iconKey: QuinieGameIconId;
   tone: GameTone;
 }
 
@@ -18,7 +23,7 @@ export interface CatalogGameView {
   name: string;
   eyebrow: string;
   description: string;
-  iconKey: string;
+  iconKey: QuinieGameIconId | null;
   tone: GameTone;
   baseAmount: number | null;
   href: string;
@@ -38,7 +43,21 @@ const DEFAULT_VISUAL: GameVisualMetadata = {
   tone: "red",
 };
 
-const LEGACY_ICON_KEYS = new Set(["bolt", "prize", "mega", "one", "two", "three"]);
+const GAME_ICON_KEY_ALIASES = {
+  "a-la-cabeza": "head",
+  "a-los-premios": "prizes",
+  invertida: "invert",
+  "sapyaite-tradicional": "sapyaite-traditional",
+  "poa-5": "poa5",
+  "poa-10": "poa10",
+  "racha-5": "racha5",
+  bolt: "sapyaite",
+  prize: "prizes",
+  mega: "megaloto",
+  one: "petei",
+  two: "mokoi",
+  three: "mbohapy",
+} as const satisfies Readonly<Record<string, QuinieGameIconId>>;
 const VISIBLE_TRADITIONAL_GAME_IDS = new Set([
   "head",
   "prizes",
@@ -52,7 +71,7 @@ export const GAME_VISUALS: Readonly<Record<string, GameVisualMetadata>> = {
   prizes: { iconKey: "prizes", tone: "orange" },
   invert: { iconKey: "invert", tone: "blue" },
   redoblona: { iconKey: "redoblona", tone: "red" },
-  "sapyaite-traditional": { iconKey: "sapyaite", tone: "purple" },
+  "sapyaite-traditional": { iconKey: "sapyaite-traditional", tone: "purple" },
   megaloto: { iconKey: "megaloto", tone: "blue" },
   sapyaite: { iconKey: "sapyaite", tone: "purple" },
   poa: { iconKey: "poa", tone: "green" },
@@ -64,6 +83,31 @@ export const GAME_VISUALS: Readonly<Record<string, GameVisualMetadata>> = {
   poa10: { iconKey: "poa10", tone: "blue" },
   racha5: { iconKey: "racha5", tone: "green" },
 };
+
+function resolveIconCandidate(value: string | null | undefined): QuinieGameIconId | null {
+  const candidate = value?.trim();
+  if (!candidate) return null;
+  if (isQuinieGameIconId(candidate)) return candidate;
+  if (!Object.hasOwn(GAME_ICON_KEY_ALIASES, candidate)) return null;
+  return GAME_ICON_KEY_ALIASES[candidate as keyof typeof GAME_ICON_KEY_ALIASES];
+}
+
+/**
+ * Resolve only approved presentation IDs. Backoffice keys and product IDs are
+ * never interpolated into asset paths; an unknown pair intentionally has no
+ * icon instead of borrowing an unrelated game's artwork.
+ */
+export function resolveCatalogGameIconId(
+  gameId: string,
+  backofficeIconKey: string | null | undefined,
+): QuinieGameIconId | null {
+  const normalizedGameId = gameId.trim();
+
+  // The product contract is authoritative whenever it provides a canonical
+  // ID. iconKey is only a presentation fallback for non-canonical remote IDs.
+  if (isQuinieGameIconId(normalizedGameId)) return normalizedGameId;
+  return resolveIconCandidate(backofficeIconKey) ?? resolveIconCandidate(normalizedGameId);
+}
 
 function minimumAmount(amounts: readonly number[]) {
   const validAmounts = amounts.filter(
@@ -100,7 +144,7 @@ export function mapCatalogGames(
     ? catalog.traditional.filter((game) => VISIBLE_TRADITIONAL_GAME_IDS.has(game.id))
     : catalog.instant;
   return games.slice(0, normalizeLimit(limit, games.length)).map((game) => {
-    const visual = GAME_VISUALS[game.id] ?? DEFAULT_VISUAL;
+    const visual = GAME_VISUALS[game.id];
     return {
       id: game.id,
       name: game.name,
@@ -109,11 +153,8 @@ export function mapCatalogGames(
           ? instantEyebrow(game as InstantGameDefinition)
           : traditionalEyebrow(game as TraditionalGameDefinition),
       description: game.description,
-      iconKey:
-        game.iconKey?.trim() && !LEGACY_ICON_KEYS.has(game.iconKey.trim())
-          ? game.iconKey.trim()
-          : visual.iconKey,
-      tone: visual.tone,
+      iconKey: resolveCatalogGameIconId(game.id, game.iconKey) ?? visual?.iconKey ?? null,
+      tone: visual?.tone ?? DEFAULT_VISUAL.tone,
       baseAmount: amount,
       href:
         family === "instant"

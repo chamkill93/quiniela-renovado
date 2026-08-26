@@ -241,6 +241,163 @@ test("renders the authoritative Home hero in dark, light and responsive layouts"
   await expectNoHorizontalOverflow(page);
 });
 
+test("completes Home with four draws, Quiniela results and the official Mega Loto banner", async ({
+  page,
+}, testInfo) => {
+  const now = new Date();
+  const catalog = buildGamingCatalog("REFUND", now);
+  const publishedResults: GamingResult[] = [
+    ["home-result-497", "497", "early", 1],
+    ["home-result-208", "208", "morning", 2],
+    ["home-result-731", "731", "evening", 3],
+    ["home-result-044", "044", "night", 4],
+    ["home-result-912", "912", "early", 5],
+  ].map(([id, result, drawId, hoursAgo]) => ({
+    id: String(id),
+    source: "DRAW",
+    gameId: "head",
+    gameName: "A la Cabeza",
+    drawId: String(drawId),
+    result: String(result),
+    resultNumbers: [String(result)],
+    occurredAt: new Date(
+      now.getTime() - Number(hoursAgo) * 3_600_000,
+    ).toISOString(),
+  }));
+  publishedResults.unshift({
+    id: "home-megaloto-excluded",
+    source: "DRAW",
+    gameId: "megaloto",
+    gameName: "Megaloto",
+    drawId: "early",
+    result: "999",
+    resultNumbers: ["999"],
+    occurredAt: new Date(now.getTime() - 30_000).toISOString(),
+  });
+
+  await page.route("**/api/mock/bootstrap", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        session: {
+          id: "home-sections-player",
+          displayName: "Jugador",
+          role: "PLAYER",
+          balance: 187_500,
+          currency: "PYG",
+        },
+        catalog,
+        plays: [],
+        results: publishedResults,
+      }),
+    });
+  });
+  await page.route("**/api/mock/results", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ results: publishedResults }),
+    });
+  });
+  await page.route("**/api/mock/wallet/movements", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ movements: [] }),
+    });
+  });
+
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+
+  const hero = page.getByTestId("home-hero");
+  const drawsSection = page.getByTestId("home-draws-section");
+  const resultsSection = page.getByTestId("home-results-section");
+  const megaBanner = page.getByTestId("home-megaloto-banner");
+  const siteFooter = page.locator(".q-site-footer");
+  const drawCards = page.getByTestId("home-draw-card");
+  const resultCards = page.getByTestId("home-result-card");
+
+  await expect(drawCards).toHaveCount(4);
+  await expect(resultCards).toHaveCount(4);
+  await expect(
+    page.getByRole("heading", { name: "Instantáneas habilitadas" }),
+  ).toHaveCount(0);
+
+  const expectedDraws = [
+    ["early", "tempranero", "Tempranero"],
+    ["morning", "matutino", "Matutino"],
+    ["evening", "vespertino", "Vespertino"],
+    ["night", "nocturno", "Nocturno"],
+  ] as const;
+  const initialTheme = themeFromProjectName(testInfo.project.name);
+  const activePseudoElement = initialTheme === "dark" ? "::before" : "::after";
+
+  for (let index = 0; index < expectedDraws.length; index += 1) {
+    const [drawId, slug, label] = expectedDraws[index];
+    const card = drawCards.nth(index);
+    await expect(card).toHaveAttribute("data-draw-id", drawId);
+    await expect(card).toHaveAttribute("data-draw-slug", slug);
+    await expect(card).toHaveAttribute("href", `/sorteos/${slug}`);
+    await expect(card.getByText(label, { exact: true })).toBeVisible();
+    await expect
+      .poll(() =>
+        card.locator("span").first().evaluate(
+          (element, pseudoElement) =>
+            getComputedStyle(element, pseudoElement).backgroundImage,
+          activePseudoElement,
+        ),
+      )
+      .toContain(`/assets/quinie-home-v3/draws/${initialTheme}/${slug}.webp`);
+  }
+  await expect(
+    page.locator('[data-testid="home-draw-card"][data-active="true"]'),
+  ).toHaveCount(1);
+
+  for (const [index, value] of ["497", "208", "731", "044"].entries()) {
+    await expect(resultCards.nth(index).getByText(value, { exact: true })).toBeVisible();
+  }
+  await expect(resultsSection.getByText("999", { exact: true })).toHaveCount(0);
+  await expect(resultsSection.getByRole("link", { name: /ver todos/i })).toHaveAttribute(
+    "href",
+    "/resultados",
+  );
+
+  await expect(megaBanner).toHaveAttribute(
+    "href",
+    "https://lotoqr.megaloto.com.py/",
+  );
+  await expect(megaBanner).toHaveAttribute("target", "_blank");
+  await expect(megaBanner).toHaveAttribute("rel", /noopener/);
+  await expect(megaBanner).toHaveAttribute("rel", /noreferrer/);
+  await expect(megaBanner.getByRole("img", { name: "Mega Loto" })).toBeVisible();
+  await expect(megaBanner.getByText("IR A MEGA LOTO", { exact: true })).toBeVisible();
+
+  const verticalOrder = await Promise.all(
+    [hero, drawsSection, resultsSection, megaBanner, siteFooter].map((locator) =>
+      locator.evaluate((element) => element.getBoundingClientRect().top),
+    ),
+  );
+  expect(verticalOrder).toEqual([...verticalOrder].sort((a, b) => a - b));
+
+  const drawColumns = await drawsSection.locator("div").first().evaluate((element) =>
+    getComputedStyle(element).gridTemplateColumns.split(" ").filter(Boolean).length,
+  );
+  expect(drawColumns).toBe((page.viewportSize()?.width ?? 0) > 1_100 ? 4 : 2);
+  await expectNoHorizontalOverflow(page);
+
+  await drawCards.first().click();
+  await expect(page).toHaveURL(/\/sorteos\/tempranero$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Tempranero" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Transmisión disponible al inicio del sorteo", { exact: true }),
+  ).toBeVisible();
+  await expect(page.locator("iframe")).toHaveCount(0);
+  await expectNoHorizontalOverflow(page);
+});
+
 test("shows only four traditional games and retires the former direct routes", async ({
   page,
 }) => {

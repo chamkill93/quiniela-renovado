@@ -11,7 +11,7 @@ export function Logo({
   surface = "auto",
   className = "",
   role = "img",
-  "aria-label": ariaLabel = "quinie.LA, Quiniela Online",
+  "aria-label": ariaLabel = "quinie.LA",
   ...props
 }: LogoProps) {
   return (

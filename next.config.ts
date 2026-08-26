@@ -14,6 +14,18 @@ function configuredBackofficeOrigin(value: string | undefined) {
   }
 }
 
+function configuredHttpsOrigin(value: string | undefined) {
+  if (!value?.trim()) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password
+      ? url.origin
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 const connectSources = ["'self'"];
 if (isDevelopment) connectSources.push("ws:", "wss:");
 const backofficeOrigins = new Set(
@@ -38,6 +50,17 @@ const backofficeOrigins = new Set(
 );
 connectSources.push(...backofficeOrigins);
 
+const frameSources = new Set(["'self'"]);
+[
+  process.env.NEXT_PUBLIC_DRAW_STREAM_TEMPRANERO_URL,
+  process.env.NEXT_PUBLIC_DRAW_STREAM_MATUTINO_URL,
+  process.env.NEXT_PUBLIC_DRAW_STREAM_VESPERTINO_URL,
+  process.env.NEXT_PUBLIC_DRAW_STREAM_NOCTURNO_URL,
+]
+  .map(configuredHttpsOrigin)
+  .filter((origin): origin is string => Boolean(origin))
+  .forEach((origin) => frameSources.add(origin));
+
 const contentSecurityPolicy = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""}`,
@@ -45,6 +68,7 @@ const contentSecurityPolicy = [
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
   "media-src 'self' data: blob:",
+  `frame-src ${[...frameSources].join(" ")}`,
   `connect-src ${connectSources.join(" ")}`,
   "worker-src 'self' blob:",
   "object-src 'none'",

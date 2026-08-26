@@ -4,6 +4,7 @@ import {
   GAME_VISUALS,
   mapCatalogGames,
   mapPublishedResults,
+  resolveCatalogGameIconId,
 } from "@/features/product/product-view-mappers";
 import { buildGamingCatalog } from "@/lib/gaming/catalog";
 import type { GamingCatalog } from "@/lib/gaming/types";
@@ -60,6 +61,23 @@ describe("mappers de vistas conectadas", () => {
       iconKey: "sapyaite",
       tone: GAME_VISUALS.sapyaite.tone,
     });
+  });
+
+  it("resuelve iconKey remotos solo contra aliases aprobados y conserva la familia tradicional", () => {
+    expect(resolveCatalogGameIconId("id-remoto-sapyaite", "bolt")).toBe("sapyaite");
+    expect(resolveCatalogGameIconId("id-remoto-premios", "a-los-premios")).toBe("prizes");
+    expect(resolveCatalogGameIconId("id-remoto-poa-cinco", "poa-5")).toBe("poa5");
+    expect(resolveCatalogGameIconId("sapyaite-traditional", "bolt")).toBe("sapyaite-traditional");
+    expect(resolveCatalogGameIconId("sapyaite-traditional", "sapyaite")).toBe("sapyaite-traditional");
+    expect(resolveCatalogGameIconId("poa", "megaloto")).toBe("poa");
+    expect(resolveCatalogGameIconId("megaloto", "mega")).toBe("megaloto");
+    expect(resolveCatalogGameIconId("sapyaite-traditional", "")).toBe("sapyaite-traditional");
+    expect(GAME_VISUALS["sapyaite-traditional"].iconKey).toBe("sapyaite-traditional");
+  });
+
+  it("rechaza iconKey e IDs desconocidos en lugar de inventar un asset", () => {
+    expect(resolveCatalogGameIconId("juego-remoto", "../../privado")).toBeNull();
+    expect(resolveCatalogGameIconId("../juego", "icono-no-aprobado")).toBeNull();
   });
 
   it("limita los previews a seis y nueve sin rellenar datos inexistentes", () => {

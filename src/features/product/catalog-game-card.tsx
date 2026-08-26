@@ -3,6 +3,7 @@ import Link from "next/link";
 import { formatGs } from "@/lib/product/catalog";
 
 import { GameIcon } from "./game-icon";
+import { isQuinieGameIconId } from "./game-icon-map";
 import type { CatalogGameView } from "./product-view-mappers";
 import styles from "./product.module.css";
 
@@ -14,6 +15,8 @@ export function CatalogGameCard({
   eager?: boolean;
   testId?: string;
 }) {
+  const iconId = game.iconKey ?? (isQuinieGameIconId(game.id) ? game.id : null);
+
   return (
     <Link
       className={styles.gameCard}
@@ -22,7 +25,7 @@ export function CatalogGameCard({
       href={game.href}
     >
       <span aria-hidden="true" className={styles.gameVisual}>
-        <GameIcon className={styles.gameEmblem} gameId={game.id} />
+        {iconId ? <GameIcon className={styles.gameEmblem} gameId={iconId} /> : null}
       </span>
       <span className={styles.gameCardEyebrow}>{game.eyebrow}</span>
       <strong>{game.name}</strong>
