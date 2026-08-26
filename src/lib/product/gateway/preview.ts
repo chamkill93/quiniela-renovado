@@ -42,6 +42,7 @@ export const PREVIEW_PRODUCT_ENDPOINTS: Readonly<PreviewProductEndpoints> = {
   logout: "/api/mock/session/logout",
   instantPlay: "/api/mock/instant",
   traditionalPlay: "/api/mock/traditional",
+  ticket: "/api/mock/tickets/{ticketId}",
   results: "/api/mock/results",
   walletMovements: "/api/mock/wallet/movements",
   walletTopUp: "/api/mock/wallet/topup",
@@ -97,6 +98,16 @@ function toPreviewPlayResponse(response: PlacePlayResponse): PlayResponse {
   };
 }
 
+function previewTicketPath(template: string, ticketId: string) {
+  if (!ticketId.trim()) throw new TypeError("ticketId no puede estar vacío.");
+  if (!template.includes("{ticketId}")) {
+    throw new TypeError(
+      "El endpoint ticket debe incluir la plantilla literal '{ticketId}'.",
+    );
+  }
+  return template.replaceAll("{ticketId}", encodeURIComponent(ticketId));
+}
+
 export class PreviewProductGateway implements ProductGateway {
   readonly mode = "preview" as const;
   readonly capabilities = {
@@ -146,6 +157,24 @@ export class PreviewProductGateway implements ProductGateway {
       toPreviewPlayResponse(response),
       command,
     );
+  }
+
+  async getTicket(
+    ticketId: string,
+    options?: ProductGatewayRequestOptions,
+  ) {
+    const data = await this.get(
+      previewTicketPath(this.endpoints.ticket, ticketId),
+      backofficeResponseParsers.ticket,
+      options,
+    );
+    return {
+      ...data.ticket,
+      resultNumbers: data.ticket.resultNumbers
+        ? [...data.ticket.resultNumbers]
+        : null,
+      createdAt: data.ticket.issuedAt,
+    };
   }
 
   async getResults(options?: ProductGatewayRequestOptions) {

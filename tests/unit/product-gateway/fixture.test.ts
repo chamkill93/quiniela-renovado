@@ -4,6 +4,7 @@ import type { GamingCatalog, WalletMovement } from "@/lib/gaming/types";
 import type {
   MockResult,
   MockSession,
+  MockTicket,
   PlayResponse,
 } from "@/lib/product/api-types";
 import {
@@ -35,6 +36,23 @@ const playCommand: ProductPlayCommand = {
   input: { gameId: "sapyaite", amount: 500, selection: "PAR" },
 };
 
+const ticket: MockTicket = {
+  id: "fixture-ticket",
+  code: "QL-FIXTURE",
+  playId: "fixture-play",
+  gameId: "sapyaite",
+  gameName: "Sapy’aite",
+  family: "INSTANT",
+  drawId: null,
+  amount: 500,
+  currency: "PYG",
+  prize: 7_777,
+  status: "WON",
+  selection: "PAR",
+  resultNumbers: ["246"],
+  issuedAt: "2026-08-25T12:00:00.000Z",
+};
+
 const playResponse: PlayResponse = {
   play: {
     id: "fixture-play",
@@ -50,15 +68,7 @@ const playResponse: PlayResponse = {
     createdAt: "2026-08-25T12:00:00.000Z",
     resultNumbers: ["246"],
   },
-  ticket: {
-    id: "fixture-ticket",
-    playId: "fixture-play",
-    gameId: "sapyaite",
-    family: "INSTANT",
-    drawId: null,
-    amount: 500,
-    resultNumbers: ["246"],
-  },
+  ticket,
   session: { balance: 3_333, currency: "PYG" },
   replayed: false,
 };
@@ -92,6 +102,7 @@ function completeFixtures(): FixtureProductGatewayConfig {
     login: { session },
     register: { session },
     plays: [{ command: playCommand, response: playResponse }],
+    tickets: [ticket],
     results: [result],
     movements: [movement],
     topUp: topUpResponse,
@@ -145,6 +156,7 @@ describe("FixtureProductGateway", () => {
     firstPlay.play.resultNumbers?.push("changed-by-consumer");
 
     await expect(gateway.requestPlay(playCommand)).resolves.toEqual(playResponse);
+    await expect(gateway.getTicket(ticket.id)).resolves.toEqual(ticket);
     await expect(
       gateway.topUp({ amount: 12_345, method: "CASH_POINT" }),
     ).resolves.toEqual(topUpResponse);
@@ -188,6 +200,9 @@ describe("FixtureProductGateway", () => {
     await expect(gateway.getResults()).rejects.toMatchObject({
       operation: "getResults",
     });
+    await expect(gateway.getTicket("missing-ticket")).rejects.toMatchObject({
+      operation: "getTicket",
+    });
     await expect(gateway.getMovements()).resolves.toEqual([]);
     await expect(
       createFixtureProductGateway().getMovements(),
@@ -204,6 +219,9 @@ describe("FixtureProductGateway", () => {
 
     await expect(
       gateway.getResults({ signal: preAborted.signal }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    await expect(
+      gateway.getTicket(ticket.id, { signal: preAborted.signal }),
     ).rejects.toMatchObject({ name: "AbortError" });
 
     const duringCall = new AbortController();
@@ -251,6 +269,7 @@ describe("FixtureProductGateway", () => {
           return error;
         },
         requestPlay: throttled,
+        getTicket: throttled,
         getResults: timeout,
         getMovements: network,
         logout: network,
@@ -259,6 +278,10 @@ describe("FixtureProductGateway", () => {
 
     await expect(gateway.bootstrap()).rejects.toBe(sessionExpired);
     await expect(gateway.requestPlay(playCommand)).rejects.toMatchObject({
+      status: 429,
+      code: "RATE_LIMITED",
+    });
+    await expect(gateway.getTicket(ticket.id)).rejects.toMatchObject({
       status: 429,
       code: "RATE_LIMITED",
     });

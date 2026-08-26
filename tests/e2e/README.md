@@ -25,7 +25,7 @@ Theme contract:
 - Sound preference remains compatible with the v25 key `quinie_sound`.
 
 The functional suite does not require additional test IDs. Login, logout,
-top-up, countdown, ticket, history, results, and role-based access are all
+top-up, active reels, receipts opened from history, results, and role-based access are all
 located by their roles, labels, headings, or visible names. API assertions use
 the browser context so its HttpOnly mock-session cookie and the UI always refer
 to the same server-side session.

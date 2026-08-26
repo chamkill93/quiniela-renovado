@@ -18,6 +18,25 @@ const catalog = buildGamingCatalog(
   new Date("2026-08-25T12:00:00.000Z"),
 );
 
+const ticketFixture = {
+  id: "ticket / 1",
+  code: "QL-TICKET1",
+  playId: "play-1",
+  gameId: "sapyaite",
+  gameName: "Sapy’aite",
+  family: "INSTANT",
+  selection: "PAR",
+  drawId: null,
+  amount: 500,
+  currency: "PYG",
+  status: "LOST",
+  result: "497",
+  resultNumbers: ["497"],
+  ruleResult: "ODD",
+  prize: 0,
+  issuedAt: "2026-08-25T12:00:00.000Z",
+};
+
 describe("PreviewProductGateway", () => {
   it("adapts the existing preview routes behind product operations", async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
@@ -152,6 +171,40 @@ describe("PreviewProductGateway", () => {
     expect(init?.body).toBe(
       JSON.stringify({ gameId: "sapyaite", amount: 500, selection: "PAR" }),
     );
+  });
+
+  it("loads an authoritative ticket through the existing encoded preview route", async () => {
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        void input;
+        void init;
+        return jsonResponse({ ticket: ticketFixture });
+      },
+    );
+    const gateway = createPreviewProductGateway({ fetch: fetchMock });
+
+    await expect(gateway.getTicket("ticket / 1")).resolves.toMatchObject({
+      id: "ticket / 1",
+      code: "QL-TICKET1",
+      playId: "play-1",
+      resultNumbers: ["497"],
+      createdAt: ticketFixture.issuedAt,
+    });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/mock/tickets/ticket%20%2F%201");
+    expect(init?.method).toBe("GET");
+  });
+
+  it("rejects an invalid ticket template before issuing a request", async () => {
+    const fetchMock = vi.fn();
+    const gateway = createPreviewProductGateway({
+      endpoints: { ticket: "/api/mock/tickets" },
+      fetch: fetchMock,
+    });
+
+    await expect(gateway.getTicket("ticket-1")).rejects.toThrow("{ticketId}");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("normalizes HTTP failures and recognizes expired sessions", async () => {

@@ -15,6 +15,7 @@ import type {
   MockPlay,
   MockResult,
   MockSession,
+  MockTicket,
   PlayResponse,
 } from "@/lib/product/api-types";
 import {
@@ -50,6 +51,7 @@ export interface ProductContextValue {
   refresh: () => Promise<void>;
   refreshMovements: () => Promise<void>;
   requestPlay: (command: ProductPlayCommand) => Promise<PlayResponse>;
+  getTicket: (ticketId: string) => Promise<MockTicket>;
   requestTopUp: (input: ProductTopUpInput) => Promise<ProductTopUpResponse>;
   login: (documentOrPhone: string, password: string) => Promise<void>;
   register: (input: RegisterUserRequest) => Promise<void>;
@@ -84,6 +86,15 @@ function isExplicitSessionExpiredError(reason: unknown) {
   );
 }
 
+function cloneTicket(ticket: MockTicket): MockTicket {
+  return {
+    ...ticket,
+    resultNumbers: ticket.resultNumbers
+      ? [...ticket.resultNumbers]
+      : ticket.resultNumbers,
+  };
+}
+
 export interface ProductProviderProps {
   children: React.ReactNode;
   /** Optional host composition seam; normal app usage resolves from public env. */
@@ -104,6 +115,10 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
   const mutationQueueRef = useRef<Promise<void>>(Promise.resolve());
   const mutationKeysRef = useRef(new Map<string, string>());
   const inFlightMutationsRef = useRef(new Map<string, Promise<unknown>>());
+  const ticketCacheRef = useRef(new Map<string, MockTicket>());
+  const inFlightTicketRequestsRef = useRef(
+    new Map<string, Promise<MockTicket>>(),
+  );
 
   const [session, setSession] = useState<MockSession | null>(null);
   const [catalog, setCatalog] = useState<GamingCatalog | null>(null);
@@ -126,6 +141,8 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
   const clearUserState = useCallback(() => {
     authGenerationRef.current += 1;
     inFlightMutationsRef.current.clear();
+    inFlightTicketRequestsRef.current.clear();
+    ticketCacheRef.current.clear();
     stateRevisionRef.current += 1;
     bootstrapRequestRef.current += 1;
     setSession(null);
@@ -151,6 +168,8 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
   );
 
   const applySnapshot = useCallback((data: ProductSnapshot) => {
+    inFlightTicketRequestsRef.current.clear();
+    ticketCacheRef.current.clear();
     setSession(data.session);
     setCatalog(data.catalog);
     setPlays([...data.plays]);
@@ -367,6 +386,11 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
           scope.assertCurrent();
           mutationKeysRef.current.delete(logicalOperation);
           stateRevisionRef.current += 1;
+          const acceptedTicket = cloneTicket(data.ticket);
+          ticketCacheRef.current.set(acceptedTicket.id, acceptedTicket);
+          if (data.play.ticketId) {
+            ticketCacheRef.current.set(data.play.ticketId, acceptedTicket);
+          }
           setSession((current) =>
             current
               ? {
@@ -410,6 +434,64 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
       return result;
     },
     [coordinator, enqueueMutation, gateway, handleGatewayError, refreshAfterAcceptedPlay],
+  );
+
+  const getTicket = useCallback(
+    (ticketId: string) => {
+      const normalizedTicketId = ticketId.trim();
+      if (!normalizedTicketId) {
+        return Promise.reject(new TypeError("ticketId no puede estar vacío."));
+      }
+
+      const cached = ticketCacheRef.current.get(normalizedTicketId);
+      if (cached) return Promise.resolve(cloneTicket(cached));
+
+      const existing = inFlightTicketRequestsRef.current.get(normalizedTicketId);
+      if (existing) return existing;
+
+      const authGeneration = authGenerationRef.current;
+      const scope = coordinator.open();
+      const request = (async () => {
+        try {
+          if (authGeneration !== authGenerationRef.current) {
+            throw supersededError();
+          }
+          const ticket = await gateway.getTicket(normalizedTicketId, {
+            signal: scope.signal,
+          });
+          scope.assertCurrent();
+          if (authGeneration !== authGenerationRef.current) {
+            throw supersededError();
+          }
+
+          const storedTicket = cloneTicket(ticket);
+          ticketCacheRef.current.set(normalizedTicketId, storedTicket);
+          ticketCacheRef.current.set(storedTicket.id, storedTicket);
+          return cloneTicket(storedTicket);
+        } catch (reason) {
+          if (isSupersededError(reason)) throw reason;
+          if (!scope.isCurrent() || isAbortError(reason)) {
+            throw supersededError();
+          }
+          handleGatewayError(reason);
+          throw reason;
+        } finally {
+          scope.close();
+        }
+      })();
+
+      inFlightTicketRequestsRef.current.set(normalizedTicketId, request);
+      const clearRequest = () => {
+        if (
+          inFlightTicketRequestsRef.current.get(normalizedTicketId) === request
+        ) {
+          inFlightTicketRequestsRef.current.delete(normalizedTicketId);
+        }
+      };
+      void request.then(clearRequest, clearRequest);
+      return request;
+    },
+    [coordinator, gateway, handleGatewayError],
   );
 
   const requestTopUp = useCallback(
@@ -512,6 +594,8 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
     (authenticatedSession: MockSession) => {
       authGenerationRef.current += 1;
       inFlightMutationsRef.current.clear();
+      inFlightTicketRequestsRef.current.clear();
+      ticketCacheRef.current.clear();
       stateRevisionRef.current += 1;
       setSession(authenticatedSession);
       setPlays([]);
@@ -668,6 +752,7 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
       refresh,
       refreshMovements,
       requestPlay,
+      getTicket,
       requestTopUp,
       login,
       register,
@@ -688,6 +773,7 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
       refresh,
       refreshMovements,
       requestPlay,
+      getTicket,
       requestTopUp,
       login,
       register,

@@ -166,6 +166,14 @@ export class BackofficeProductGateway implements ProductGateway {
     return assertPlayResponseMatchesCommand(toPlayResponse(response), command);
   }
 
+  async getTicket(
+    ticketId: string,
+    options?: ProductGatewayRequestOptions,
+  ) {
+    const data = await this.client.getTicket(ticketId, options);
+    return toMockTicket(data.ticket);
+  }
+
   async getResults(options?: ProductGatewayRequestOptions) {
     const data = await this.client.getResults({}, options);
     return data.results.map(toMockResult);

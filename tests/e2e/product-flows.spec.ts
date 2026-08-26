@@ -223,22 +223,33 @@ test("publishes exactly nine instant games and returns 5, 10, and 5 reel results
   }
 });
 
-test("shows the five-second countdown, ticket, and persisted instant result", async ({
+test("keeps the reel active and opens the receipt only from Mis Jugadas", async ({
   page,
 }) => {
+  test.slow();
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/instantaneas/racha5", { waitUntil: "domcontentloaded" });
 
-  await page.getByRole("button", { name: "Jugar ahora", exact: true }).click();
+  const reelStage = page.getByLabel("Rodillos numéricos");
+  await expect(reelStage).toHaveAttribute("data-state", "preview");
+  await expect(page.getByRole("button", { name: "Gs. 10.000", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Gs. 20.000", exact: true })).toHaveCount(0);
+  await expect(page.getByText("La jugada se registra una sola vez y el resultado se define antes de animar.", { exact: true })).toHaveCount(0);
 
-  const reels = page.getByLabel("Rodillos numéricos").locator("[data-spinning]");
-  await expect(reels).toHaveCount(5);
-  await expect(page.getByText("Comprobante en 5 s", { exact: true })).toBeVisible({
-    timeout: 4_000,
+  await page.getByRole("button", { name: "Jugar", exact: true }).click();
+
+  await expect(reelStage.locator('[data-spinning="false"]')).toHaveCount(5);
+  await expect(page.getByRole("dialog", { name: "Jugada registrada" })).toHaveCount(0);
+  await expect(page.getByText("Comprobante en 5 s", { exact: true })).toHaveCount(0);
+
+  await page.goto("/mis-jugadas", { waitUntil: "domcontentloaded" });
+  const playItem = page.getByRole("article").filter({
+    has: page.getByRole("heading", { level: 3, name: "Racha 5", exact: true }),
   });
+  await playItem.getByRole("button", { name: "Ver mi comprobante" }).click();
 
   const ticket = page.getByRole("dialog", { name: "Jugada registrada" });
-  await expect(ticket).toBeVisible({ timeout: 8_000 });
+  await expect(ticket).toBeVisible({ timeout: 45_000 });
   await expect(
     ticket.getByRole("heading", { level: 2, name: "Jugada registrada" }),
   ).toBeVisible();
@@ -320,7 +331,12 @@ test("renders an authoritative fixture result without invoking local game logic"
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ session, catalog, plays: [], results: [] }),
+      body: JSON.stringify({
+        session,
+        catalog,
+        plays: acceptedPlays > 0 ? [play] : [],
+        results: [],
+      }),
     });
   });
   await page.route("**/api/mock/wallet/movements", async (route) => {
@@ -357,18 +373,30 @@ test("renders an authoritative fixture result without invoking local game logic"
       }),
     });
   });
+  await page.route("**/api/mock/tickets/external-ticket-246", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ticket }),
+    });
+  });
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/instantaneas/sapyaite", {
     waitUntil: "domcontentloaded",
   });
-  await page.getByRole("button", { name: "Jugar ahora", exact: true }).click();
+  await page.getByRole("button", { name: "Jugar", exact: true }).click();
 
   await expect(page.getByLabel("Rodillo 1: 246")).toBeVisible();
   await expect(page.getByText("Premio Gs. 20.000", { exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Jugada registrada" })).toHaveCount(0);
+
+  await page.goto("/mis-jugadas", { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "Ver mi comprobante" }).click();
   await expect(
     page.getByRole("dialog", { name: "Jugada registrada" }),
   ).toBeVisible({ timeout: 8_000 });
+  await expect(page.getByText("FIXTURE-246", { exact: true })).toBeVisible();
   expect(acceptedPlays).toBe(1);
 });
 

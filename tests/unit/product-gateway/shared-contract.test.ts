@@ -125,6 +125,7 @@ const backofficeEndpoints: BackofficeEndpoints = {
   traditionalPlays: "/gaming/plays/traditional",
   instantPlays: "/gaming/plays/instant",
   results: "/gaming/results",
+  ticket: "/gaming/tickets/{ticketId}",
   walletMovements: "/wallet/movements",
   walletTopUp: "/wallet/topup",
 };
@@ -135,6 +136,7 @@ const adapters: readonly GatewayAdapter[] = [
     create: (responses) =>
       createFixtureProductGateway({
         plays: [{ command: playCommand, response: responses.play }],
+        tickets: [responses.play.ticket],
         movements: [],
         topUp: responses.topUp,
       }),
@@ -146,6 +148,9 @@ const adapters: readonly GatewayAdapter[] = [
         fetch: async (input) => {
           const url = String(input);
           if (url.endsWith("/instant")) return jsonResponse(responses.play);
+          if (url.endsWith("/tickets/ticket-contract-1")) {
+            return jsonResponse({ ticket: responses.play.ticket });
+          }
           if (url.endsWith("/topup")) return jsonResponse(responses.topUp);
           throw new Error(`Unexpected contract request: ${url}`);
         },
@@ -163,6 +168,9 @@ const adapters: readonly GatewayAdapter[] = [
           if (url.endsWith("/gaming/plays/instant")) {
             return jsonResponse(responses.play);
           }
+          if (url.endsWith("/gaming/tickets/ticket-contract-1")) {
+            return jsonResponse({ ticket: responses.play.ticket });
+          }
           if (url.endsWith("/wallet/topup")) {
             return jsonResponse(responses.topUp);
           }
@@ -178,6 +186,19 @@ const adapters: readonly GatewayAdapter[] = [
 ];
 
 describe.each(adapters)("shared ProductGateway contract: $name", (adapter) => {
+  it("retrieves the authoritative ticket associated with a play", async () => {
+    const response = playResponse();
+    const gateway = adapter.create({ play: response, topUp: topUpResponse() });
+
+    await expect(gateway.getTicket(response.play.ticketId)).resolves.toMatchObject({
+      id: response.ticket.id,
+      code: response.ticket.code,
+      playId: response.play.id,
+      amount: response.play.amount,
+      resultNumbers: response.play.resultNumbers,
+    });
+  });
+
   it("accepts a play response correlated with the submitted command", async () => {
     const response = playResponse();
     const gateway = adapter.create({ play: response, topUp: topUpResponse() });

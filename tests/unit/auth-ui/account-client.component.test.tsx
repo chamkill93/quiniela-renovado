@@ -72,6 +72,7 @@ function gatewayWithBootstrapSequence(
       return structuredClone(step);
     },
     requestPlay: fixture.requestPlay.bind(fixture),
+    getTicket: fixture.getTicket.bind(fixture),
     getResults: fixture.getResults.bind(fixture),
     login: fixture.login.bind(fixture),
     register: fixture.register.bind(fixture),

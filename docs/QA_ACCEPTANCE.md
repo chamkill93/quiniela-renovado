@@ -15,7 +15,9 @@ Cada viewport se prueba Dark y Light. No debe haber scroll horizontal no intenci
 - Sapy'aite tradicional.
 - Megaloto.
 - Los 9 Instantaneos.
-- 5 segundos hasta comprobante de Instantanea.
+- Rodillo activo antes de jugar y reemplazo por resultado autoritativo.
+- Fichas de Instantáneas limitadas a Gs. 500, 1.000, 2.000, 5.000 y 10.000.
+- Ningún comprobante se abre automáticamente; se consulta desde Mis Jugadas.
 - Idempotencia ante doble click/retry.
 - Saldo se actualiza desde servidor.
 - Mis Jugadas y comprobante.

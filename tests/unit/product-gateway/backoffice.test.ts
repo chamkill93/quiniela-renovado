@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { BackofficeClient, BackofficeSession } from "@/lib/backoffice";
-import type { WalletMovement } from "@/lib/gaming/types";
+import type { GamingTicket, WalletMovement } from "@/lib/gaming/types";
 import { buildGamingCatalog } from "@/lib/gaming";
 import {
   createBackofficeProductGateway,
@@ -13,6 +13,25 @@ const session: BackofficeSession = {
   role: "PLAYER",
   balance: 75_000,
   currency: "PYG",
+};
+
+const ticket: GamingTicket = {
+  id: "ticket-1",
+  code: "QL-TICKET1",
+  playId: "play-1",
+  family: "INSTANT",
+  gameId: "sapyaite",
+  gameName: "Sapy’aite",
+  selection: "PAR",
+  drawId: null,
+  amount: 500,
+  currency: "PYG",
+  status: "WON",
+  result: "246",
+  resultNumbers: ["246"],
+  ruleResult: "EVEN",
+  prize: 1_000,
+  issuedAt: "2026-08-25T12:00:00.000Z",
 };
 
 function partialClient(
@@ -109,6 +128,27 @@ describe("BackofficeProductGateway", () => {
       { amount: 20_000, method: "CASH_POINT" },
       { idempotencyKey: "topup-key" },
     );
+  });
+
+  it("delegates ticket lookup and maps the validated backoffice response", async () => {
+    const getTicket = vi.fn(async () => ({ ticket }));
+    const gateway = createBackofficeProductGateway({
+      client: partialClient({ getTicket }),
+    });
+    const controller = new AbortController();
+
+    await expect(
+      gateway.getTicket("ticket-1", { signal: controller.signal }),
+    ).resolves.toMatchObject({
+      id: "ticket-1",
+      code: "QL-TICKET1",
+      playId: "play-1",
+      resultNumbers: ["246"],
+      createdAt: ticket.issuedAt,
+    });
+    expect(getTicket).toHaveBeenCalledWith("ticket-1", {
+      signal: controller.signal,
+    });
   });
 
   it("does not invent wallet routes when the capability is unconfigured", async () => {

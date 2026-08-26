@@ -12,24 +12,35 @@ export function NumericReels({
   selectedNumbers = [],
   selectedParity,
   variant = "classic",
+  continuous = false,
   onComplete,
 }: {
   results: readonly string[];
   selectedNumbers?: readonly string[];
   selectedParity?: "PAR" | "IMPAR";
   variant?: ReelVariant;
+  continuous?: boolean;
   onComplete?: () => void;
 }) {
   const [stopped, setStopped] = useState(0);
   const [tick, setTick] = useState(0);
   const playSound = useSoundEffects();
   const normalized = useMemo(() => results.map((number) => padNumber(number)), [results]);
-  const allStopped = normalized.length > 0 && stopped === normalized.length;
+  const allStopped = !continuous && normalized.length > 0 && stopped === normalized.length;
   const reelColumns = normalized.length === 1 ? 1 : Math.min(normalized.length, 5);
 
   useEffect(() => {
     if (normalized.length === 0) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (continuous) {
+      if (reduced) return;
+      const ticker = window.setInterval(() => {
+        setTick((value) => value + 1);
+      }, 170);
+      return () => window.clearInterval(ticker);
+    }
+
     playSound("reelStart");
     const ticker = reduced
       ? undefined
@@ -54,21 +65,31 @@ export function NumericReels({
       if (ticker) window.clearInterval(ticker);
       timers.forEach((timer) => window.clearTimeout(timer));
     };
-  }, [normalized, onComplete, playSound]);
+  }, [continuous, normalized, onComplete, playSound]);
+
+  const reelStateLabel = continuous
+    ? "Rodillo activo · girando"
+    : allStopped
+      ? "Rodillo resultado"
+      : "Resultado · girando";
+  const visualState = continuous ? "preview" : allStopped ? "result" : "spinning";
 
   return (
     <div
-      aria-busy={!allStopped}
+      aria-busy={continuous ? false : !allStopped}
       aria-label="Rodillos numéricos"
       className={styles.reelStage}
-      data-state={allStopped ? "result" : "spinning"}
+      data-state={visualState}
       data-variant={variant}
+      data-continuous={continuous}
     >
       <span aria-hidden="true" className={styles.reelStateLabel}>
-        {allStopped ? "Rodillo resultado" : "Rodillo animado · girando"}
+        {reelStateLabel}
       </span>
-      <span aria-live="polite" className={styles.reelAnnouncement} role="status">
-        {allStopped
+      <span aria-live={continuous ? "off" : "polite"} className={styles.reelAnnouncement} role="status">
+        {continuous
+          ? "Rodillo activo; jugá para obtener resultado"
+          : allStopped
           ? `Resultado: ${normalized.join(", ")}`
           : `${normalized.length === 1 ? "Rodillo girando" : `${normalized.length} rodillos girando`}`}
       </span>
@@ -79,7 +100,7 @@ export function NumericReels({
         style={{ "--reel-columns": reelColumns } as CSSProperties}
       >
         {normalized.map((result, index) => {
-          const isStopped = index < stopped;
+          const isStopped = !continuous && index < stopped;
           const filler = padNumber(((index + 1) * 137 + tick * 47) % 999 || 999);
           const displayedNumber = isStopped ? result : filler;
           const parityMatches = selectedParity
@@ -119,7 +140,7 @@ export function NumericReels({
           );
         })}
       </div>
-      {allStopped ? (
+      {allStopped && !continuous ? (
         <span aria-hidden="true" className={styles.reelConfetti}>
           {Array.from({ length: 14 }, (_, index) => <i key={index} />)}
         </span>

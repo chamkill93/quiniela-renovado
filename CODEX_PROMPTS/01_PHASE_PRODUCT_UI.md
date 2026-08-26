@@ -8,7 +8,7 @@ Definition of Done:
 - Todas las pantallas del HTML tienen equivalente funcional.
 - 9 Instantaneas visibles en grid 3x3 desktop.
 - Rodillos simples, 5 y 10 implementados visualmente.
-- Flujo 5 segundos -> ticket.
+- Comprobante disponible solo desde Mis Jugadas, sin countdown ni modal automático.
 - Modo light calido y dark.
 - Iconografia SVG y game-art, cero emojis finales.
 - No scroll horizontal.

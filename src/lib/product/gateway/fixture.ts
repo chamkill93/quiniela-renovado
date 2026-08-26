@@ -1,6 +1,10 @@
 import type { LoginRequest, RegisterUserRequest } from "@/lib/backoffice";
 import type { WalletMovement } from "@/lib/gaming/types";
-import type { MockResult, PlayResponse } from "@/lib/product/api-types";
+import type {
+  MockResult,
+  MockTicket,
+  PlayResponse,
+} from "@/lib/product/api-types";
 
 import type {
   ProductAuthenticationResponse,
@@ -22,6 +26,7 @@ export type FixtureProductGatewayOperation =
   | "login"
   | "register"
   | "requestPlay"
+  | "getTicket"
   | "getResults"
   | "getMovements"
   | "topUp"
@@ -64,6 +69,7 @@ export interface FixtureProductGatewayConfig {
   login?: FixtureAuthenticationResponse;
   register?: FixtureAuthenticationResponse;
   plays?: readonly FixtureProductPlay[];
+  tickets?: readonly MockTicket[];
   results?: readonly MockResult[];
   movements?: readonly WalletMovement[];
   topUp?: ProductTopUpResponse;
@@ -164,6 +170,13 @@ export class FixtureProductGateway implements ProductGateway {
       options?.signal,
     );
     return assertPlayResponseMatchesCommand(response, command);
+  }
+
+  getTicket(ticketId: string, options?: ProductGatewayRequestOptions) {
+    const fixture = this.fixtures.tickets?.find(
+      (candidate) => candidate.id === ticketId,
+    );
+    return this.response("getTicket", fixture, options?.signal);
   }
 
   getResults(options?: ProductGatewayRequestOptions) {

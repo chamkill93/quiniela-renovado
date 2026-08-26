@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import type { PlayResponse } from "@/lib/product/api-types";
 import type { TraditionalPlayRequest } from "@/lib/gaming/schemas";
 import type { TraditionalGameDefinition } from "@/lib/gaming/types";
 import {
@@ -13,7 +12,6 @@ import {
 } from "@/lib/product/catalog";
 import { useProduct } from "@/providers/product-provider";
 import { AmountChip } from "./amount-chip";
-import { TicketDialog } from "./ticket-dialog";
 import { useSoundEffects } from "./use-sound-effects";
 import styles from "./product.module.css";
 
@@ -101,7 +99,7 @@ export function TraditionalGameClient({ game }: { game: ProductGame<TraditionalG
   const [amount, setAmount] = useState<number>(10_000);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [response, setResponse] = useState<PlayResponse | null>(null);
+  const [registeredPlayId, setRegisteredPlayId] = useState<string | null>(null);
   const playSound = useSoundEffects();
   const availableAmounts = catalog?.amounts ?? [];
   const remoteGame = catalog?.traditional.find(
@@ -144,6 +142,7 @@ export function TraditionalGameClient({ game }: { game: ProductGame<TraditionalG
     if (pending) return;
     setPending(true);
     setError(null);
+    setRegisteredPlayId(null);
     playSound("confirm");
     try {
       const data = await requestPlay({
@@ -155,7 +154,7 @@ export function TraditionalGameClient({ game }: { game: ProductGame<TraditionalG
           selection,
         ),
       });
-      setResponse(data);
+      setRegisteredPlayId(data.play.id);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No pudimos registrar la jugada.");
     } finally {
@@ -198,6 +197,11 @@ export function TraditionalGameClient({ game }: { game: ProductGame<TraditionalG
             <button className={styles.primaryButton} disabled={pending || loading || Boolean(gatewayError) || !session || !enabledGame || !effectiveDrawId || availableAmounts.length === 0} onClick={submit} type="button">
               {pending ? "Confirmando…" : "Confirmar jugada"}
             </button>
+            {registeredPlayId ? (
+              <div className={styles.statusBox} role="status">
+                Jugada registrada. <Link className={styles.textLink} href="/mis-jugadas">Ver en Mis jugadas</Link>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -212,7 +216,6 @@ export function TraditionalGameClient({ game }: { game: ProductGame<TraditionalG
           <p className={styles.fieldHint} style={{ marginTop: 16 }}>Revisá los datos antes de confirmar. La aceptación final siempre ocurre en el servidor.</p>
         </aside>
       </section>
-      {response ? <TicketDialog ticket={response.ticket} play={response.play} onClose={() => setResponse(null)} /> : null}
     </main>
   );
 }

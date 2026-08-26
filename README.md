@@ -68,7 +68,8 @@ Instantáneas:
 - Po’a 5, Po’a 10 y Racha 5
 - Rodillos numéricos de 001 a 999; cinco y diez rodillos responsive
 - Resultado definido en servidor antes de la animación
-- Countdown de cinco segundos y comprobante digital
+- Rodillo activo antes de jugar, fichas limitadas a Gs. 10.000 y formulario compacto
+- Comprobante digital disponible únicamente desde Mis Jugadas
 
 Los importes, resultados y premios que aparecen en la vista previa son fixtures
 de QA y no forman parte del contrato productivo. En modo `backoffice` la UI
@@ -109,7 +110,7 @@ La matriz visual cubre dark y light en:
 
 `360×800`, `390×844`, `430×932`, `768×1024`, `1024×768`, `1366×768`, `1440×900` y `1920×1080`.
 
-Los flujos E2E validan los seis juegos tradicionales, las nueve Instantáneas, rodillos 5/10, countdown, comprobante, saldo autoritativo, recarga, idempotencia, historiales, login/logout, registro preview no persistente, sesión expirada y error de red con reintento.
+Los flujos E2E validan los seis juegos tradicionales, las nueve Instantáneas, rodillos 5/10, comprobantes consultados desde Mis Jugadas, saldo autoritativo, recarga, idempotencia, historiales, login/logout, registro preview no persistente, sesión expirada y error de red con reintento.
 
 Playwright instala Chromium en CI. En una estación nueva, ejecutá una vez `npx playwright install chromium`; también podés usar Chrome con `PLAYWRIGHT_CHANNEL=chrome`.
 

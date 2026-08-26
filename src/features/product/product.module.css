@@ -509,9 +509,51 @@
   gap: 20px;
 }
 
+.instantGameShell {
+  width: min(100%, 980px);
+  display: grid;
+  gap: clamp(18px, 3vw, 28px);
+  margin: 0 auto;
+}
+
+.instantGameHeader {
+  width: min(100%, 760px);
+  margin: 0 auto;
+  text-align: center;
+}
+
+.instantGameHeader .lede {
+  max-width: 680px;
+  margin-inline: auto;
+}
+
+.instantReelArea {
+  display: grid;
+  gap: 14px;
+}
+
+.instantFormCard {
+  width: min(100%, 720px);
+  margin: 0 auto;
+  padding: clamp(18px, 3vw, 26px);
+}
+
 .formStack {
   display: grid;
   gap: 20px;
+}
+
+.instantFormStack {
+  gap: 16px;
+}
+
+.instantFormStack .fieldGroup {
+  gap: 8px;
+}
+
+.instantFormStack .fieldLabel,
+.instantFormStack .fieldGroup > label {
+  text-align: center;
 }
 
 .fieldGroup {
@@ -560,6 +602,31 @@
   display: flex;
   flex-wrap: wrap;
   gap: 9px;
+}
+
+.instantFormStack .chipGrid {
+  justify-content: center;
+}
+
+.instantFormStack .chip:not(.amountChip) {
+  min-width: 64px;
+  min-height: 40px;
+  padding: 0 13px;
+  font-size: 0.82rem;
+}
+
+.instantFormStack .input,
+.instantFormStack .select {
+  min-height: 44px;
+}
+
+.instantFormStack .numberInput {
+  min-height: 52px;
+  font-size: 1.45rem;
+}
+
+.instantFormStack .compactNumberInput {
+  width: min(100%, 104px);
 }
 
 .chip {
@@ -666,6 +733,52 @@
   outline-offset: 4px;
 }
 
+.instantAmountGrid {
+  gap: clamp(9px, 2vw, 15px);
+}
+
+.instantSelectionSummary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid var(--q-line);
+  border-radius: var(--q-r-md);
+  background: color-mix(in srgb, var(--q-panel-2) 74%, transparent);
+}
+
+.instantSelectionSummary > span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  padding: 7px 10px;
+  color: var(--q-muted);
+  font-size: 0.68rem;
+  font-weight: 780;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.instantSelectionSummary > span + span {
+  border-left: 1px solid var(--q-line);
+}
+
+.instantSelectionSummary strong {
+  overflow-wrap: anywhere;
+  color: var(--q-text);
+  font-size: 0.88rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.instantPlayButton {
+  width: 100%;
+  min-height: 52px;
+  margin-top: 2px;
+  font-size: 0.96rem;
+}
+
 .summaryList {
   display: grid;
   gap: 0;
@@ -735,6 +848,30 @@
   background: linear-gradient(90deg, transparent, rgba(255, 31, 45, 0.68), transparent);
   box-shadow: 0 0 22px rgba(227, 6, 19, 0.58);
   pointer-events: none;
+}
+
+.instantReelArea .reelStage {
+  min-height: clamp(218px, 30vw, 280px);
+}
+
+.reelStage[data-continuous="true"] {
+  border-color: color-mix(in srgb, var(--q-red) 48%, #292c31);
+}
+
+.reelStage[data-continuous="true"] .reelStateLabel {
+  color: #ff8b93;
+}
+
+.reelStage[data-continuous="true"] .reelStateLabel::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  display: inline-block;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: #ff2433;
+  box-shadow: 0 0 11px rgba(255, 36, 51, 0.84);
+  animation: reelActivePulse 900ms ease-in-out infinite alternate;
 }
 
 .reelStateLabel {
@@ -1061,6 +1198,11 @@
   to { filter: brightness(1.18); }
 }
 
+@keyframes reelActivePulse {
+  from { opacity: 0.48; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1.08); }
+}
+
 @keyframes reelConfettiBurst {
   0% { opacity: 0; transform: translate(-50%, -50%) rotate(0); }
   12% { opacity: 1; }
@@ -1298,6 +1440,17 @@
   .amountChip { width: 58px; height: 58px; }
   .amountChipFace { width: 54px; height: 54px; }
   .amountChipFace span { font-size: 0.77rem; }
+  .instantGameShell { gap: 16px; }
+  .instantGameHeader { text-align: left; }
+  .instantGameHeader .lede { margin-inline: 0; }
+  .instantFormCard { padding: 16px 13px; }
+  .instantFormStack { gap: 14px; }
+  .instantFormStack .chipGrid { gap: 7px; }
+  .instantFormStack .chip:not(.amountChip) { min-width: 58px; min-height: 38px; padding: 0 10px; }
+  .instantFormStack .compactNumberInput { width: min(100%, 82px); }
+  .instantSelectionSummary { padding: 7px; }
+  .instantSelectionSummary > span { padding: 6px 5px; }
+  .instantSelectionSummary strong { font-size: 0.8rem; }
   .drawCard { min-height: 145px; padding: 15px; }
   .megaBanner > div { max-width: 78%; }
   .megaBannerIcon { right: -28px; width: 126px; opacity: 0.42; }
@@ -1325,6 +1478,7 @@
   .quietButton,
   .reelDigitTrack,
   .reel[data-spinning="true"] .reelDigit:nth-child(2),
+  .reelStage[data-continuous="true"] .reelStateLabel::before,
   .reelConfetti i,
   .loadingBar::after {
     animation: none;

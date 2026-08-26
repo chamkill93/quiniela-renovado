@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import type { InstantPlayRequest } from "@/lib/gaming/schemas";
 import type { InstantGameDefinition } from "@/lib/gaming/types";
@@ -10,9 +10,10 @@ import { useProduct } from "@/providers/product-provider";
 import { AmountChip } from "./amount-chip";
 import { NumericReels, type ReelVariant } from "./numeric-reels";
 import { ResultStateCard, resultVisualState } from "./result-state";
-import { TicketDialog } from "./ticket-dialog";
 import { useSoundEffects } from "./use-sound-effects";
 import styles from "./product.module.css";
+
+const INSTANT_AMOUNTS = new Set([500, 1_000, 2_000, 5_000, 10_000]);
 
 function buildInitialSelection(gameId: InstantGameId) {
   if (gameId === "poa5" || gameId === "poa10") return ["001", "002", "003"];
@@ -113,11 +114,12 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
   const [error, setError] = useState<string | null>(null);
   const [response, setResponse] = useState<PlayResponse | null>(null);
   const [animationDone, setAnimationDone] = useState(false);
-  const [countdown, setCountdown] = useState<number | null>(null);
-  const [showTicket, setShowTicket] = useState(false);
-  const countdownTimer = useRef<number | null>(null);
   const playSound = useSoundEffects();
-  const availableAmounts = catalog?.amounts ?? [];
+  const availableAmounts = useMemo(
+    () => [...new Set((catalog?.amounts ?? []).filter((value) => INSTANT_AMOUNTS.has(value)))]
+      .sort((left, right) => left - right),
+    [catalog?.amounts],
+  );
   const remoteGame = catalog?.instant.find(
     (definition) => definition.id === game.id,
   );
@@ -128,10 +130,6 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
     ? amount
     : (availableAmounts[0] ?? 0);
 
-  useEffect(() => () => {
-    if (countdownTimer.current !== null) window.clearInterval(countdownTimer.current);
-  }, []);
-
   const selectedNumbers = useMemo(() => selectedForMatches(game.id, selection), [game.id, selection]);
   const resultNumbers = useMemo(() => {
     if (!response) return [];
@@ -139,23 +137,17 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
     if (response.play.result) return [response.play.result];
     return [];
   }, [response]);
+  const previewResults = useMemo(
+    () => Array.from({ length: remoteGame?.reels ?? 1 }, (_, index) => padNumber(String((index + 1) * 137))),
+    [remoteGame?.reels],
+  );
+  const visibleResults = response && resultNumbers.length ? resultNumbers : previewResults;
+  const selectionLabel = Array.isArray(selection) ? selection.join(" · ") : selection;
 
-  const startCountdown = useCallback(() => {
+  const finishResult = useCallback(() => {
     setAnimationDone(true);
     const won = resultVisualState(response?.play.status ?? "PENDING") === "won";
     playSound(won ? "win" : "lose");
-    setCountdown(5);
-    let remaining = 5;
-    if (countdownTimer.current !== null) window.clearInterval(countdownTimer.current);
-    countdownTimer.current = window.setInterval(() => {
-      remaining -= 1;
-      setCountdown(remaining);
-      if (remaining <= 0) {
-        if (countdownTimer.current !== null) window.clearInterval(countdownTimer.current);
-        countdownTimer.current = null;
-        setShowTicket(true);
-      }
-    }, 1000);
   }, [playSound, response?.play.status]);
 
   const play = async () => {
@@ -164,8 +156,6 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
     setError(null);
     setResponse(null);
     setAnimationDone(false);
-    setCountdown(null);
-    setShowTicket(false);
     playSound("confirm");
     try {
       const data = await requestPlay({
@@ -180,31 +170,60 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
     }
   };
 
-  const closeTicket = useCallback(() => {
-    if (countdownTimer.current !== null) window.clearInterval(countdownTimer.current);
-    countdownTimer.current = null;
-    setShowTicket(false);
-    setResponse(null);
-    setAnimationDone(false);
-    setCountdown(null);
-  }, []);
-
   return (
     <main className={`${styles.page} ${styles.pageStack}`}>
       <div>
         <Link className={styles.textLink} href="/instantaneas">← Volver a Instantáneas</Link>
       </div>
-      <section className={styles.splitLayout}>
-        <div className={styles.contentCard}>
+      <section className={styles.instantGameShell}>
+        <header className={styles.instantGameHeader}>
           <p className={styles.eyebrow}>{game.eyebrow}</p>
           <h1 className={styles.title}>{displayName}</h1>
           <p className={styles.lede}>{displayDescription}</p>
+        </header>
 
-          <div className={styles.formStack} style={{ marginTop: 28 }}>
+        <div className={styles.instantReelArea}>
+          <NumericReels
+            continuous={!response}
+            key={response?.play.id ?? "active-preview"}
+            results={visibleResults}
+            selectedNumbers={selectedNumbers}
+            selectedParity={game.id === "racha5" || game.id === "sapyaite" ? selection as "PAR" | "IMPAR" : undefined}
+            variant={reelVariantFor(game.id)}
+            onComplete={response ? finishResult : undefined}
+          />
+          {response ? (
+            <ResultStateCard
+              live
+              status={animationDone ? response.play.status : "PENDING"}
+              description={
+                !animationDone
+                  ? "Presentando el resultado confirmado…"
+                  : resultVisualState(response.play.status) === "won"
+                    ? `Premio ${formatGs(response.play.prize ?? 0)}`
+                    : resultVisualState(response.play.status) === "lost"
+                      ? "Intentá de nuevo"
+                      : "Resultado confirmado"
+              }
+              meta={
+                animationDone ? (
+                  <span>
+                    {typeof response.play.matches === "number"
+                      ? `${response.play.matches} coincidencia${response.play.matches === 1 ? "" : "s"}`
+                      : resultNumbers.join(" · ")}
+                  </span>
+                ) : null
+              }
+            />
+          ) : null}
+        </div>
+
+        <div className={`${styles.contentCard} ${styles.instantFormCard}`}>
+          <div className={`${styles.formStack} ${styles.instantFormStack}`}>
             <SelectionControl definition={remoteGame} gameId={game.id} selection={selection} onChange={setSelection} />
             <div className={styles.fieldGroup}>
-              <span className={styles.fieldLabel}>Importe de la jugada</span>
-              <div className={styles.chipGrid}>
+              <span className={styles.fieldLabel}>Elegí el importe</span>
+              <div className={`${styles.chipGrid} ${styles.instantAmountGrid}`}>
                 {availableAmounts.map((value) => (
                   <AmountChip
                     key={value}
@@ -215,73 +234,32 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
                 ))}
               </div>
             </div>
+            <div className={styles.instantSelectionSummary} aria-label="Resumen de la selección">
+              <span>
+                Selección
+                <strong>{selectionLabel}</strong>
+              </span>
+              <span>
+                Importe
+                <strong>{formatGs(effectiveAmount)}</strong>
+              </span>
+            </div>
             {loading ? <div className={styles.loadingBar} aria-label="Cargando catálogo" /> : null}
             {catalog && !enabledGame ? <div className={styles.errorBox} role="alert">Este juego no está habilitado por el backoffice.</div> : null}
             {gatewayError ? <div className={styles.errorBox} role="alert"><p>{gatewayError}</p><button className={styles.quietButton} onClick={() => void refresh()} type="button">Reintentar conexión</button></div> : null}
             {!gatewayError && (unauthorized || (!loading && !session)) ? <div className={styles.errorBox} role="alert">Iniciá sesión para registrar una jugada. <Link className={styles.textLink} href="/cuenta">Ir a Cuenta</Link></div> : null}
             {error ? <div className={styles.errorBox} role="alert">{error}</div> : null}
-            <button className={styles.primaryButton} disabled={pending || response !== null || loading || Boolean(gatewayError) || !session || !enabledGame || availableAmounts.length === 0} onClick={play} type="button">
-              {pending ? "Registrando…" : response ? "Jugada registrada" : "Jugar ahora"}
+            <button
+              className={`${styles.primaryButton} ${styles.instantPlayButton}`}
+              disabled={pending || Boolean(response && !animationDone) || loading || Boolean(gatewayError) || !session || !enabledGame || availableAmounts.length === 0}
+              onClick={play}
+              type="button"
+            >
+              {pending ? "Registrando…" : "Jugar"}
             </button>
-            <p className={styles.fieldHint}>La jugada se registra una sola vez y el resultado se define antes de animar.</p>
           </div>
         </div>
-
-        <aside className={styles.contentCard} aria-label="Resumen de la jugada">
-          <p className={styles.eyebrow}>Tu selección</p>
-          <dl className={styles.summaryList}>
-            <div className={styles.summaryRow}><dt>Juego</dt><dd>{remoteGame?.name ?? "—"}</dd></div>
-            <div className={styles.summaryRow}><dt>Selección</dt><dd>{Array.isArray(selection) ? selection.join(" · ") : selection}</dd></div>
-            <div className={styles.summaryRow}><dt>Importe</dt><dd>{formatGs(effectiveAmount)}</dd></div>
-            <div className={styles.summaryRow}><dt>Rodillos</dt><dd>{remoteGame?.reels ?? "—"}</dd></div>
-          </dl>
-        </aside>
       </section>
-
-      {response && resultNumbers.length ? (
-        <section aria-labelledby="reel-title">
-          <div className={styles.sectionHeader}>
-            <div>
-              <p className={styles.eyebrow}>Resultado registrado</p>
-              <h2 className={styles.sectionTitle} id="reel-title">Los rodillos están llegando a tu resultado</h2>
-            </div>
-          </div>
-          <NumericReels
-            results={resultNumbers}
-            selectedNumbers={selectedNumbers}
-            selectedParity={game.id === "racha5" || game.id === "sapyaite" ? selection as "PAR" | "IMPAR" : undefined}
-            variant={reelVariantFor(game.id)}
-            onComplete={startCountdown}
-          />
-          <ResultStateCard
-            live
-            status={animationDone ? response.play.status : "PENDING"}
-            description={
-              !animationDone
-                ? "Presentando el resultado confirmado…"
-                : resultVisualState(response.play.status) === "won"
-                  ? `Premio ${formatGs(response.play.prize ?? 0)}`
-                  : resultVisualState(response.play.status) === "lost"
-                    ? "Intentá de nuevo"
-                    : "Resultado confirmado"
-            }
-            meta={
-              animationDone ? (
-                <>
-                  <span>{typeof response.play.matches === "number" ? `${response.play.matches} coincidencia${response.play.matches === 1 ? "" : "s"}` : resultNumbers.join(" · ")}</span>
-                  {countdown !== null && countdown > 0 ? (
-                    <span className={styles.countdown}>Comprobante en {countdown} s</span>
-                  ) : null}
-                </>
-              ) : null
-            }
-          />
-        </section>
-      ) : null}
-
-      {showTicket && response ? (
-        <TicketDialog ticket={response.ticket} play={response.play} onClose={closeTicket} />
-      ) : null}
     </main>
   );
 }

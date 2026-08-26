@@ -14,6 +14,7 @@ import type {
   MockPlay,
   MockResult,
   MockSession,
+  MockTicket,
   PlayResponse,
 } from "@/lib/product/api-types";
 
@@ -74,6 +75,10 @@ export interface ProductGateway {
     command: ProductPlayCommand,
     options?: ProductGatewayMutationOptions,
   ): Promise<PlayResponse>;
+  getTicket(
+    ticketId: string,
+    options?: ProductGatewayRequestOptions,
+  ): Promise<MockTicket>;
   getResults(options?: ProductGatewayRequestOptions): Promise<readonly MockResult[]>;
   login(
     input: LoginRequest,
@@ -97,6 +102,8 @@ export interface PreviewProductEndpoints {
   logout: string;
   instantPlay: string;
   traditionalPlay: string;
+  /** Path template containing the literal `{ticketId}` token. */
+  ticket: string;
   results: string;
   walletMovements: string;
   walletTopUp: string;
