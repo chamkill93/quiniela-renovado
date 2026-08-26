@@ -1,39 +1,55 @@
+import Link from "next/link";
+
+import { GameIcon } from "@/features/product/game-icon";
+import {
+  INSTANT_RULES,
+  type RuleGameCard,
+  TRADITIONAL_RULES,
+} from "@/features/product/rules-page-data";
 import { SectionHeader } from "@/features/product/section-header";
 import styles from "@/features/product/product.module.css";
 
-const RULES = [
-  { title: "A la Cabeza", copy: "Elegí un número de 001 a 999. Participa en la primera posición del sorteo seleccionado." },
-  { title: "A los Premios", copy: "Elegí un número de 001 a 999 y una cobertura desde la posición 2 hasta la 14." },
-  { title: "Invertida", copy: "Ingresá tres cifras y visualizalas por posición. La postura se configura entre las posiciones habilitadas." },
-  { title: "Redoblona", copy: "Combiná un número de cabeza de tres cifras con una terminación de dos cifras y su posición." },
-] as const;
+function RuleCard({
+  headingLevel = 2,
+  rule,
+}: {
+  headingLevel?: 2 | 3;
+  rule: RuleGameCard;
+}) {
+  const Heading = headingLevel === 3 ? "h3" : "h2";
 
-const INSTANT_RULES = [
-  "Sapy’aite: par o impar.",
-  "Po’a: rango de centena.",
-  "Pya’e: menor o mayor que 500; el 500 se resuelve según configuración.",
-  "Peteĩ: última cifra.",
-  "Mokõi: últimas dos cifras.",
-  "Mbohapy: coincidencia exacta de tres cifras.",
-  "Po’a 5: tres números elegidos frente a cinco resultados.",
-  "Po’a 10: tres números elegidos frente a diez resultados.",
-  "Racha 5: par o impar frente a cinco resultados; premio configurado por coincidencias.",
-] as const;
+  return (
+    <Link
+      aria-label={`Jugar ${rule.title}`}
+      className={styles.ruleCardLink}
+      href={rule.href}
+    >
+      <span aria-hidden="true" className={styles.ruleCardIcon}>
+        <GameIcon gameId={rule.id} />
+      </span>
+      <span className={styles.ruleCardCopy}>
+        <Heading>{rule.title}</Heading>
+        <p>{rule.copy}</p>
+      </span>
+      <span aria-hidden="true" className={styles.ruleCardCta}>Jugar →</span>
+    </Link>
+  );
+}
 
 export default function RulesPage() {
   return (
     <main className={`${styles.page} ${styles.pageStack}`}>
       <section>
         <SectionHeader eyebrow="Cómo jugar" title="Reglas claras antes de confirmar" description="Conocé qué seleccionás, cómo se evalúa y cuándo recibís tu comprobante." />
-        <div className={styles.rulesGrid}>
-          {RULES.map((rule) => <article className={styles.ruleCard} key={rule.title}><h2>{rule.title}</h2><p>{rule.copy}</p></article>)}
+        <div className={`${styles.rulesGrid} ${styles.traditionalRulesGrid}`}>
+          {TRADITIONAL_RULES.map((rule) => <RuleCard key={rule.id} rule={rule} />)}
         </div>
       </section>
       <section>
         <SectionHeader eyebrow="Resultado inmediato" title="Las 9 Instantáneas" headingLevel={2} />
-        <article className={styles.ruleCard}>
-          <ul>{INSTANT_RULES.map((rule) => <li key={rule}>{rule}</li>)}</ul>
-        </article>
+        <div className={`${styles.rulesGrid} ${styles.instantRulesGrid}`}>
+          {INSTANT_RULES.map((rule) => <RuleCard headingLevel={3} key={rule.id} rule={rule} />)}
+        </div>
       </section>
       <section className={styles.statusBox} aria-label="Juego responsable">
         <strong>Jugá de forma responsable.</strong> Definí un importe antes de empezar y no persigas resultados. Los multiplicadores y límites finales requieren aprobación de Negocio, Kodexa y Legal antes de producción.

@@ -415,6 +415,9 @@ test("shows only four traditional games and retires the former direct routes", a
   await expect(grid.getByText("Redoblona", { exact: true })).toBeVisible();
   await expect(grid.getByText("Sapy’aite", { exact: true })).toHaveCount(0);
   await expect(grid.getByText("Megaloto", { exact: true })).toHaveCount(0);
+  await expect(grid.getByText("Quiniela tradicional", { exact: true })).toHaveCount(0);
+  await expect(grid.getByText("Desde", { exact: true })).toHaveCount(0);
+  await expect(grid.getByText("Gs. 500", { exact: true })).toHaveCount(0);
 
   await page.goto("/instantaneas", { waitUntil: "domcontentloaded" });
   const instantGrid = page.getByTestId(E2E_SELECTORS.instantGamesGrid);
@@ -423,7 +426,18 @@ test("shows only four traditional games and retires the former direct routes", a
   await page.goto("/reglas", { waitUntil: "domcontentloaded" });
   await expect(page.getByText("Sapy’aite tradicional", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Megaloto", { exact: true })).toHaveCount(0);
-  await expect(page.getByText("Sapy’aite: par o impar.", { exact: true })).toBeVisible();
+  await expect(page.locator('main a[href^="/quinielas/"], main a[href^="/instantaneas/"]')).toHaveCount(13);
+  const headRule = page.getByRole("link", { name: "Jugar A la Cabeza", exact: true });
+  const sapyaiteRule = page.getByRole("link", { name: "Jugar Sapy’aite", exact: true });
+  await expect(headRule).toHaveAttribute("href", "/quinielas/head");
+  await expect(sapyaiteRule).toHaveAttribute("href", "/instantaneas/sapyaite");
+  await expect(page.getByText("Elegí par o impar.", { exact: true })).toBeVisible();
+
+  await headRule.click();
+  await expect(page).toHaveURL(/\/quinielas\/head$/);
+  await page.goto("/reglas", { waitUntil: "domcontentloaded" });
+  await page.getByRole("link", { name: "Jugar Sapy’aite", exact: true }).click();
+  await expect(page).toHaveURL(/\/instantaneas\/sapyaite$/);
 
   for (const path of [
     "/quinielas/sapyaite-traditional",
@@ -439,6 +453,33 @@ test("uses the approved 3D icon theme and responsive catalog grid", async ({
 }, testInfo) => {
   const initialTheme = themeFromProjectName(testInfo.project.name);
   const nextTheme = initialTheme === "dark" ? "light" : "dark";
+
+  await page.goto("/quinielas", { waitUntil: "domcontentloaded" });
+  const traditionalGrid = page.getByTestId(E2E_SELECTORS.traditionalGamesGrid);
+  const traditionalColumnCount = await traditionalGrid.evaluate((element) =>
+    getComputedStyle(element).gridTemplateColumns.split(" ").filter(Boolean).length,
+  );
+  expect(traditionalColumnCount).toBe(2);
+  await expectNoHorizontalOverflow(page);
+
+  if ((page.viewportSize()?.width ?? 0) > 1_000) {
+    await page.setViewportSize({ width: 600, height: 900 });
+    await page.goto("/quinielas", { waitUntil: "domcontentloaded" });
+    const tabletGrid = page.getByTestId(E2E_SELECTORS.traditionalGamesGrid);
+    const tabletCard = tabletGrid.getByTestId(E2E_SELECTORS.traditionalGameCard).first();
+    const tabletColumns = await tabletGrid.evaluate((element) =>
+      getComputedStyle(element).gridTemplateColumns.split(" ").filter(Boolean).length,
+    );
+    expect(tabletColumns).toBe(2);
+    expect(
+      await tabletCard.locator("strong").evaluate((element) => element.getBoundingClientRect().width),
+    ).toBeGreaterThan(100);
+    expect(
+      await tabletCard.locator("p").evaluate((element) => element.getBoundingClientRect().width),
+    ).toBeGreaterThan(100);
+    await expectNoHorizontalOverflow(page);
+    await page.setViewportSize({ width: 1_366, height: 768 });
+  }
 
   await page.goto("/instantaneas", { waitUntil: "domcontentloaded" });
   const grid = page.getByTestId(E2E_SELECTORS.instantGamesGrid);
@@ -456,7 +497,10 @@ test("uses the approved 3D icon theme and responsive catalog grid", async ({
   const columnCount = await grid.evaluate((element) =>
     getComputedStyle(element).gridTemplateColumns.split(" ").filter(Boolean).length,
   );
-  expect(columnCount).toBe((page.viewportSize()?.width ?? 0) >= 768 ? 3 : 2);
+  expect(columnCount).toBe(3);
+  await expect(grid.getByText("Resultado inmediato", { exact: true })).toHaveCount(0);
+  await expect(grid.getByText("Desde", { exact: true })).toHaveCount(0);
+  await expect(grid.getByText("Gs. 500", { exact: true })).toHaveCount(0);
   await expectNoHorizontalOverflow(page);
 
   await page.getByTestId(E2E_SELECTORS.themeToggle).click();

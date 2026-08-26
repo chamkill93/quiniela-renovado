@@ -65,6 +65,22 @@ const VISIBLE_TRADITIONAL_GAME_IDS = new Set([
   "redoblona",
 ]);
 
+const SIMPLE_CATALOG_DESCRIPTIONS: Readonly<Record<string, string>> = {
+  head: "Elegí 3 cifras para el primer premio.",
+  prizes: "Elegí 3 cifras y hasta qué posición juega.",
+  invert: "Jugá las 3 cifras en distinto orden.",
+  redoblona: "Combiná un número y una terminación.",
+  sapyaite: "Elegí par o impar.",
+  poa: "Elegí una centena.",
+  pyae: "Menor o mayor que 500.",
+  petei: "Elegí la última cifra.",
+  mokoi: "Elegí las últimas 2 cifras.",
+  mbohapy: "Elegí las 3 cifras exactas.",
+  poa5: "3 números en 5 giros.",
+  poa10: "3 números en 10 giros.",
+  racha5: "Par o impar en 5 giros.",
+};
+
 /** Presentation-only metadata. Names, rules, prices and results never live here. */
 export const GAME_VISUALS: Readonly<Record<string, GameVisualMetadata>> = {
   head: { iconKey: "head", tone: "red" },
@@ -152,7 +168,7 @@ export function mapCatalogGames(
         family === "instant"
           ? instantEyebrow(game as InstantGameDefinition)
           : traditionalEyebrow(game as TraditionalGameDefinition),
-      description: game.description,
+      description: SIMPLE_CATALOG_DESCRIPTIONS[game.id] ?? game.description,
       iconKey: resolveCatalogGameIconId(game.id, game.iconKey) ?? visual?.iconKey ?? null,
       tone: visual?.tone ?? DEFAULT_VISUAL.tone,
       baseAmount: amount,

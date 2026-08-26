@@ -19,6 +19,19 @@ function game(overrides: Partial<CatalogGameView> = {}): CatalogGameView {
 }
 
 describe("CatalogGameCard", () => {
+  it("muestra solo nombre, explicación y la acción de jugar", () => {
+    const markup = renderToStaticMarkup(<CatalogGameCard game={game()} />);
+
+    expect(markup).toContain('aria-label="Jugar Juego remoto"');
+    expect(markup).toContain('href="/instantaneas/producto-remoto-42"');
+    expect(markup).toContain("Juego remoto");
+    expect(markup).toContain("Definición recibida del backoffice.");
+    expect(markup).toContain("Jugar");
+    expect(markup).not.toContain("Resultado inmediato");
+    expect(markup).not.toContain("Desde");
+    expect(markup).not.toContain("Gs.");
+  });
+
   it("renderiza el icono aprobado resuelto desde iconKey aunque el ID sea remoto", () => {
     const markup = renderToStaticMarkup(<CatalogGameCard game={game()} />);
 

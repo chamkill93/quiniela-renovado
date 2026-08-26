@@ -287,7 +287,7 @@
 }
 
 .traditionalGameGrid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .gameCard {
@@ -295,11 +295,12 @@
   --game-accent-hot: #ff3a46;
   position: relative;
   isolation: isolate;
-  min-height: 292px;
+  min-width: 0;
+  min-height: 214px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 16px;
+  padding: 14px;
   border: 1px solid color-mix(in srgb, var(--game-accent) 52%, #292c32);
   border-radius: var(--q-r-lg);
   background:
@@ -355,11 +356,11 @@
 .gameVisual {
   position: relative;
   isolation: isolate;
-  min-height: 146px;
+  min-height: 100px;
   display: grid;
   place-items: center;
   overflow: hidden;
-  margin: -10px -10px 14px;
+  margin: -8px -8px 12px;
   border-radius: calc(var(--q-r-lg) - 5px);
   background: linear-gradient(155deg, rgba(255, 255, 255, 0.045), transparent 58%);
 }
@@ -375,8 +376,8 @@
 .gameEmblem {
   position: relative;
   z-index: 2;
-  width: 132px;
-  height: 132px;
+  width: 92px;
+  height: 92px;
   filter: drop-shadow(0 13px 18px rgba(0, 0, 0, 0.42));
   transition: transform 180ms ease;
 }
@@ -394,31 +395,23 @@
   transform: scale(1.055) rotate(-1deg);
 }
 
-.gameCardEyebrow {
-  margin-bottom: 5px;
-  color: color-mix(in srgb, var(--game-accent-hot) 78%, #fff);
-  font-size: 0.66rem;
-  font-weight: 850;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
 .gameCard strong {
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   color: #fff;
-  font-size: 1.08rem;
+  font-size: 1rem;
   line-height: 1.12;
+  overflow-wrap: anywhere;
 }
 
 .gameCard p {
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  min-height: 38px;
+  -webkit-line-clamp: 2;
+  min-height: 36px;
   margin-bottom: 0;
   color: rgba(255, 255, 255, 0.7);
   font-size: 0.82rem;
@@ -436,10 +429,10 @@
 .gameCardFooter {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
   margin-top: auto;
-  padding-top: 13px;
+  padding-top: 9px;
   border-top: 1px solid color-mix(in srgb, var(--game-accent-hot) 27%, rgba(255, 255, 255, 0.12));
 }
 
@@ -458,10 +451,6 @@
   text-transform: uppercase;
 }
 
-:global([data-theme="light"]) .gameCardEyebrow {
-  color: color-mix(in srgb, var(--game-accent) 78%, #3a1b1d);
-}
-
 :global([data-theme="light"]) .gameCardFooter {
   border-top-color: color-mix(in srgb, var(--game-accent) 22%, var(--q-line));
 }
@@ -471,8 +460,8 @@
 }
 
 .cardCta {
-  min-width: 82px;
-  min-height: 44px;
+  min-width: 80px;
+  min-height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -485,6 +474,49 @@
   font-weight: 900;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.gameGrid[data-family="traditional"] .gameCard {
+  min-height: 150px;
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 5px 14px;
+}
+
+.gameGrid[data-family="traditional"] .gameVisual {
+  grid-column: 1;
+  grid-row: 1 / -1;
+  min-height: 96px;
+  margin: 0;
+}
+
+.gameGrid[data-family="traditional"] .gameEmblem {
+  width: 88px;
+  height: 88px;
+}
+
+.gameGrid[data-family="traditional"] .gameCard strong {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+}
+
+.gameGrid[data-family="traditional"] .gameCard p {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: start;
+  min-height: 0;
+  margin-top: 2px;
+}
+
+.gameGrid[data-family="traditional"] .gameCardFooter {
+  grid-column: 3;
+  grid-row: 1 / -1;
+  margin: 0;
+  padding: 0;
+  border-top: 0;
 }
 
 .megaBanner {
@@ -1579,6 +1611,14 @@
   gap: 16px;
 }
 
+.traditionalRulesGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.instantRulesGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .positionGrid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -1619,6 +1659,82 @@
 .ruleCard h2 { margin: 0 0 10px; font-size: 1.15rem; }
 .ruleCard p, .ruleCard li { color: var(--q-muted); line-height: 1.6; }
 .ruleCard ul { margin: 10px 0 0; padding-left: 20px; }
+
+.ruleCardLink {
+  min-width: 0;
+  min-height: 132px;
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  grid-template-rows: 1fr auto;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 16px;
+  border: 1px solid var(--q-line);
+  border-radius: var(--q-r-lg);
+  background: var(--q-panel);
+  color: var(--q-text);
+  text-decoration: none;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.ruleCardLink:hover,
+.ruleCardLink:focus-visible {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--q-red) 58%, var(--q-line));
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.18);
+}
+
+.ruleCardLink:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--q-red) 62%, #fff);
+  outline-offset: 3px;
+}
+
+.ruleCardIcon {
+  grid-row: 1 / -1;
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 9px 13px rgba(0, 0, 0, 0.28));
+}
+
+.ruleCardIcon > span {
+  width: 64px;
+  height: 64px;
+}
+
+.ruleCardCopy {
+  min-width: 0;
+  align-self: end;
+}
+
+.ruleCardCopy h2,
+.ruleCardCopy h3 {
+  margin: 0 0 5px;
+  font-size: 1rem;
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+
+.ruleCardCopy p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--q-muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.ruleCardCta {
+  align-self: start;
+  color: var(--q-red);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
 
 .accountGrid {
   display: grid;
@@ -1719,7 +1835,6 @@
 }
 
 @media (max-width: 1100px) {
-  .gameGrid,
   .traditionalGameGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .splitLayout, .accountGrid { grid-template-columns: 1fr; }
   .reels { gap: 9px; }
@@ -1732,23 +1847,80 @@
   .quickGrid { grid-template-columns: 1fr; margin-top: -74px; padding: 0 14px; }
   .quickCard { min-height: 105px; }
   .drawGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .rulesGrid { grid-template-columns: 1fr; }
   .positionGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .sectionHeader { align-items: start; }
   .reels[data-layout="multiple"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
+@media (max-width: 720px) {
+  .gameGrid[data-family="traditional"] .gameCard {
+    min-height: 176px;
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .gameGrid[data-family="traditional"] .gameVisual {
+    min-height: 76px;
+    margin: -5px -5px 9px;
+  }
+
+  .gameGrid[data-family="traditional"] .gameEmblem {
+    width: 72px;
+    height: 72px;
+  }
+
+  .gameGrid[data-family="traditional"] .gameCard p {
+    align-self: stretch;
+    min-height: 0;
+    margin-top: 6px;
+  }
+
+  .gameGrid[data-family="traditional"] .gameCard strong {
+    align-self: stretch;
+  }
+
+  .gameGrid[data-family="traditional"] .gameCardFooter {
+    display: none;
+  }
+}
+
 @media (max-width: 520px) {
   .sectionHeader { display: grid; }
-  .gameGrid,
-  .traditionalGameGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-  .gameCard { min-height: 284px; padding: 12px; border-radius: var(--q-r-lg); }
-  .gameVisual { min-height: 108px; margin: -7px -7px 13px; }
-  .gameEmblem { width: 98px; height: 98px; }
-  .gameCard strong { font-size: 0.98rem; }
-  .gameCard p { min-height: 0; font-size: 0.79rem; }
-  .gameCardFooter { align-items: start; display: grid; }
-  .cardCta { width: 100%; }
+  .gameGrid[data-family="instant"] { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .traditionalGameGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .gameCard { min-height: 176px; padding: 9px; border-radius: 15px; }
+  .gameVisual { min-height: 76px; margin: -5px -5px 9px; }
+  .gameEmblem { width: 72px; height: 72px; }
+  .gameCard strong { font-size: 0.86rem; }
+  .gameCard p { min-height: 0; font-size: 0.7rem; line-height: 1.3; }
+  .gameCardFooter { display: none; }
+  .gameGrid[data-family="traditional"] .gameCard { min-height: 176px; display: flex; gap: 0; }
+  .gameGrid[data-family="traditional"] .gameVisual { min-height: 76px; margin: -5px -5px 9px; }
+  .gameGrid[data-family="traditional"] .gameEmblem { width: 72px; height: 72px; }
+  .gameGrid[data-family="traditional"] .gameCard p { min-height: 0; margin-top: 6px; }
+  .gameGrid[data-family="traditional"] .gameCardFooter { display: none; }
+  .gameGrid[data-family="instant"] .gameCard { min-height: 148px; padding: 6px; border-radius: 13px; }
+  .gameGrid[data-family="instant"] .gameVisual { min-height: 62px; margin: -3px -3px 7px; }
+  .gameGrid[data-family="instant"] .gameEmblem { width: 58px; height: 58px; }
+  .gameGrid[data-family="instant"] .gameCard strong { font-size: 0.74rem; line-height: 1.08; }
+  .gameGrid[data-family="instant"] .gameCard p { font-size: 0.62rem; line-height: 1.24; }
+  .rulesGrid { gap: 8px; }
+  .traditionalRulesGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .instantRulesGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .ruleCardLink { min-height: 142px; display: flex; flex-direction: column; gap: 6px; padding: 9px; text-align: center; }
+  .ruleCardIcon { width: 58px; height: 58px; flex: 0 0 auto; }
+  .ruleCardIcon > span { width: 58px; height: 58px; }
+  .ruleCardCopy { align-self: stretch; }
+  .ruleCardCopy h2,
+  .ruleCardCopy h3 { margin-bottom: 4px; font-size: 0.82rem; }
+  .ruleCardCopy p { font-size: 0.66rem; line-height: 1.25; }
+  .ruleCardCta { display: none; }
+  .instantRulesGrid .ruleCardLink { min-height: 126px; padding: 6px 4px; }
+  .instantRulesGrid .ruleCardIcon { width: 48px; height: 48px; }
+  .instantRulesGrid .ruleCardIcon > span { width: 48px; height: 48px; }
+  .instantRulesGrid .ruleCardCopy h3 { font-size: 0.7rem; }
+  .instantRulesGrid .ruleCardCopy p { -webkit-line-clamp: 3; font-size: 0.58rem; line-height: 1.2; }
   .amountChip { width: 58px; height: 58px; }
   .amountChipFace { width: 54px; height: 54px; }
   .amountChipFace span { font-size: 0.77rem; }
@@ -1792,8 +1964,6 @@
 }
 
 @media (max-width: 330px) {
-  .gameGrid,
-  .traditionalGameGrid { grid-template-columns: 1fr; }
   .heroActions { display: grid; }
 }
 

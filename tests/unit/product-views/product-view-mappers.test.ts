@@ -48,14 +48,14 @@ describe("mappers de vistas conectadas", () => {
     expect(getInstantGame("sapyaite")?.name).toBe("Sapy’aite");
   });
 
-  it("usa contenido y montos remotos, conservando solo presentación local", () => {
+  it("usa nombres y montos remotos con una explicación breve de presentación", () => {
     const games = mapCatalogGames(remoteCatalog(), "instant", 6);
 
     expect(games).toHaveLength(6);
     expect(games[0]).toMatchObject({
       id: "sapyaite",
       name: "Nombre entregado por API",
-      description: "Descripción entregada por API.",
+      description: "Elegí par o impar.",
       baseAmount: 1_000,
       href: "/instantaneas/sapyaite",
       iconKey: "sapyaite",

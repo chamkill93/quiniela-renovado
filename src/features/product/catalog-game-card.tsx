@@ -1,7 +1,5 @@
 import Link from "next/link";
 
-import { formatGs } from "@/lib/product/catalog";
-
 import { GameIcon } from "./game-icon";
 import { isQuinieGameIconId } from "./game-icon-map";
 import type { CatalogGameView } from "./product-view-mappers";
@@ -19,6 +17,7 @@ export function CatalogGameCard({
 
   return (
     <Link
+      aria-label={`Jugar ${game.name}`}
       className={styles.gameCard}
       data-testid={testId}
       data-tone={game.tone}
@@ -27,14 +26,9 @@ export function CatalogGameCard({
       <span aria-hidden="true" className={styles.gameVisual}>
         {iconId ? <GameIcon className={styles.gameEmblem} gameId={iconId} /> : null}
       </span>
-      <span className={styles.gameCardEyebrow}>{game.eyebrow}</span>
       <strong>{game.name}</strong>
       <p>{game.description}</p>
       <span className={styles.gameCardFooter}>
-        <span className={styles.gamePrice}>
-          <small>{game.baseAmount === null ? "Monto" : "Desde"}</small>
-          {game.baseAmount === null ? "Consultar" : formatGs(game.baseAmount)}
-        </span>
         <span aria-hidden="true" className={styles.cardCta}>Jugar</span>
       </span>
     </Link>
