@@ -140,6 +140,107 @@ test.beforeEach(async ({ page }, testInfo) => {
   );
 });
 
+test("renders the authoritative Home hero in dark, light and responsive layouts", async ({
+  page,
+}, testInfo) => {
+  const now = new Date();
+  const catalog = buildGamingCatalog("REFUND", now);
+  const authoritativeResult = {
+    id: "external-home-result-246",
+    source: "DRAW" as const,
+    gameId: "head" as const,
+    gameName: "A la Cabeza",
+    drawId: "previous-quiniela-home",
+    result: "246",
+    resultNumbers: ["246"],
+    occurredAt: new Date(now.getTime() - 3_600_000).toISOString(),
+  };
+
+  await page.route("**/api/mock/bootstrap", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        session: {
+          id: "home-fixture-player",
+          displayName: "Jugador",
+          role: "PLAYER",
+          balance: 250_000,
+          currency: "PYG",
+        },
+        catalog,
+        plays: [],
+        results: [authoritativeResult],
+      }),
+    });
+  });
+  await page.route("**/api/mock/results", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ results: [authoritativeResult] }),
+    });
+  });
+  await page.route("**/api/mock/wallet/movements", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ movements: [] }),
+    });
+  });
+
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+
+  const hero = page.getByTestId("home-hero");
+  await expect(hero).toBeVisible();
+  await expect(
+    hero.getByRole("heading", { level: 1, name: "Tus números. Tu momento." }),
+  ).toBeVisible();
+  await expect(hero.getByRole("link", { name: "Jugar Quiniela" })).toHaveAttribute(
+    "href",
+    "/quinielas",
+  );
+  await expect(hero.getByRole("link", { name: "Ver Instantáneas" })).toHaveAttribute(
+    "href",
+    "/instantaneas",
+  );
+  await expect(hero.locator("[data-reel-column]")).toHaveCount(3);
+  await expect(hero.locator('[data-reel-result="246"]')).toHaveAttribute(
+    "aria-label",
+    "Último resultado publicado 246",
+  );
+  await expect(hero.getByTestId("home-hero-fire")).toBeVisible();
+  await expect(hero.getByText("En vivo", { exact: false })).toHaveCount(0);
+  await expect(hero.getByText("Ganaste", { exact: false })).toHaveCount(0);
+  await expect(page.locator('[aria-label="Accesos rápidos"]')).toHaveCount(0);
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-theme",
+    themeFromProjectName(testInfo.project.name),
+  );
+
+  const layout = await hero.evaluate((element) => {
+    const [copy, reel] = Array.from(element.children);
+    const heroBox = element.getBoundingClientRect();
+    const copyBox = copy.getBoundingClientRect();
+    const reelBox = reel.getBoundingClientRect();
+    return {
+      heroHeight: heroBox.height,
+      copyRight: copyBox.right,
+      copyBottom: copyBox.bottom,
+      reelX: reelBox.x,
+      reelY: reelBox.y,
+    };
+  });
+
+  if (testInfo.project.name.includes("1366x768")) {
+    expect(layout.reelX).toBeGreaterThanOrEqual(layout.copyRight - 1);
+    expect(layout.heroHeight).toBeLessThanOrEqual(380);
+  } else {
+    expect(layout.reelY).toBeGreaterThanOrEqual(layout.copyBottom - 1);
+  }
+  await expectNoHorizontalOverflow(page);
+});
+
 test("shows only four traditional games and retires the former direct routes", async ({
   page,
 }) => {

@@ -1,0 +1,11 @@
+<svg width="1200" height="360" viewBox="0 0 1200 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="blur" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="12"/></filter>
+    <linearGradient id="g1" x1="60" y1="280" x2="1130" y2="70" gradientUnits="userSpaceOnUse"><stop stop-color="#6A0005" stop-opacity="0"/><stop offset=".28" stop-color="#E30613" stop-opacity=".82"/><stop offset=".62" stop-color="#FF3A0A"/><stop offset="1" stop-color="#FFB21A" stop-opacity="0"/></linearGradient>
+    <linearGradient id="g2" x1="1100" y1="280" x2="120" y2="80" gradientUnits="userSpaceOnUse"><stop stop-color="#750008" stop-opacity="0"/><stop offset=".34" stop-color="#FF180A" stop-opacity=".7"/><stop offset=".7" stop-color="#FF7A00"/><stop offset="1" stop-color="#FFD16A" stop-opacity="0"/></linearGradient>
+  </defs>
+  <path d="M-40 282C172 124 354 246 538 194C738 138 845 22 1240 68" stroke="url(#g1)" stroke-width="18" stroke-linecap="round" filter="url(#blur)"/>
+  <path d="M-60 304C155 199 334 323 555 237C765 155 933 74 1248 116" stroke="url(#g1)" stroke-width="6" stroke-linecap="round"/>
+  <path d="M1245 287C1032 145 875 285 683 207C507 136 336 40 -45 94" stroke="url(#g2)" stroke-width="16" stroke-linecap="round" filter="url(#blur)"/>
+  <path d="M1244 310C1010 217 895 323 659 243C460 176 319 80 -42 130" stroke="url(#g2)" stroke-width="5" stroke-linecap="round"/>
+</svg>

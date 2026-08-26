@@ -1,0 +1,423 @@
+.hero {
+  --hero-panel: #05070b;
+  --hero-panel-raised: #0b0f15;
+  --hero-text: #f8fafc;
+  --hero-muted: #9ca6b5;
+  --hero-line: #242b36;
+  position: relative;
+  isolation: isolate;
+  min-height: 348px;
+  display: grid;
+  grid-template-columns: minmax(360px, 0.95fr) minmax(440px, 1.35fr);
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--hero-line);
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 67% 48%, rgb(227 6 19 / 17%), transparent 36%),
+    linear-gradient(105deg, #05070b 0%, #080b10 46%, #050609 100%);
+  box-shadow: 0 24px 70px rgb(0 0 0 / 28%);
+  color: var(--hero-text);
+}
+
+:global([data-theme="light"]) .hero {
+  --hero-panel: #faf8f4;
+  --hero-panel-raised: #fffefa;
+  --hero-text: #12151b;
+  --hero-muted: #6d737d;
+  --hero-line: #ded9d2;
+  background:
+    radial-gradient(circle at 69% 48%, rgb(244 72 31 / 9%), transparent 39%),
+    linear-gradient(105deg, #fbfaf7 0%, #f8f5ef 48%, #fffdfa 100%);
+  box-shadow: 0 20px 58px rgb(53 42 28 / 10%);
+}
+
+.hero::before {
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+  background: linear-gradient(90deg, var(--hero-panel) 0 24%, transparent 59%);
+  content: "";
+  pointer-events: none;
+}
+
+.copy {
+  position: relative;
+  z-index: 4;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding: clamp(20px, 1.65vw, 28px) clamp(26px, 2.25vw, 34px);
+}
+
+.eyebrow {
+  margin: 0;
+  color: #ff2635;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.145em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 6px 0 10px;
+  color: var(--hero-text);
+  font-size: clamp(2.9rem, 3.65vw, 4.15rem);
+  font-weight: 950;
+  letter-spacing: -0.062em;
+  line-height: 0.91;
+}
+
+.title > span {
+  display: block;
+  white-space: nowrap;
+}
+
+.titleMark {
+  color: #ff2635;
+}
+
+.nextDrawLabel {
+  margin-bottom: 5px;
+  color: var(--hero-muted);
+  font-size: 0.65rem;
+  font-weight: 850;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+}
+
+.nextDraw,
+.nextDrawUnavailable {
+  width: min(100%, 322px);
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto 18px;
+  align-items: center;
+  gap: 9px;
+  padding: 4px 10px 4px 7px;
+  border: 1px solid color-mix(in srgb, #e30613 48%, var(--hero-line));
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--hero-panel-raised) 94%, transparent);
+  color: var(--hero-text);
+  text-decoration: none;
+  box-shadow: inset 0 1px rgb(255 255 255 / 5%);
+}
+
+.nextDraw {
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.nextDraw:hover {
+  transform: translateY(-1px);
+  border-color: #f01927;
+  box-shadow: 0 0 0 4px rgb(227 6 19 / 10%);
+}
+
+.nextDrawUnavailable {
+  grid-template-columns: 42px minmax(0, 1fr);
+  border-color: var(--hero-line);
+  color: var(--hero-muted);
+}
+
+.drawIcon,
+.drawIconFallback {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+}
+
+.drawIcon::before,
+.drawIcon::after {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  content: "";
+  pointer-events: none;
+}
+
+.drawIcon::before {
+  background-image: var(--hero-draw-icon-dark);
+  opacity: 1;
+}
+
+.drawIcon::after {
+  background-image: var(--hero-draw-icon-light);
+  opacity: 0;
+}
+
+:global([data-theme="light"]) .drawIcon::before { opacity: 0; }
+:global([data-theme="light"]) .drawIcon::after { opacity: 1; }
+
+.drawIconFallback {
+  color: #ffb31a;
+}
+
+.drawIconFallback svg {
+  width: 28px;
+  height: 28px;
+}
+
+.drawName {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--hero-text);
+  font-size: 0.84rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.drawTime {
+  min-width: 58px;
+  padding: 4px 8px;
+  border: 1px solid color-mix(in srgb, #e30613 48%, var(--hero-line));
+  border-radius: 999px;
+  color: var(--hero-text);
+  font-size: 0.77rem;
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
+}
+
+.chevron {
+  width: 18px;
+  height: 18px;
+  color: #f01927;
+}
+
+.countdown {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  color: var(--hero-muted);
+}
+
+.countdownLabel {
+  margin-right: 2px;
+  font-size: 0.7rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.timeGroup {
+  display: contents;
+}
+
+.timeUnit {
+  min-width: 45px;
+  display: grid;
+  place-items: center;
+  padding: 4px 5px 3px;
+  border: 1px solid color-mix(in srgb, #e30613 32%, var(--hero-line));
+  border-radius: 9px;
+  background: color-mix(in srgb, #e30613 8%, var(--hero-panel-raised));
+}
+
+.timeValue {
+  color: #ff2635;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.timeLabel {
+  margin-top: 2px;
+  color: var(--hero-muted);
+  font-size: 0.42rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.countdownDivider {
+  color: #e30613;
+  font-size: 0.85rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.drawState {
+  min-height: 33px;
+  display: inline-flex;
+  align-items: center;
+  margin-top: 7px;
+  padding: 0 12px;
+  border: 1px solid var(--hero-line);
+  border-radius: 10px;
+  background: var(--hero-panel-raised);
+  color: var(--hero-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 9px;
+  margin-top: 8px;
+}
+
+.primaryAction,
+.secondaryAction {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  font-size: 0.73rem;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  text-decoration: none;
+  transition: transform 160ms ease, filter 160ms ease, border-color 160ms ease;
+}
+
+.primaryAction {
+  border-color: #ff3440;
+  background: linear-gradient(180deg, #ff2635, #d90714);
+  box-shadow: 0 10px 25px rgb(227 6 19 / 24%);
+  color: #fff;
+}
+
+.secondaryAction {
+  border-color: var(--hero-line);
+  background: var(--hero-panel-raised);
+  color: var(--hero-text);
+}
+
+.primaryAction:hover,
+.secondaryAction:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.actionIcon {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+}
+
+.reelColumn {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  display: grid;
+  place-items: center;
+  padding: 4px 14px 4px 0;
+}
+
+@media (max-width: 1180px) {
+  .hero {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .copy {
+    width: min(100%, 680px);
+    padding-bottom: 6px;
+  }
+
+  .reelColumn {
+    min-height: 270px;
+    padding: 0 14px 12px;
+  }
+
+  .hero::before {
+    background: linear-gradient(180deg, var(--hero-panel) 0 26%, transparent 64%);
+  }
+}
+
+@media (max-width: 760px) {
+  .hero {
+    border-radius: 24px;
+  }
+
+  .copy {
+    padding: 22px 20px 6px;
+  }
+
+  .title {
+    font-size: clamp(2.75rem, 11.5vw, 4rem);
+  }
+
+  .reelColumn {
+    min-height: 238px;
+    padding-inline: 7px;
+  }
+}
+
+@media (max-width: 430px) {
+  .copy {
+    padding-inline: 15px;
+  }
+
+  .eyebrow {
+    font-size: 0.62rem;
+  }
+
+  .title {
+    font-size: clamp(2.65rem, 12.2vw, 3.3rem);
+  }
+
+  .nextDraw,
+  .nextDrawUnavailable {
+    width: 100%;
+  }
+
+  .actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .primaryAction,
+  .secondaryAction {
+    width: 100%;
+    padding-inline: 9px;
+    font-size: 0.67rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .countdown {
+    gap: 4px;
+  }
+
+  .countdownLabel {
+    font-size: 0.64rem;
+  }
+
+  .timeUnit {
+    min-width: 41px;
+  }
+
+  .actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nextDraw,
+  .primaryAction,
+  .secondaryAction {
+    transition: none;
+  }
+}

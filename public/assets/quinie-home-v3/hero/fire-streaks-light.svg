@@ -1,0 +1,9 @@
+<svg width="1200" height="360" viewBox="0 0 1200 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="blur" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="14"/></filter>
+    <linearGradient id="g1" x1="60" y1="280" x2="1130" y2="70" gradientUnits="userSpaceOnUse"><stop stop-color="#FF7A00" stop-opacity="0"/><stop offset=".3" stop-color="#FF5A16" stop-opacity=".36"/><stop offset=".62" stop-color="#E30613" stop-opacity=".48"/><stop offset="1" stop-color="#FFC46A" stop-opacity="0"/></linearGradient>
+  </defs>
+  <path d="M-40 282C172 124 354 246 538 194C738 138 845 22 1240 68" stroke="url(#g1)" stroke-width="16" stroke-linecap="round" filter="url(#blur)"/>
+  <path d="M-60 304C155 199 334 323 555 237C765 155 933 74 1248 116" stroke="url(#g1)" stroke-width="5" stroke-linecap="round"/>
+  <path d="M1245 287C1032 145 875 285 683 207C507 136 336 40 -45 94" stroke="url(#g1)" stroke-width="14" stroke-linecap="round" filter="url(#blur)"/>
+</svg>
