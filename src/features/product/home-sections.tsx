@@ -115,6 +115,7 @@ function MegaLotoBanner() {
           height={164}
           sizes="(max-width: 600px) 78px, 112px"
           src="/assets/quinie-home-v3/megaloto/mega-loto-logo-oficial.png"
+          unoptimized
           width={180}
         />
         <span className={styles.megaCopy}>
