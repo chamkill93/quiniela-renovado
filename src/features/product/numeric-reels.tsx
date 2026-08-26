@@ -5,15 +5,19 @@ import { padNumber } from "@/lib/product/catalog";
 import { useSoundEffects } from "./use-sound-effects";
 import styles from "./product.module.css";
 
+export type ReelVariant = "classic" | "light" | "neon" | "gold";
+
 export function NumericReels({
   results,
   selectedNumbers = [],
   selectedParity,
+  variant = "classic",
   onComplete,
 }: {
-  results: string[];
-  selectedNumbers?: string[];
+  results: readonly string[];
+  selectedNumbers?: readonly string[];
   selectedParity?: "PAR" | "IMPAR";
+  variant?: ReelVariant;
   onComplete?: () => void;
 }) {
   const [stopped, setStopped] = useState(0);
@@ -58,6 +62,7 @@ export function NumericReels({
       aria-label="Rodillos numéricos"
       className={styles.reelStage}
       data-state={allStopped ? "result" : "spinning"}
+      data-variant={variant}
     >
       <span aria-hidden="true" className={styles.reelStateLabel}>
         {allStopped ? "Rodillo resultado" : "Rodillo animado · girando"}

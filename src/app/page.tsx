@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { HomeRemoteSections } from "@/features/product/catalog-views";
 import { GameIcon } from "@/features/product/game-icon";
+import { HeroVisual } from "@/features/product/hero-visual";
 import styles from "@/features/product/product.module.css";
 
 const QUICK_LINKS = [
@@ -42,6 +43,7 @@ export default function HomePage() {
               <Link className={styles.secondaryButton} href="/instantaneas">Ver Instantáneas</Link>
             </div>
           </div>
+          <HeroVisual />
         </div>
 
         <div className={styles.quickGrid} aria-label="Accesos rápidos">

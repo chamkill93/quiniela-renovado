@@ -9,7 +9,7 @@ export type CatalogFamily = "instant" | "traditional";
 export type GameTone = "red" | "orange" | "blue" | "purple" | "green";
 
 interface GameVisualMetadata {
-  art: string;
+  iconKey: string;
   tone: GameTone;
 }
 
@@ -18,7 +18,7 @@ export interface CatalogGameView {
   name: string;
   eyebrow: string;
   description: string;
-  art: string;
+  iconKey: string;
   tone: GameTone;
   baseAmount: number | null;
   href: string;
@@ -34,27 +34,29 @@ export interface PublishedResultView {
 }
 
 const DEFAULT_VISUAL: GameVisualMetadata = {
-  art: "/assets/game-art/head.webp",
+  iconKey: "head",
   tone: "red",
 };
 
+const LEGACY_ICON_KEYS = new Set(["bolt", "prize", "mega", "one", "two", "three"]);
+
 /** Presentation-only metadata. Names, rules, prices and results never live here. */
 export const GAME_VISUALS: Readonly<Record<string, GameVisualMetadata>> = {
-  head: { art: "/assets/game-art/head.webp", tone: "red" },
-  prizes: { art: "/assets/game-art/prize.webp", tone: "orange" },
-  invert: { art: "/assets/game-art/invert.webp", tone: "blue" },
-  redoblona: { art: "/assets/game-art/redoblona.webp", tone: "red" },
-  "sapyaite-traditional": { art: "/assets/game-art/bolt.webp", tone: "purple" },
-  megaloto: { art: "/assets/game-art/mega.webp", tone: "blue" },
-  sapyaite: { art: "/assets/game-art/bolt.webp", tone: "purple" },
-  poa: { art: "/assets/game-art/poa.webp", tone: "green" },
-  pyae: { art: "/assets/game-art/pyae.webp", tone: "purple" },
-  petei: { art: "/assets/game-art/one.webp", tone: "red" },
-  mokoi: { art: "/assets/game-art/two.webp", tone: "blue" },
-  mbohapy: { art: "/assets/game-art/three.webp", tone: "orange" },
-  poa5: { art: "/assets/game-art/prize.webp", tone: "red" },
-  poa10: { art: "/assets/game-art/mega.webp", tone: "blue" },
-  racha5: { art: "/assets/game-art/redoblona.webp", tone: "green" },
+  head: { iconKey: "head", tone: "red" },
+  prizes: { iconKey: "prizes", tone: "orange" },
+  invert: { iconKey: "invert", tone: "blue" },
+  redoblona: { iconKey: "redoblona", tone: "red" },
+  "sapyaite-traditional": { iconKey: "sapyaite", tone: "purple" },
+  megaloto: { iconKey: "megaloto", tone: "blue" },
+  sapyaite: { iconKey: "sapyaite", tone: "purple" },
+  poa: { iconKey: "poa", tone: "green" },
+  pyae: { iconKey: "pyae", tone: "purple" },
+  petei: { iconKey: "petei", tone: "red" },
+  mokoi: { iconKey: "mokoi", tone: "blue" },
+  mbohapy: { iconKey: "mbohapy", tone: "orange" },
+  poa5: { iconKey: "poa5", tone: "red" },
+  poa10: { iconKey: "poa10", tone: "blue" },
+  racha5: { iconKey: "racha5", tone: "green" },
 };
 
 function minimumAmount(amounts: readonly number[]) {
@@ -99,7 +101,10 @@ export function mapCatalogGames(
           ? instantEyebrow(game as InstantGameDefinition)
           : traditionalEyebrow(game as TraditionalGameDefinition),
       description: game.description,
-      art: visual.art,
+      iconKey:
+        game.iconKey?.trim() && !LEGACY_ICON_KEYS.has(game.iconKey.trim())
+          ? game.iconKey.trim()
+          : visual.iconKey,
       tone: visual.tone,
       baseAmount: amount,
       href:

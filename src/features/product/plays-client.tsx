@@ -5,11 +5,8 @@ import { useProduct } from "@/providers/product-provider";
 import { formatGs } from "@/lib/product/catalog";
 import { SectionHeader } from "./section-header";
 import { RemoteUnauthorizedState } from "./remote-view-state";
+import { ResultStateBadge } from "./result-state";
 import styles from "./product.module.css";
-
-function statusLabel(status: string) {
-  return ({ PENDING: "Pendiente", WON: "Premiada", LOST: "Sin premio", REFUNDED: "Reintegrada" } as Record<string, string>)[status] ?? status;
-}
 
 export function PlaysClient() {
   const { plays, session, loading, error, unauthorized, refresh } = useProduct();
@@ -39,7 +36,8 @@ export function PlaysClient() {
               <div>
                 <p className={styles.eyebrow}>{play.family === "INSTANT" ? "Instantánea" : "Quiniela"}</p>
                 <h3>{play.gameName ?? play.gameId}</h3>
-                <p>{new Intl.DateTimeFormat("es-PY", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Asuncion" }).format(new Date(play.createdAt))} · {statusLabel(play.status)}</p>
+                <p>{new Intl.DateTimeFormat("es-PY", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Asuncion" }).format(new Date(play.createdAt))}</p>
+                <ResultStateBadge status={play.status} />
               </div>
               <div className={styles.listAmount}>
                 {formatGs(play.amount)}

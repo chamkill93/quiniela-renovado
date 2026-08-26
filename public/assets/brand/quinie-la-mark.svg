@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" role="img" aria-labelledby="title description">
+  <title id="title">Marca quinie.LA</title>
+  <desc id="description">Monograma LA de Quiniela Online</desc>
+  <circle cx="90" cy="90" r="78" fill="#07090d" stroke="#e42a32" stroke-width="10"/>
+  <g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M54 52c-2 22-4 47-5 75 12 1 24 0 37-3" stroke-width="13"/>
+    <path d="m78 126 24-74 32 73M87 99c13-1 26-1 39 0" stroke-width="12"/>
+  </g>
+  <circle cx="40" cy="126" r="7" fill="#e42a32"/>
+</svg>

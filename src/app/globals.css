@@ -91,21 +91,27 @@ ul, ol { margin-block: 0; padding-inline-start: 1.2rem; }
   -webkit-mask: var(--q-icon-url) center / contain no-repeat;
   mask: var(--q-icon-url) center / contain no-repeat;
 }
-.q-logo { display: inline-flex; align-items: center; min-width: 0; }
+.q-logo { display: inline-flex; max-width: 100%; align-items: center; min-width: 0; }
 .q-logo__plate {
-  display: inline-flex;
+  position: relative;
+  display: block;
+  max-width: 100%;
+  flex: 0 1 auto;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  border: 1px solid rgb(227 6 19 / 14%);
-  border-radius: var(--q-pill);
-  background: var(--q-logo-plate);
-  box-shadow: var(--q-inset-highlight), 0 8px 24px rgb(0 0 0 / 12%);
+  overflow: visible;
 }
-.q-logo--sm .q-logo__plate { width: 7.25rem; height: 2.45rem; padding: .35rem .75rem; }
-.q-logo--md .q-logo__plate { width: 9rem; height: 3rem; padding: .45rem .9rem; }
-.q-logo--lg .q-logo__plate { width: 11rem; height: 3.6rem; padding: .5rem 1rem; }
-.q-logo__image { width: 100%; max-height: 100%; object-fit: contain; }
+.q-logo--sm .q-logo__plate { width: 7.25rem; height: 2.45rem; }
+.q-logo--md .q-logo__plate { width: 9rem; height: 3rem; }
+.q-logo--lg .q-logo__plate { width: 11rem; height: 3.6rem; }
+.q-logo__image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.q-logo__image--on-light { display: none; }
+[data-theme="light"] .q-logo--surface-auto .q-logo__image--on-dark,
+.q-logo--surface-light .q-logo__image--on-dark { display: none; }
+[data-theme="light"] .q-logo--surface-auto .q-logo__image--on-light,
+.q-logo--surface-light .q-logo__image--on-light { display: block; }
+.q-logo--surface-dark .q-logo__image--on-dark { display: block; }
+.q-logo--surface-dark .q-logo__image--on-light { display: none; }
 
 /* Buttons */
 .q-button, .q-button-link {
@@ -408,7 +414,7 @@ ul, ol { margin-block: 0; padding-inline-start: 1.2rem; }
 }
 
 @media (max-width: 639px) {
-  .q-logo--sm .q-logo__plate { width: 6.4rem; height: 2.2rem; padding-inline: .55rem; }
+  .q-logo--sm .q-logo__plate { width: 6.4rem; height: 2.2rem; }
   .q-topbar__actions { gap: .4rem; }
   .q-preference-controls { gap: .35rem; }
   .q-icon-button { width: 2.45rem; height: 2.45rem; border-radius: var(--q-r-xs); }

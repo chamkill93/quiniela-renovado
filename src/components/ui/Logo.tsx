@@ -3,18 +3,40 @@ import type { HTMLAttributes } from "react";
 
 export interface LogoProps extends Omit<HTMLAttributes<HTMLSpanElement>, "children"> {
   size?: "sm" | "md" | "lg";
+  surface?: "auto" | "dark" | "light";
 }
 
-export function Logo({ size = "md", className = "", ...props }: LogoProps) {
+export function Logo({
+  size = "md",
+  surface = "auto",
+  className = "",
+  role = "img",
+  "aria-label": ariaLabel = "quinie.LA, Quiniela Online",
+  ...props
+}: LogoProps) {
   return (
-    <span {...props} className={`q-logo q-logo--${size} ${className}`.trim()}>
-      <span className="q-logo__plate">
+    <span
+      {...props}
+      className={`q-logo q-logo--${size} q-logo--surface-${surface} ${className}`.trim()}
+      role={role}
+      aria-label={ariaLabel}
+    >
+      <span className="q-logo__plate" aria-hidden="true">
         <Image
-          className="q-logo__image"
-          src="/assets/brand/logo_quiniela_original.png"
-          alt="quinie.LA"
-          width={185}
-          height={89}
+          className="q-logo__image q-logo__image--on-dark"
+          src="/assets/brand/quinie-la-on-dark.svg"
+          alt=""
+          width={530}
+          height={180}
+          draggable={false}
+          priority
+        />
+        <Image
+          className="q-logo__image q-logo__image--on-light"
+          src="/assets/brand/quinie-la-on-light.svg"
+          alt=""
+          width={530}
+          height={180}
           draggable={false}
           priority
         />

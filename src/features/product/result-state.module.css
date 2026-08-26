@@ -1,0 +1,137 @@
+.card,
+.badge {
+  --result-color: #55df86;
+  --result-border: rgb(55 201 104 / 54%);
+  --result-surface: linear-gradient(145deg, rgb(5 91 33 / 94%), rgb(3 45 18 / 97%));
+  --result-shadow: rgb(31 208 91 / 22%);
+  color: #f8fff9;
+}
+
+.card[data-result-state="lost"],
+.badge[data-result-state="lost"] {
+  --result-color: #ff5a5f;
+  --result-border: rgb(234 54 61 / 56%);
+  --result-surface: linear-gradient(145deg, rgb(89 12 15 / 96%), rgb(43 5 8 / 98%));
+  --result-shadow: rgb(226 36 44 / 22%);
+}
+
+.card[data-result-state="pending"],
+.badge[data-result-state="pending"] {
+  --result-color: #ffc64f;
+  --result-border: rgb(225 151 25 / 58%);
+  --result-surface: linear-gradient(145deg, rgb(92 53 1 / 96%), rgb(43 25 1 / 98%));
+  --result-shadow: rgb(224 150 28 / 22%);
+}
+
+.card[data-result-state="receipt"],
+.badge[data-result-state="receipt"] {
+  --result-color: #56b7ff;
+  --result-border: rgb(47 145 221 / 58%);
+  --result-surface: linear-gradient(145deg, rgb(7 54 91 / 96%), rgb(3 28 49 / 98%));
+  --result-shadow: rgb(46 145 220 / 22%);
+}
+
+.card[data-result-state="refunded"],
+.badge[data-result-state="refunded"] {
+  --result-color: #c491ff;
+  --result-border: rgb(151 91 220 / 58%);
+  --result-surface: linear-gradient(145deg, rgb(59 24 96 / 96%), rgb(31 11 53 / 98%));
+  --result-shadow: rgb(133 76 201 / 22%);
+}
+
+.card {
+  width: min(100%, 34rem);
+  min-height: 8.75rem;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 0.35rem;
+  margin: 1rem auto 0;
+  padding: 1.15rem 1.5rem;
+  border: 1px solid var(--result-border);
+  border-radius: 0.9rem;
+  background: var(--result-surface);
+  box-shadow: inset 0 1px rgb(255 255 255 / 8%), 0 1rem 2.5rem var(--result-shadow);
+  text-align: center;
+}
+
+.icon {
+  width: 2.85rem;
+  height: 2.85rem;
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  color: var(--result-color);
+  filter: drop-shadow(0 0 0.6rem var(--result-shadow));
+}
+
+.icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.title {
+  color: #fff;
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  font-weight: 900;
+  letter-spacing: 0.015em;
+  text-transform: uppercase;
+}
+
+.description {
+  color: rgb(255 255 255 / 91%);
+  font-size: 0.94rem;
+  font-weight: 720;
+}
+
+.meta {
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+  color: rgb(255 255 255 / 72%);
+  font-size: 0.79rem;
+}
+
+.badge {
+  width: max-content;
+  max-width: 100%;
+  min-height: 1.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+  padding: 0.2rem 0.65rem 0.2rem 0.4rem;
+  border: 1px solid var(--result-border);
+  border-radius: 999px;
+  background: var(--result-surface);
+  box-shadow: inset 0 1px rgb(255 255 255 / 9%);
+  font-size: 0.7rem;
+  font-weight: 850;
+  letter-spacing: 0.035em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.badge .icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  filter: none;
+}
+
+@media (max-width: 520px) {
+  .card {
+    min-height: 8rem;
+    padding-inline: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .card[data-result-state="pending"] .icon {
+    animation: pendingPulse 1.35s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes pendingPulse {
+  from { opacity: 0.72; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1.04); }
+}

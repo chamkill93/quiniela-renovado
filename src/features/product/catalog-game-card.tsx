@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 
 import { formatGs } from "@/lib/product/catalog";
@@ -9,7 +8,6 @@ import styles from "./product.module.css";
 
 export function CatalogGameCard({
   game,
-  eager = false,
   testId,
 }: {
   game: CatalogGameView;
@@ -24,14 +22,7 @@ export function CatalogGameCard({
       href={game.href}
     >
       <span aria-hidden="true" className={styles.gameVisual}>
-        <Image
-          alt=""
-          height={220}
-          loading={eager ? "eager" : "lazy"}
-          src={game.art}
-          width={260}
-        />
-        <GameIcon className={styles.gameEmblem} gameId={game.id} />
+        <GameIcon className={styles.gameEmblem} gameId={game.iconKey} />
       </span>
       <span className={styles.gameCardEyebrow}>{game.eyebrow}</span>
       <strong>{game.name}</strong>

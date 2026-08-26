@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useProduct } from "@/providers/product-provider";
 
 import { CatalogGameCard } from "./catalog-game-card";
+import { GameIcon } from "./game-icon";
 import {
   mapCatalogGames,
   mapPublishedResults,
@@ -170,6 +171,7 @@ export function HomeRemoteSections() {
             <p>{megaloto.description}</p>
             <Link className={styles.primaryButton} href={megaloto.href}>Elegir números</Link>
           </div>
+          <GameIcon className={styles.megaBannerIcon} gameId={megaloto.iconKey} />
         </section>
       ) : null}
     </>

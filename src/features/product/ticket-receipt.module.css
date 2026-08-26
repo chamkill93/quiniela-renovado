@@ -1,0 +1,221 @@
+.receiptFrame {
+  width: 100%;
+  padding: 0.15rem;
+  filter: drop-shadow(0 1.25rem 2rem rgb(0 0 0 / 28%));
+}
+
+.receipt {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  width: 100%;
+  padding: clamp(1.25rem, 4vw, 2rem);
+  background:
+    radial-gradient(circle at 20% 15%, rgb(255 255 255 / 88%), transparent 26%),
+    linear-gradient(150deg, #fff, #f2f1ec 72%);
+  color: #171717;
+  -webkit-mask:
+    linear-gradient(#000 0 0) center / calc(100% - 0.75rem) 100% no-repeat,
+    linear-gradient(#000 0 0) center / 100% calc(100% - 0.75rem) no-repeat,
+    radial-gradient(circle at 50% 100%, #000 69%, transparent 72%) top / 0.75rem 0.45rem repeat-x,
+    radial-gradient(circle at 50% 0, #000 69%, transparent 72%) bottom / 0.75rem 0.45rem repeat-x,
+    radial-gradient(circle at 100% 50%, #000 69%, transparent 72%) left / 0.45rem 0.75rem repeat-y,
+    radial-gradient(circle at 0 50%, #000 69%, transparent 72%) right / 0.45rem 0.75rem repeat-y;
+  mask:
+    linear-gradient(#000 0 0) center / calc(100% - 0.75rem) 100% no-repeat,
+    linear-gradient(#000 0 0) center / 100% calc(100% - 0.75rem) no-repeat,
+    radial-gradient(circle at 50% 100%, #000 69%, transparent 72%) top / 0.75rem 0.45rem repeat-x,
+    radial-gradient(circle at 50% 0, #000 69%, transparent 72%) bottom / 0.75rem 0.45rem repeat-x,
+    radial-gradient(circle at 100% 50%, #000 69%, transparent 72%) left / 0.45rem 0.75rem repeat-y,
+    radial-gradient(circle at 0 50%, #000 69%, transparent 72%) right / 0.45rem 0.75rem repeat-y;
+}
+
+.receipt::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 4px, rgb(0 0 0 / 1.8%) 5px),
+    radial-gradient(circle at 70% 30%, rgb(0 0 0 / 2.5%) 0 1px, transparent 1.5px) 0 0 / 9px 9px;
+  content: "";
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.receiptHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px dashed #b8b5ae;
+}
+
+.receiptLogo {
+  flex: 0 1 auto;
+}
+
+.receiptLogo :global(.q-logo__plate) {
+  width: 8rem;
+  height: 3.05rem;
+  padding: 0.15rem;
+  border: 0;
+  border-radius: 0;
+  background: #fff;
+  box-shadow: none;
+}
+
+.receiptHeading {
+  display: grid;
+  justify-items: end;
+  color: #154d35;
+  text-align: right;
+}
+
+.receiptHeading > strong {
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.receiptHeading [data-result-state] {
+  margin-top: 0.3rem;
+}
+
+.receiptGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(9rem, 0.8fr);
+  gap: clamp(1rem, 4vw, 2rem);
+  padding: 1rem 0;
+  border-bottom: 1px dashed #b8b5ae;
+}
+
+.receiptFacts {
+  display: grid;
+  align-content: start;
+  gap: 0.45rem;
+  margin: 0;
+}
+
+.receiptFacts + .receiptFacts {
+  padding-left: clamp(1rem, 3vw, 1.65rem);
+  border-left: 1px solid #d0cdc5;
+}
+
+.receiptFact {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(4.3rem, auto) minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: baseline;
+  margin: 0;
+  padding: 0.1rem 0;
+}
+
+.receiptFact dt {
+  color: #6b6964;
+  font-size: 0.68rem;
+}
+
+.receiptFact dd {
+  min-width: 0;
+  margin: 0;
+  color: #202020;
+  font-size: 0.75rem;
+  font-weight: 760;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.receiptFact[data-emphasis="prize"] dd {
+  color: #16812f;
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+.codeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0 0.3rem;
+  color: #333;
+  font-size: 0.69rem;
+}
+
+.codeRow strong {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.68rem;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.barcode {
+  height: 3.2rem;
+  margin-top: 0.25rem;
+  border-block: 1px solid #aaa;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      #111 0 2px,
+      transparent 2px 4px,
+      #111 4px 5px,
+      transparent 5px 8px,
+      #111 8px 12px,
+      transparent 12px 14px,
+      #111 14px 15px,
+      transparent 15px 19px
+    );
+}
+
+.receiptFooter {
+  margin: 0.65rem 0 0;
+  color: #c31720;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+@media (max-width: 580px) {
+  .receipt {
+    padding: 1.1rem;
+  }
+
+  .receiptHeader {
+    align-items: flex-start;
+  }
+
+  .receiptLogo :global(.q-logo__plate) {
+    width: 6.7rem;
+    height: 2.55rem;
+  }
+
+  .receiptGrid {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+  }
+
+  .receiptFacts + .receiptFacts {
+    padding-top: 0.65rem;
+    padding-left: 0;
+    border-top: 1px solid #d0cdc5;
+    border-left: 0;
+  }
+
+  .codeRow {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .codeRow strong {
+    text-align: left;
+  }
+}
+
+@media print {
+  .receiptFrame {
+    filter: none;
+  }
+}

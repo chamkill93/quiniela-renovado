@@ -40,7 +40,7 @@ describe("mappers de vistas conectadas", () => {
       description: "Descripción entregada por API.",
       baseAmount: 1_000,
       href: "/instantaneas/sapyaite",
-      art: GAME_VISUALS.sapyaite.art,
+      iconKey: "sapyaite",
       tone: GAME_VISUALS.sapyaite.tone,
     });
   });

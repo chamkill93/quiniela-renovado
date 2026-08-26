@@ -8,7 +8,8 @@ import type { PlayResponse } from "@/lib/product/api-types";
 import { type InstantGameId, formatGs, padNumber, type ProductGame } from "@/lib/product/catalog";
 import { useProduct } from "@/providers/product-provider";
 import { AmountChip } from "./amount-chip";
-import { NumericReels } from "./numeric-reels";
+import { NumericReels, type ReelVariant } from "./numeric-reels";
+import { ResultStateCard, resultVisualState } from "./result-state";
 import { TicketDialog } from "./ticket-dialog";
 import { useSoundEffects } from "./use-sound-effects";
 import styles from "./product.module.css";
@@ -87,6 +88,15 @@ function selectedForMatches(gameId: InstantGameId, selection: string | string[])
   return [];
 }
 
+function reelVariantFor(gameId: InstantGameId): ReelVariant {
+  if (gameId === "poa" || gameId === "petei") return "light";
+  if (gameId === "pyae" || gameId === "mokoi" || gameId === "poa10") {
+    return "neon";
+  }
+  if (gameId === "mbohapy" || gameId === "poa5") return "gold";
+  return "classic";
+}
+
 export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }) {
   const {
     requestPlay,
@@ -132,7 +142,7 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
 
   const startCountdown = useCallback(() => {
     setAnimationDone(true);
-    const won = (response?.play.prize ?? 0) > 0;
+    const won = resultVisualState(response?.play.status ?? "PENDING") === "won";
     playSound(won ? "win" : "lose");
     setCountdown(5);
     let remaining = 5;
@@ -146,7 +156,7 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
         setShowTicket(true);
       }
     }, 1000);
-  }, [playSound, response?.play.prize]);
+  }, [playSound, response?.play.status]);
 
   const play = async () => {
     if (pending) return;
@@ -240,17 +250,32 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
             results={resultNumbers}
             selectedNumbers={selectedNumbers}
             selectedParity={game.id === "racha5" || game.id === "sapyaite" ? selection as "PAR" | "IMPAR" : undefined}
+            variant={reelVariantFor(game.id)}
             onComplete={startCountdown}
           />
-          {animationDone ? (
-            <div className={styles.resultPanel} aria-live="polite">
-              <strong>{(response.play.prize ?? 0) > 0 ? `Premio ${formatGs(response.play.prize ?? 0)}` : "Resultado confirmado"}</strong>
-              <span>{typeof response.play.matches === "number" ? `${response.play.matches} coincidencia${response.play.matches === 1 ? "" : "s"}` : resultNumbers.join(" · ")}</span>
-              {countdown !== null && countdown > 0 ? (
-                <span className={styles.countdown}>Comprobante en {countdown} s</span>
-              ) : null}
-            </div>
-          ) : null}
+          <ResultStateCard
+            live
+            status={animationDone ? response.play.status : "PENDING"}
+            description={
+              !animationDone
+                ? "Presentando el resultado confirmado…"
+                : resultVisualState(response.play.status) === "won"
+                  ? `Premio ${formatGs(response.play.prize ?? 0)}`
+                  : resultVisualState(response.play.status) === "lost"
+                    ? "Intentá de nuevo"
+                    : "Resultado confirmado"
+            }
+            meta={
+              animationDone ? (
+                <>
+                  <span>{typeof response.play.matches === "number" ? `${response.play.matches} coincidencia${response.play.matches === 1 ? "" : "s"}` : resultNumbers.join(" · ")}</span>
+                  {countdown !== null && countdown > 0 ? (
+                    <span className={styles.countdown}>Comprobante en {countdown} s</span>
+                  ) : null}
+                </>
+              ) : null
+            }
+          />
         </section>
       ) : null}
 

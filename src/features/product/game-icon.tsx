@@ -2,12 +2,22 @@
 
 import { useId } from "react";
 
+const ICON_KEY_ALIASES: Readonly<Record<string, string>> = {
+  prize: "prizes",
+  mega: "megaloto",
+  bolt: "pyae",
+  one: "petei",
+  two: "mokoi",
+  three: "mbohapy",
+};
+
 export function GameIcon({ gameId, className }: { gameId: string; className?: string }) {
   const id = useId().replace(/:/g, "");
   const disc = `${id}-disc`;
   const metal = `${id}-metal`;
   const red = `${id}-red`;
   const glow = `${id}-glow`;
+  const glyphId = ICON_KEY_ALIASES[gameId] ?? gameId;
 
   return (
     <svg
@@ -47,7 +57,7 @@ export function GameIcon({ gameId, className }: { gameId: string; className?: st
       <ellipse cx="38" cy="18" rx="19" ry="4" fill="rgba(255,255,255,.08)" transform="rotate(-18 38 18)" />
 
       <g filter={`url(#${glow})`}>
-        <GameGlyph gameId={gameId} metal={metal} red={red} />
+        <GameGlyph gameId={glyphId} metal={metal} red={red} />
       </g>
     </svg>
   );
