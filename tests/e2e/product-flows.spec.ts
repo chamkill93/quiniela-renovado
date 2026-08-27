@@ -953,12 +953,12 @@ test("accepts all six traditional games and exposes server-backed balance and Mi
   await expect(
     page.getByRole("heading", { level: 1, name: "Saldo y movimientos" }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("heading", {
-      level: 2,
-      name: /247[.\s]?000/,
-    }),
-  ).toBeVisible();
+  const formattedBalance = new Intl.NumberFormat("es-PY").format(after.session.balance);
+  const displayedBalance = page
+    .getByRole("region", { name: "Resumen de tu billetera", exact: true })
+    .getByLabel(`Saldo disponible: Gs. ${formattedBalance}`, { exact: true });
+  await expect(displayedBalance).toBeVisible();
+  await expect(displayedBalance).toHaveText(`₲${formattedBalance}`);
 });
 
 test("publishes only Sapy’aite and rejects disabled instant games", async ({
