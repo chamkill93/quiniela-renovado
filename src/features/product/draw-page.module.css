@@ -11,6 +11,7 @@
   gap: clamp(16px, 2.2vw, 26px);
   margin: 0 auto;
   padding: clamp(18px, 3vw, 40px);
+  padding-bottom: 16px;
   color: var(--draw-page-strong);
 }
 

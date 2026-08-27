@@ -3,13 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
-  type PointerEvent as ReactPointerEvent,
 } from "react";
 
 import { useProduct } from "@/providers/product-provider";
@@ -96,31 +93,10 @@ function DrawTimeline({ draws }: { draws: readonly HomeDrawCardView[] }) {
 
 function NextDrawsPanel() {
   const now = useDrawClock();
-  const scrollerRef = useRef<HTMLDivElement>(null);
   const draws = useMemo(
     () => selectHomeDrawCards(now ?? Number.NaN),
     [now],
   );
-  const activeSlug = draws.find((draw) => draw.isNext)?.slug ?? null;
-
-  useEffect(() => {
-    const scroller = scrollerRef.current;
-    if (!scroller || !activeSlug || !window.matchMedia("(max-width: 767px)").matches) {
-      return;
-    }
-    const activeCard = scroller.querySelector<HTMLElement>(
-      `[data-draw-slug="${activeSlug}"]`,
-    );
-    if (!activeCard) return;
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const cardLeft = activeCard.getBoundingClientRect().left
-      - scroller.getBoundingClientRect().left
-      + scroller.scrollLeft;
-    scroller.scrollTo({
-      left: Math.max(0, cardLeft - 12),
-      behavior: reducedMotion ? "auto" : "smooth",
-    });
-  }, [activeSlug]);
 
   return (
     <section
@@ -133,10 +109,8 @@ function NextDrawsPanel() {
         <h2 id="home-draws-title">Próximos sorteos del día</h2>
       </header>
 
-      <div className={styles.drawScroller} ref={scrollerRef}>
-        <div className={styles.drawGrid}>
-          {draws.map((draw) => <DrawCard draw={draw} key={draw.id} />)}
-        </div>
+      <div className={styles.drawGrid} data-testid="home-draw-grid">
+        {draws.map((draw) => <DrawCard draw={draw} key={draw.id} />)}
       </div>
       <DrawTimeline draws={draws} />
     </section>
@@ -145,12 +119,10 @@ function NextDrawsPanel() {
 
 function ResultsSkeleton() {
   return (
-    <div aria-hidden="true" className={styles.resultsViewport}>
-      <div className={styles.resultsTrack}>
-        {[0, 1, 2, 3, 4, 5].map((slot) => (
-          <span className={styles.resultSkeleton} key={slot} />
-        ))}
-      </div>
+    <div aria-hidden="true" className={styles.resultsGrid}>
+      {[0, 1, 2, 3, 4, 5].map((slot) => (
+        <span className={styles.resultSkeleton} key={slot} />
+      ))}
     </div>
   );
 }
@@ -177,7 +149,7 @@ function ResultCard({ result }: { result: HomePublishedResultView }) {
   );
 }
 
-function ResultsCarousel({
+function PublishedResultsPanel({
   results,
   loading,
   emptyMessage,
@@ -187,45 +159,10 @@ function ResultsCarousel({
   emptyMessage: string;
 }) {
   const [selectedTab, setSelectedTab] = useState<HomeResultTabId>("head");
-  const [canScrollBack, setCanScrollBack] = useState(false);
-  const [canScrollForward, setCanScrollForward] = useState(false);
-  const [dragging, setDragging] = useState(false);
-  const viewportRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef({ active: false, startX: 0, startScrollLeft: 0 });
   const visibleResults = useMemo(
     () => results.filter((result) => result.tabId === selectedTab),
     [results, selectedTab],
   );
-
-  const updateScrollState = useCallback(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-    const maxScroll = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
-    setCanScrollBack(viewport.scrollLeft > 2);
-    setCanScrollForward(viewport.scrollLeft < maxScroll - 2);
-  }, []);
-
-  useEffect(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-    viewport.scrollTo({ left: 0, behavior: "auto" });
-    const frame = window.requestAnimationFrame(updateScrollState);
-    return () => window.cancelAnimationFrame(frame);
-  }, [selectedTab, visibleResults.length, updateScrollState]);
-
-  useEffect(() => {
-    const handleResize = () => updateScrollState();
-    const viewport = viewportRef.current;
-    const resizeObserver = viewport && typeof ResizeObserver !== "undefined"
-      ? new ResizeObserver(handleResize)
-      : null;
-    if (viewport) resizeObserver?.observe(viewport);
-    window.addEventListener("resize", handleResize);
-    return () => {
-      resizeObserver?.disconnect();
-      window.removeEventListener("resize", handleResize);
-    };
-  }, [loading, selectedTab, visibleResults.length, updateScrollState]);
 
   function handleTabKeyDown(
     event: ReactKeyboardEvent<HTMLButtonElement>,
@@ -242,46 +179,6 @@ function ResultsCarousel({
     const nextTab = HOME_RESULT_TABS[nextIndex];
     setSelectedTab(nextTab.id);
     document.getElementById(`home-results-tab-${nextTab.id}`)?.focus();
-  }
-
-  function scrollResults(direction: -1 | 1) {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    viewport.scrollBy({
-      left: direction * Math.max(180, viewport.clientWidth * 0.82),
-      behavior: reducedMotion ? "auto" : "smooth",
-    });
-  }
-
-  function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
-    if (event.pointerType !== "mouse" || event.button !== 0) return;
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-    dragRef.current = {
-      active: true,
-      startX: event.clientX,
-      startScrollLeft: viewport.scrollLeft,
-    };
-    setDragging(true);
-    event.currentTarget.setPointerCapture(event.pointerId);
-  }
-
-  function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
-    if (!dragRef.current.active || event.pointerType !== "mouse") return;
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-    viewport.scrollLeft = dragRef.current.startScrollLeft - (event.clientX - dragRef.current.startX);
-  }
-
-  function stopDragging(event: ReactPointerEvent<HTMLDivElement>) {
-    if (!dragRef.current.active) return;
-    dragRef.current.active = false;
-    setDragging(false);
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-    updateScrollState();
   }
 
   return (
@@ -305,7 +202,7 @@ function ResultsCarousel({
         <div aria-label="Modalidad de resultado" className={styles.resultTabs} role="tablist">
           {HOME_RESULT_TABS.map((tab, tabIndex) => (
             <button
-              aria-controls="home-results-carousel"
+              aria-controls="home-results-grid"
               aria-selected={selectedTab === tab.id}
               className={styles.resultTab}
               id={`home-results-tab-${tab.id}`}
@@ -320,27 +217,6 @@ function ResultsCarousel({
             </button>
           ))}
         </div>
-
-        <div aria-label="Controles del carrusel" className={styles.carouselControls}>
-          <button
-            aria-label="Ver resultados anteriores"
-            className={styles.carouselButton}
-            disabled={!canScrollBack}
-            onClick={() => scrollResults(-1)}
-            type="button"
-          >
-            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" /></svg>
-          </button>
-          <button
-            aria-label="Ver más resultados"
-            className={styles.carouselButton}
-            disabled={!canScrollForward}
-            onClick={() => scrollResults(1)}
-            type="button"
-          >
-            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" /></svg>
-          </button>
-        </div>
       </div>
 
       {loading ? (
@@ -348,27 +224,18 @@ function ResultsCarousel({
       ) : visibleResults.length > 0 ? (
         <div
           aria-labelledby={`home-results-tab-${selectedTab}`}
-          className={styles.resultsViewport}
-          data-dragging={dragging ? "true" : "false"}
-          id="home-results-carousel"
-          onPointerCancel={stopDragging}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={stopDragging}
-          onScroll={updateScrollState}
-          ref={viewportRef}
+          className={styles.resultsGrid}
+          id="home-results-grid"
           role="tabpanel"
           tabIndex={0}
         >
-          <div className={styles.resultsTrack}>
-            {visibleResults.map((result) => <ResultCard key={result.id} result={result} />)}
-          </div>
+          {visibleResults.map((result) => <ResultCard key={result.id} result={result} />)}
         </div>
       ) : (
         <div
           aria-labelledby={`home-results-tab-${selectedTab}`}
           className={styles.emptyResults}
-          id="home-results-carousel"
+          id="home-results-grid"
           role="tabpanel"
         >
           <p role="status">{emptyMessage}</p>
@@ -439,7 +306,7 @@ export function HomeSections() {
   return (
     <div className={styles.sections}>
       <NextDrawsPanel />
-      <ResultsCarousel
+      <PublishedResultsPanel
         emptyMessage={emptyResultsMessage}
         loading={waitingForResults}
         results={publishedResults}

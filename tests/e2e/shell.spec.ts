@@ -86,6 +86,39 @@ test("renders the accessible product shell without horizontal overflow", async (
 
   await expectInsideHorizontalViewport(shell, page);
   await expectNoHorizontalOverflow(page);
+
+  const drawCards = page.getByTestId("home-draw-card");
+  await expect(drawCards).toHaveCount(4);
+  for (const card of await drawCards.all()) {
+    await expectInsideHorizontalViewport(card, page);
+  }
+  const drawGrid = await page.getByTestId("home-draw-grid").evaluate((element) => ({
+    columns: getComputedStyle(element).gridTemplateColumns.split(" ").length,
+    scrollWidth: element.scrollWidth,
+    clientWidth: element.clientWidth,
+    height: element.getBoundingClientRect().height,
+  }));
+  expect(drawGrid.columns).toBe(page.viewportSize()!.width >= 1280 ? 4 : 2);
+  expect(drawGrid.scrollWidth).toBeLessThanOrEqual(drawGrid.clientWidth + 1);
+  if (page.viewportSize()!.width < 768) expect(drawGrid.height).toBeLessThanOrEqual(212);
+
+  const footer = page.locator(".q-site-footer");
+  const footerLinks = footer.getByRole("link");
+  await expect(footerLinks).toHaveCount(5);
+  const linkRows = await footerLinks.evaluateAll((links) =>
+    links.map((link) => Math.round(link.getBoundingClientRect().top)),
+  );
+  expect(new Set(linkRows).size).toBe(1);
+  for (const link of await footerLinks.all()) {
+    await expectInsideHorizontalViewport(link, page);
+  }
+  const footerGap = await page.getByRole("main").evaluate((element) => {
+    const footer = document.querySelector(".q-site-footer")!;
+    return footer.getBoundingClientRect().top - element.lastElementChild!.getBoundingClientRect().bottom;
+  });
+  expect(footerGap).toBeGreaterThanOrEqual(0);
+  expect(footerGap).toBeLessThanOrEqual(20);
+  await page.screenshot({ path: testInfo.outputPath("home-responsive.png"), fullPage: true });
 });
 
 test("shows only the enabled instant game", async ({

@@ -1,6 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
 const QA_VIEWPORTS = [
+  { name: "320x568", width: 320, height: 568 },
   { name: "360x800", width: 360, height: 800 },
   { name: "390x844", width: 390, height: 844 },
   { name: "430x932", width: 430, height: 932 },

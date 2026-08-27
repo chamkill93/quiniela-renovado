@@ -43,10 +43,6 @@
   text-transform: uppercase;
 }
 
-.drawScroller {
-  min-width: 0;
-}
-
 .drawGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -56,9 +52,9 @@
 .drawCard {
   position: relative;
   min-width: 0;
-  min-height: 128px;
+  min-height: 112px;
   display: grid;
-  grid-template-columns: 88px minmax(0, 1fr);
+  grid-template-columns: clamp(40px, 4.2vw, 80px) minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) auto;
   align-items: center;
   column-gap: 11px;
@@ -72,7 +68,6 @@
   color: var(--q-text);
   text-decoration: none;
   box-shadow: inset 0 1px rgb(255 255 255 / 4%), 0 10px 25px rgb(0 0 0 / 9%);
-  scroll-snap-align: start;
   transition:
     transform var(--q-duration-base) var(--q-ease-standard),
     border-color var(--q-duration-base) var(--q-ease-standard),
@@ -96,8 +91,7 @@
 .drawCard:focus-visible,
 .resultsLink:focus-visible,
 .resultTab:focus-visible,
-.carouselButton:focus-visible,
-.resultsViewport:focus-visible,
+.resultsGrid:focus-visible,
 .megaCta:focus-visible {
   outline: 3px solid var(--q-focus);
   outline-offset: 3px;
@@ -142,9 +136,9 @@
 
 .drawIcon[data-size="lg"] {
   grid-column: 1;
-  grid-row: 1 / 3;
-  width: 88px;
-  height: 88px;
+  grid-row: 1;
+  width: clamp(40px, 4.2vw, 80px);
+  height: clamp(40px, 4.2vw, 80px);
   filter: drop-shadow(0 11px 13px rgb(0 0 0 / 34%));
 }
 
@@ -188,12 +182,13 @@
 }
 
 .drawStatus {
+  grid-column: 1 / -1;
   min-width: 0;
   min-height: 25px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  justify-self: start;
+  justify-self: center;
   align-self: end;
   padding: 0 8px;
   border: 1px solid color-mix(in srgb, var(--q-red) 44%, var(--q-line));
@@ -215,7 +210,8 @@
   color: #ff8d94;
 }
 
-:global([data-theme="light"]) .drawStatus {
+:global([data-theme="light"]) .drawStatus,
+:global([data-theme="light"]) .drawCard[data-active="true"] .drawStatus {
   color: var(--q-red);
 }
 
@@ -282,7 +278,7 @@
 }
 
 .resultsPanel {
-  min-height: 218px;
+  min-height: 0;
 }
 
 .resultsLink {
@@ -296,6 +292,8 @@
   font-size: 0.68rem;
   font-weight: 850;
   text-decoration: none;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .resultsLink:hover {
@@ -320,24 +318,18 @@
 
 .resultTabs {
   min-width: 0;
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: center;
   gap: 4px;
-  overflow-x: auto;
   padding: 4px;
   border: 1px solid var(--q-line);
   border-radius: 13px;
   background: color-mix(in srgb, var(--q-panel-2) 82%, transparent);
-  scrollbar-width: none;
-}
-
-.resultTabs::-webkit-scrollbar,
-.resultsViewport::-webkit-scrollbar,
-.drawScroller::-webkit-scrollbar {
-  display: none;
 }
 
 .resultTab {
+  min-width: 0;
   min-height: 34px;
   flex: 0 0 auto;
   padding: 0 13px;
@@ -350,7 +342,7 @@
   font-size: 0.61rem;
   font-weight: 900;
   letter-spacing: 0.035em;
-  line-height: 1;
+  line-height: 1.25;
   transition: background var(--q-duration-base) var(--q-ease-standard), color var(--q-duration-base) var(--q-ease-standard);
 }
 
@@ -369,73 +361,18 @@
   color: var(--q-red);
 }
 
-.carouselControls {
-  flex: 0 0 auto;
-  display: flex;
-  gap: 7px;
-}
-
-.carouselButton {
-  width: 38px;
-  height: 38px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--q-line);
-  border-radius: 50%;
-  background: var(--q-panel-2);
-  color: var(--q-text);
-  cursor: pointer;
-  transition: border-color var(--q-duration-base) var(--q-ease-standard), background var(--q-duration-base) var(--q-ease-standard), opacity var(--q-duration-base) var(--q-ease-standard);
-}
-
-.carouselButton svg {
-  width: 17px;
-  height: 17px;
-}
-
-.carouselButton:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--q-red) 55%, var(--q-line));
-  background: color-mix(in srgb, var(--q-red) 10%, var(--q-panel-2));
-  color: var(--q-red-soft);
-}
-
-.carouselButton:disabled {
-  cursor: default;
-  opacity: 0.35;
-}
-
-.resultsViewport {
+.resultsGrid {
   min-width: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 2px 2px 7px;
-  border-radius: 15px;
-  cursor: grab;
-  overscroll-behavior-inline: contain;
-  scroll-behavior: smooth;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-  touch-action: pan-x pan-y;
-}
-
-.resultsViewport[data-dragging="true"] {
-  cursor: grabbing;
-  scroll-behavior: auto;
-  user-select: none;
-}
-
-.resultsTrack {
-  min-width: 100%;
-  display: flex;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  border-radius: 12px;
 }
 
 .resultCard,
 .resultSkeleton {
-  width: clamp(164px, calc((100% - 50px) / 6), 218px);
-  min-height: 126px;
-  flex: 0 0 clamp(164px, calc((100% - 50px) / 6), 218px);
-  scroll-snap-align: start;
+  min-width: 0;
+  min-height: 98px;
 }
 
 .resultCard {
@@ -445,9 +382,9 @@
   flex-direction: column;
   justify-content: center;
   overflow: hidden;
-  padding: 13px 14px 12px;
+  padding: 10px;
   border: 1px solid var(--q-line);
-  border-radius: 16px;
+  border-radius: 12px;
   background:
     radial-gradient(circle at 40% -45%, rgb(227 6 19 / 19%), transparent 65%),
     linear-gradient(145deg, color-mix(in srgb, var(--q-panel-2) 96%, #171d28), color-mix(in srgb, var(--q-panel) 96%, #080b10));
@@ -469,6 +406,7 @@
 .resultTopline {
   min-width: 0;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 7px;
@@ -476,15 +414,13 @@
 
 .resultModality {
   min-width: 0;
-  overflow: hidden;
   color: var(--q-muted-strong);
   font-size: 0.57rem;
   font-weight: 900;
   letter-spacing: 0.04em;
   line-height: 1.15;
-  text-overflow: ellipsis;
   text-transform: uppercase;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .resultPosition {
@@ -502,7 +438,7 @@
 .resultValue {
   margin-block: 5px 7px;
   color: var(--q-text-strong);
-  font-size: clamp(2rem, 2.7vw, 2.55rem);
+  font-size: clamp(1.65rem, 2.2vw, 2rem);
   font-variant-numeric: tabular-nums;
   font-weight: 950;
   letter-spacing: 0.065em;
@@ -527,9 +463,7 @@
 .resultMeta > span,
 .resultMeta > strong {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .resultMeta > strong {
@@ -741,10 +675,8 @@
     display: none;
   }
 
-  .resultCard,
-  .resultSkeleton {
-    width: calc((100% - 22px) / 3.35);
-    flex-basis: calc((100% - 22px) / 3.35);
+  .resultsGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .megaBanner {
@@ -782,6 +714,7 @@
   }
 
   .sectionHeader {
+    gap: 8px;
     margin-bottom: 10px;
   }
 
@@ -789,47 +722,56 @@
     font-size: 0.65rem;
   }
 
-  .drawScroller {
-    overflow-x: auto;
-    overflow-y: hidden;
-    margin-inline: -12px;
-    padding: 2px 20px 8px 12px;
-    overscroll-behavior-inline: contain;
-    scroll-padding-inline: 12px;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
-  }
-
   .drawGrid {
-    width: max-content;
-    display: grid;
-    grid-auto-columns: min(82vw, 310px);
-    grid-auto-flow: column;
-    grid-template-columns: none;
-    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
 
   .drawCard {
-    min-height: 120px;
-    grid-template-columns: 84px minmax(0, 1fr);
-    padding: 12px 12px 11px 9px;
+    min-height: 100px;
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 5px 6px;
+    padding: 20px 8px 8px;
+    border-radius: 13px;
   }
 
   .drawIcon[data-size="lg"] {
-    width: 84px;
-    height: 84px;
+    grid-row: 1;
+    width: 34px;
+    height: 34px;
   }
 
-  .drawContent {
-    padding-top: 10px;
+  .drawContent,
+  .drawCard:not([data-active="true"]) .drawContent {
+    grid-row: 1;
+    align-self: center;
+    padding-top: 0;
+  }
+
+  .drawLabel {
+    font-size: 0.62rem;
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
   }
 
   .drawTime {
-    font-size: 1.45rem;
+    font-size: 1.25rem;
   }
 
-  .resultsPanel {
-    min-height: 230px;
+  .nextBadge {
+    min-height: 17px;
+    padding-inline: 6px;
+    border-radius: 0 12px 0 8px;
+    font-size: 0.5rem;
+  }
+
+  .drawStatus {
+    grid-column: 1 / -1;
+    justify-self: center;
+    min-height: 20px;
+    font-size: 0.56rem;
+    letter-spacing: 0;
   }
 
   .resultsToolbar {
@@ -838,42 +780,34 @@
   }
 
   .resultTabs {
-    margin-right: -5px;
+    width: 100%;
+    gap: 2px;
+    padding: 3px;
   }
 
   .resultTab {
     min-height: 44px;
-    padding-inline: 11px;
-    font-size: 0.56rem;
+    padding-inline: 2px;
+    font-size: 0.58rem;
+    letter-spacing: 0;
   }
 
-  .carouselControls {
-    display: none;
-  }
-
-  .resultsViewport {
-    margin-inline: -12px;
-    padding: 2px 12px 8px;
-    scroll-padding-inline: 12px;
-  }
-
-  .resultsTrack {
-    gap: 9px;
+  .resultsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
   }
 
   .resultCard,
   .resultSkeleton {
-    width: min(66vw, 270px);
-    min-height: 132px;
-    flex-basis: min(66vw, 270px);
+    min-height: 90px;
   }
 
   .resultCard {
-    padding: 13px;
+    padding: 9px;
   }
 
   .resultValue {
-    font-size: 2.35rem;
+    font-size: 1.75rem;
   }
 
   .megaBanner {
@@ -922,17 +856,14 @@
 }
 
 @media (max-width: 390px) {
-  .drawGrid {
-    grid-auto-columns: min(86vw, 292px);
-  }
-
   .drawCard {
-    grid-template-columns: 76px minmax(0, 1fr);
+    grid-template-columns: 28px minmax(0, 1fr);
+    column-gap: 5px;
   }
 
   .drawIcon[data-size="lg"] {
-    width: 76px;
-    height: 76px;
+    width: 28px;
+    height: 28px;
   }
 
   .drawStatus {
@@ -945,10 +876,7 @@
 @media (prefers-reduced-motion: reduce) {
   .drawCard,
   .resultTab,
-  .carouselButton,
-  .megaCta,
-  .resultsViewport {
-    scroll-behavior: auto;
+  .megaCta {
     transition: none;
   }
 

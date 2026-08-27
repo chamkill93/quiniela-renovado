@@ -16,6 +16,7 @@ import { buildGamingCatalog } from "@/lib/gaming";
 import {
   activeNavigation,
   E2E_SELECTORS,
+  expectInsideHorizontalViewport,
   expectNoHorizontalOverflow,
   installThemePreference,
   themeFromProjectName,
@@ -452,29 +453,27 @@ test("completes Home with scheduled draws, tabbed results and the official Mega 
   expect(verticalOrder).toEqual([...verticalOrder].sort((a, b) => a - b));
 
   const viewportWidth = page.viewportSize()?.width ?? 0;
-  if (viewportWidth >= 1_280) {
-    const drawColumns = await drawsSection.locator("div").nth(1).evaluate((element) =>
-      getComputedStyle(element).gridTemplateColumns.split(" ").filter(Boolean).length,
-    );
-    expect(drawColumns).toBe(4);
-  } else if (viewportWidth < 768) {
-    const activePosition = await page.locator('[data-testid="home-draw-card"][data-active="true"]').evaluate(
-      (element) => {
-        const card = element.getBoundingClientRect();
-        const scroller = element.parentElement?.parentElement?.getBoundingClientRect();
-        return scroller ? card.left - scroller.left : Number.POSITIVE_INFINITY;
-      },
-    );
-    expect(activePosition).toBeLessThanOrEqual(18);
+  const drawColumns = await page.getByTestId("home-draw-grid").evaluate((element) =>
+    getComputedStyle(element).gridTemplateColumns.split(" ").filter(Boolean).length,
+  );
+  expect(drawColumns).toBe(viewportWidth >= 1_280 ? 4 : 2);
+  for (const card of await drawCards.all()) {
+    await expectInsideHorizontalViewport(card, page);
   }
 
-  if (viewportWidth >= 768) {
-    const nextButton = resultsSection.getByRole("button", { name: "Ver más resultados" });
-    await expect(nextButton).toBeEnabled();
-    const initialScroll = await resultsSection.locator('[role="tabpanel"]').evaluate((element) => element.scrollLeft);
-    await nextButton.click();
-    await expect.poll(() => resultsSection.locator('[role="tabpanel"]').evaluate((element) => element.scrollLeft)).toBeGreaterThan(initialScroll);
-  } else {
+  await expect(resultsSection.getByRole("button", { name: "Ver más resultados" })).toHaveCount(0);
+  for (const card of await resultCards.all()) {
+    await expectInsideHorizontalViewport(card, page);
+  }
+  const resultGrid = await resultsSection.getByRole("tabpanel").evaluate((element) => ({
+    scrollWidth: element.scrollWidth,
+    clientWidth: element.clientWidth,
+    display: getComputedStyle(element).display,
+  }));
+  expect(resultGrid.display).toBe("grid");
+  expect(resultGrid.scrollWidth).toBeLessThanOrEqual(resultGrid.clientWidth + 1);
+
+  if (viewportWidth < 768) {
     const widths = await Promise.all([
       megaBanner.evaluate((element) => element.getBoundingClientRect().width),
       megaCta.evaluate((element) => element.getBoundingClientRect().width),
@@ -493,6 +492,44 @@ test("completes Home with scheduled draws, tabbed results and the official Mega 
   ).toBeVisible();
   await expect(page.locator("iframe")).toHaveCount(0);
   await expectNoHorizontalOverflow(page);
+});
+
+test("keeps a compact footer with all legal links together across the menus", async ({ page }) => {
+  test.setTimeout(120_000);
+  for (const route of [
+    "/quinielas", "/instantaneas", "/instantaneas/sapyaite", "/mis-jugadas",
+    "/cuenta", "/reglas", "/resultados", "/saldos", "/ayuda",
+    "/legal/terminos", "/legal/privacidad",
+  ]) {
+    await page.goto(route, { waitUntil: "domcontentloaded" });
+    const footer = page.locator(".q-site-footer");
+    const links = footer.getByRole("navigation").getByRole("link");
+    await expect(links).toHaveCount(5);
+    await expect(footer.getByRole("link", { name: "Términos", exact: true })).toHaveAttribute("href", "/legal/terminos");
+    await expect(footer.getByRole("link", { name: "Privacidad", exact: true })).toHaveAttribute("href", "/legal/privacidad");
+    const rows = await links.evaluateAll((elements) => elements.map((element) =>
+      Math.round(element.getBoundingClientRect().top),
+    ));
+    expect(new Set(rows).size, route).toBe(1);
+    const gap = await page.getByRole("main").evaluate((element) => {
+      const footer = document.querySelector(".q-site-footer")!;
+      return footer.getBoundingClientRect().top - element.lastElementChild!.getBoundingClientRect().bottom;
+    });
+    expect(gap, route).toBeGreaterThanOrEqual(0);
+    expect(gap, route).toBeLessThanOrEqual(24);
+    await footer.scrollIntoViewIfNeeded();
+    for (const link of await links.all()) await expectInsideHorizontalViewport(link, page);
+    if (page.viewportSize()!.width < 980) {
+      // Wallet/session content can grow after hydration; check the settled layout.
+      await expect(async () => {
+        await footer.scrollIntoViewIfNeeded();
+        const legalBottom = await links.last().evaluate((element) => element.getBoundingClientRect().bottom);
+        const navTop = await page.getByRole("navigation", { name: "Navegación móvil", exact: true }).evaluate((element) => element.getBoundingClientRect().top);
+        expect(legalBottom, route).toBeLessThanOrEqual(navTop);
+      }).toPass({ timeout: 10_000 });
+    }
+    await expectNoHorizontalOverflow(page);
+  }
 });
 
 test("shows only four traditional games and retires the former direct routes", async ({
