@@ -1,21 +1,14 @@
-.toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; padding: 14px; border: 1px solid var(--q-line); border-radius: 16px; background: var(--q-panel); }
-.dateField { display: grid; gap: 6px; min-width: 0; color: var(--q-text); font-size: .8rem; font-weight: 700; }
-.dateField input { min-width: 0; width: 100%; box-sizing: border-box; min-height: 44px; padding: 9px 12px; border: 1px solid var(--q-line); border-radius: 10px; color: var(--q-text); background: var(--q-panel-2); font: inherit; font-size: 1rem; }
-.clear { min-height: 44px; padding: 9px 12px; border: 1px solid var(--q-line); border-radius: 10px; background: transparent; color: var(--q-text); font-size: .78rem; font-weight: 700; cursor: pointer; }
-.clear:disabled { opacity: .5; cursor: default; }
+.heading { display: grid; justify-items: center; gap: clamp(20px, 3vw, 28px); min-width: 0; text-align: center; }
 .hint { margin: 0; color: var(--q-muted); font-size: .73rem; line-height: 1.5; }
-.dateField input:focus-visible, .clear:focus-visible, .details summary:focus-visible { outline: 3px solid var(--q-red); outline-offset: 3px; }
+.details summary:focus-visible { outline: 3px solid var(--q-red); outline-offset: 3px; }
 .days { display: grid; gap: 24px; scroll-margin-top: 100px; }
-.pagination { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--q-line); border-radius: 14px; background: var(--q-panel); }
+.pagination { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: center; gap: 12px; width: min(100%, 560px); min-width: 0; box-sizing: border-box; padding: 12px; border: 1px solid var(--q-line); border-radius: 16px; background: var(--q-panel); }
 .pagination button { min-height: 44px; min-width: 0; padding: 8px 12px; border: 1px solid var(--q-line); border-radius: 9px; background: var(--q-panel-2); color: var(--q-text); font: inherit; font-size: .78rem; font-weight: 700; cursor: pointer; }
 .pagination button:disabled { opacity: .45; cursor: default; }
 .pagination button:not(:disabled):hover { border-color: var(--q-red); }
 .pagination button:focus-visible, .days:focus-visible { outline: 2px solid var(--q-red); outline-offset: 3px; }
-.pagination div { display: grid; gap: 4px; text-align: center; }
-.pagination strong { color: var(--q-text); font-size: .8rem; }
-.pagination span { color: var(--q-muted); font-size: .7rem; }
 .day { min-width: 0; }
-.dayHeader { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.dayHeader { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-bottom: 12px; text-align: center; }
 .dayHeader h2 { margin: 0; color: var(--q-text); font-size: clamp(1rem, 2vw, 1.2rem); line-height: 1.4; }
 .dayHeader span { color: var(--q-muted); font-size: .72rem; }
 .drawGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: start; gap: 12px; }
@@ -40,8 +33,20 @@
 .missing p { margin: 0; color: var(--q-muted); font-size: .72rem; line-height: 1.5; }
 .details { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--q-line); }
 .details summary { min-height: 36px; align-content: center; color: var(--draw-color); cursor: pointer; font-size: .72rem; font-weight: 700; }
-.publication { padding-top: 12px; }
-.publication h4 { margin: 0 0 6px; color: var(--q-text); font-size: .75rem; overflow-wrap: anywhere; }
+.postures { min-width: 0; padding-top: 12px; }
+.postures h4 { margin: 0 0 8px; color: var(--q-text); font-size: .75rem; overflow-wrap: anywhere; }
+.postureTable { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; overflow: hidden; border: 1px solid var(--q-line); border-radius: 10px; font-variant-numeric: tabular-nums; }
+.postureTable th, .postureTable td { padding: 7px 6px; text-align: center; }
+.postureTable thead th { color: var(--q-muted); background: var(--q-panel-2); font-size: .65rem; font-weight: 700; }
+.postureTable tbody th { color: var(--q-muted); font-size: .72rem; font-weight: 650; }
+.postureTable tbody td { color: var(--q-text); font-size: 1rem; font-weight: 800; }
+.postureTable tbody tr + tr > * { border-top: 1px solid var(--q-line); }
+.postureTable tr[data-head="true"] > * { color: var(--draw-color); background: color-mix(in srgb, var(--draw-color) 16%, var(--q-panel-2)); }
+:global([data-theme="light"]) .postureTable tr[data-head="true"] > * { color: color-mix(in srgb, var(--draw-color) 70%, var(--q-text)); }
+.postureTable tr[data-head="true"] td { font-size: 1.15rem; }
+.headLabel { display: block; margin-top: 3px; font-size: .58rem; line-height: 1.35; }
+.postureUnavailable { color: var(--q-muted); font-weight: 500; }
+.unpositioned { display: grid; gap: 6px; margin-top: 12px; }
 .values { display: flex; flex-wrap: wrap; gap: 5px; margin: 0; padding: 0; list-style: none; }
 .values li { max-width: 100%; padding: 5px 7px; border: 1px solid var(--q-line); border-radius: 6px; background: var(--q-panel-2); color: var(--q-text); font-size: .85rem; font-weight: 750; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .other { display: grid; gap: 10px; }
@@ -55,9 +60,6 @@
   .drawHeader { gap: 5px; }
   .drawHeader h3 { font-size: .75rem; }
   .drawHeader > span[role="img"] { width: 36px; }
-  .toolbar { align-items: stretch; }
-  .dateField, .clear { flex: 1 1 100%; }
-  .pagination { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .pagination div { grid-column: 1 / -1; grid-row: 1; }
+  .pagination { gap: 8px; padding: 10px; }
   .pagination button { padding: 8px; font-size: .72rem; }
 }

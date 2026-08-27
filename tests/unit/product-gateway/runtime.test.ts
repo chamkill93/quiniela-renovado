@@ -62,6 +62,7 @@ describe("product gateway runtime composition", () => {
     expect(gateway.mode).toBe("backoffice");
     expect(gateway.capabilities).toEqual({
       wallet: false,
+      withdrawal: false,
       persistentRegistration: true,
     });
     expect(resolveBackofficeProductConfiguration(environment)).toMatchObject({

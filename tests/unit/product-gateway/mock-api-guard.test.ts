@@ -58,20 +58,23 @@ describe("mock API proxy", () => {
     vi.unstubAllEnvs();
   });
 
-  it("returns a non-cacheable 404 in backoffice mode", async () => {
-    vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("NEXT_PUBLIC_PRODUCT_GATEWAY_MODE", "backoffice");
+  it.each(["bootstrap", "wallet/movements", "wallet/topup", "wallet/withdrawal"])(
+    "returns a non-cacheable 404 for %s in backoffice mode",
+    async (path) => {
+      vi.stubEnv("NODE_ENV", "production");
+      vi.stubEnv("NEXT_PUBLIC_PRODUCT_GATEWAY_MODE", "backoffice");
 
-    const response = proxy(
-      new NextRequest("https://quinie.example/api/mock/bootstrap"),
-    );
+      const response = proxy(
+        new NextRequest("https://quinie.example/api/mock/" + path),
+      );
 
-    expect(response.status).toBe(404);
-    expect(response.headers.get("Cache-Control")).toBe("no-store");
-    await expect(response.json()).resolves.toEqual({
-      error: { code: "NOT_FOUND", message: "Not Found" },
-    });
-  });
+      expect(response.status).toBe(404);
+      expect(response.headers.get("Cache-Control")).toBe("no-store");
+      await expect(response.json()).resolves.toEqual({
+        error: { code: "NOT_FOUND", message: "Not Found" },
+      });
+    },
+  );
 
   it("continues to the preview handler only in explicit production preview", () => {
     vi.stubEnv("NODE_ENV", "production");

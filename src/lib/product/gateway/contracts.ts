@@ -5,6 +5,7 @@ import type {
   PlaceTraditionalPlayRequest,
   RegisterUserRequest,
 } from "@/lib/backoffice";
+import type { AccountGateway } from "@/lib/account/contracts";
 import type {
   GamingCatalog,
   TopupMethod,
@@ -30,6 +31,8 @@ export interface ProductGatewayRequestOptions {
 
 export interface ProductGatewayMutationOptions extends ProductGatewayRequestOptions {
   idempotencyKey?: string;
+  /** Preview mutations reject a cookie belonging to a different displayed session. */
+  expectedSessionId?: string;
 }
 
 export interface ProductSnapshot {
@@ -41,8 +44,8 @@ export interface ProductSnapshot {
 
 export interface ProductAuthenticationResponse {
   session: MockSession;
-  /** Makes it explicit that preview registration is a non-persistent fixture. */
-  source: "preview-fixture" | "backoffice";
+  /** Distinguishes isolated fixtures from server sessions and persistent backoffice identity. */
+  source: "preview-fixture" | "preview-session" | "backoffice";
 }
 
 export interface ProductTopUpInput {
@@ -56,9 +59,14 @@ export interface ProductTopUpResponse {
   replayed: boolean;
 }
 
+export type ProductWithdrawalInput = ProductTopUpInput;
+export type ProductWithdrawalResponse = ProductTopUpResponse;
+
 export interface ProductGatewayCapabilities {
   /** Wallet remains disabled until both external endpoint contracts are supplied. */
   wallet: boolean;
+  /** Explicit opt-in; a wallet integration does not imply a withdrawal contract. */
+  withdrawal?: boolean;
   /** Preview registration is a fixture; only backoffice mode persists a user. */
   persistentRegistration: boolean;
 }
@@ -68,6 +76,7 @@ export interface ProductGatewayCapabilities {
  * balances, results, payouts or account state.
  */
 export interface ProductGateway {
+  readonly account?: AccountGateway;
   readonly mode: ProductGatewayMode;
   readonly capabilities: Readonly<ProductGatewayCapabilities>;
   bootstrap(options?: ProductGatewayRequestOptions): Promise<ProductSnapshot>;
@@ -94,10 +103,19 @@ export interface ProductGateway {
     input: ProductTopUpInput,
     options?: ProductGatewayMutationOptions,
   ): Promise<ProductTopUpResponse>;
+  withdraw?(
+    input: ProductWithdrawalInput,
+    options?: ProductGatewayMutationOptions,
+  ): Promise<ProductWithdrawalResponse>;
 }
 
 export interface PreviewProductEndpoints {
   bootstrap: string;
+  register: string;
+  account: string;
+  accountLimits: string;
+  accountPause: string;
+  accountProfile: string;
   login: string;
   logout: string;
   instantPlay: string;
@@ -107,6 +125,7 @@ export interface PreviewProductEndpoints {
   results: string;
   walletMovements: string;
   walletTopUp: string;
+  walletWithdrawal: string;
 }
 
 export interface PublicProductGatewayEnvironment {

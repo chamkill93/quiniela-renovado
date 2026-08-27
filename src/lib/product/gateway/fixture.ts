@@ -15,10 +15,13 @@ import type {
   ProductSnapshot,
   ProductTopUpInput,
   ProductTopUpResponse,
+  ProductWithdrawalInput,
+  ProductWithdrawalResponse,
 } from "./contracts";
 import {
   assertPlayResponseMatchesCommand,
   assertTopUpResponseMatchesInput,
+  assertWithdrawalResponseMatchesInput,
 } from "./response-contract";
 
 export type FixtureProductGatewayOperation =
@@ -30,6 +33,7 @@ export type FixtureProductGatewayOperation =
   | "getResults"
   | "getMovements"
   | "topUp"
+  | "withdraw"
   | "logout";
 
 export type FixtureProductGatewayFailureFactory = (
@@ -73,6 +77,7 @@ export interface FixtureProductGatewayConfig {
   results?: readonly MockResult[];
   movements?: readonly WalletMovement[];
   topUp?: ProductTopUpResponse;
+  withdrawal?: ProductWithdrawalResponse;
   /** Immediate, preconfigured transport or domain failures by operation. */
   failures?: Partial<
     Record<FixtureProductGatewayOperation, FixtureProductGatewayFailure>
@@ -149,6 +154,7 @@ export class FixtureProductGateway implements ProductGateway {
       wallet:
         this.fixtures.movements !== undefined &&
         this.fixtures.topUp !== undefined,
+      withdrawal: this.fixtures.withdrawal !== undefined,
       persistentRegistration: false,
     });
   }
@@ -232,6 +238,18 @@ export class FixtureProductGateway implements ProductGateway {
       options?.signal,
     );
     return assertTopUpResponseMatchesInput(response, input);
+  }
+
+  async withdraw(
+    input: ProductWithdrawalInput,
+    options?: ProductGatewayMutationOptions,
+  ) {
+    const response = await this.response(
+      "withdraw",
+      this.fixtures.withdrawal,
+      options?.signal,
+    );
+    return assertWithdrawalResponseMatchesInput(response, input);
   }
 
   private async response<T>(

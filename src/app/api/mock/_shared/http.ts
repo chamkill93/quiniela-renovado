@@ -30,6 +30,12 @@ const STATUS_BY_CODE: Record<GamingErrorCode, number> = {
   GAME_NOT_FOUND: 404,
   DRAW_NOT_AVAILABLE: 409,
   INSUFFICIENT_BALANCE: 409,
+  ACCOUNT_LIMIT_INCREASE: 409,
+  ACCOUNT_PAUSE_SHORTENED: 409,
+  ACCOUNT_PAUSED: 423,
+  ACCOUNT_TIME_LIMIT: 423,
+  ACCOUNT_AMOUNT_LIMIT: 409,
+  ACCOUNT_SESSION_CHANGED: 409,
   IDEMPOTENCY_KEY_REQUIRED: 400,
   IDEMPOTENCY_CONFLICT: 409,
   PLAY_NOT_FOUND: 404,
@@ -49,6 +55,14 @@ export function requireSessionId(request: NextRequest): string {
   const sessionId = request.cookies.get(MOCK_SESSION_COOKIE)?.value;
   if (!sessionId) {
     throw new GamingDomainError("SESSION_REQUIRED", "Ingresá para continuar.");
+  }
+  return sessionId;
+}
+
+export function requireAccountSessionId(request: NextRequest): string {
+  const sessionId = requireSessionId(request);
+  if (request.headers.get("X-Account-Session") !== sessionId) {
+    throw new GamingDomainError("ACCOUNT_SESSION_CHANGED", "La sesión cambió. Actualizá la página antes de modificar tu cuenta.");
   }
   return sessionId;
 }

@@ -314,7 +314,7 @@ describe("AccountClient integrado con ProductProvider", () => {
     expect(screen.getByText("Ingresá un documento o teléfono válido.")).toBeTruthy();
   });
 
-  it("identifica explícitamente el registro fixture como no persistente", async () => {
+  it("confirma el registro con presentación de cuenta personal", async () => {
     const gateway = createFixtureProductGateway(fixtureConfig());
     const user = renderAccount(gateway);
 
@@ -335,9 +335,9 @@ describe("AccountClient integrado con ProductProvider", () => {
 
     expect(await screen.findByRole("heading", { name: "Cuenta" })).toBeTruthy();
     expect((await screen.findByRole("status")).textContent).toContain(
-      "Registro simulado para esta vista previa; no se creó una cuenta persistente.",
+      "Registro completado. Ya podés gestionar tu cuenta.",
     );
-    expect(screen.getByText("Fixture de vista previa")).toBeTruthy();
+    expect(screen.getByText("Cuenta personal")).toBeTruthy();
   });
 
   it("normaliza USER_EXISTS durante el registro sin iniciar una sesión", async () => {

@@ -1,3 +1,5 @@
+import type { PositionedDrawNumber } from "@/lib/gaming/types";
+
 export type UserRole = "PLAYER" | "ADMIN";
 
 export interface MockSession {
@@ -52,6 +54,7 @@ export interface MockResult {
   source?: "DRAW" | "INSTANT";
   numbers?: string[];
   resultNumbers?: string[];
+  drawNumbers?: PositionedDrawNumber[];
   result?: string;
   occurredAt?: string;
   publishedAt?: string;

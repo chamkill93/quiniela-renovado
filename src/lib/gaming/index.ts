@@ -8,12 +8,17 @@ export {
   instantPlayRequestSchema,
   mockLoginRequestSchema,
   traditionalPlayRequestSchema,
+  walletAmountSchema,
+  walletMethodSchema,
   walletTopupRequestSchema,
+  walletWithdrawalRequestSchema,
   type InstantPlayRequest,
   type MockLoginRequest,
   type TraditionalPlayRequest,
   type WalletTopupRequest,
+  type WalletWithdrawalRequest,
 } from "./schemas";
+export { WALLET_MAX_AMOUNT, WALLET_METHODS, WALLET_MIN_AMOUNT } from "./types";
 export type {
   GamingCatalog,
   GamingPlay,
@@ -26,5 +31,6 @@ export type {
   PlayStatus,
   TraditionalGameId,
   TopupResponse,
+  WithdrawalResponse,
   WalletMovement,
 } from "./types";

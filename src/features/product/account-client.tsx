@@ -2,8 +2,8 @@
 
 import { FormEvent, useRef, useState } from "react";
 import { useProduct } from "@/providers/product-provider";
-import { formatGs } from "@/lib/product/catalog";
 import { publicProductErrorMessage } from "@/lib/product/public-error";
+import { AccountDashboard } from "./account-dashboard";
 import { SectionHeader } from "./section-header";
 import styles from "./product.module.css";
 
@@ -95,12 +95,13 @@ export function accountErrorMessage(
 
 export function AccountClient() {
   const {
+    account,
     session,
     loading,
     login,
     register,
     logout,
-    persistentRegistration,
+    gatewayMode,
     error: gatewayError,
     unauthorized,
     refresh,
@@ -173,11 +174,7 @@ export function AccountClient() {
           password,
           acceptedTerms,
         });
-        setStatus(
-          persistentRegistration
-            ? "Registro completado. Tu cuenta ya está lista."
-            : "Registro simulado para esta vista previa; no se creó una cuenta persistente.",
-        );
+        setStatus("Registro completado. Ya podés gestionar tu cuenta.");
       } else {
         await login(identifier.trim(), password);
       }
@@ -215,46 +212,19 @@ export function AccountClient() {
   }
 
   if (session) {
-    const initials = session.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
     return (
-      <main className={styles.page}>
-        <SectionHeader eyebrow="Tu espacio" title="Cuenta" description="Gestioná tu sesión y consultá la información principal de tu perfil." />
-        <div className={styles.accountGrid}>
-          <section className={styles.contentCard}>
-            <div className={styles.profileHero}>
-              <span className={styles.avatarLarge} aria-hidden="true">{initials}</span>
-              <div><p className={styles.eyebrow}>{session.role === "ADMIN" ? "Sesión de operador" : "Cuenta personal"}</p><h2 className={styles.sectionTitle}>{session.displayName}</h2></div>
-            </div>
-            <dl className={styles.summaryList} style={{ marginTop: 24 }}>
-              <div className={styles.summaryRow}><dt>Saldo disponible</dt><dd>{formatGs(session.balance)}</dd></div>
-              <div className={styles.summaryRow}><dt>Moneda</dt><dd>{session.currency}</dd></div>
-              <div className={styles.summaryRow}><dt>Sesión</dt><dd>{persistentRegistration ? "Sesión segura" : "Fixture de vista previa"}</dd></div>
-            </dl>
-            {status ? (
-              <div className={styles.statusBox} role="status" style={{ marginTop: 20 }}>
-                {status}
-              </div>
-            ) : null}
-            {gatewayError ? (
-              <div className={styles.errorBox} role="alert" style={{ marginTop: 20 }}>
-                <p>{gatewayError}</p>
-                <button className={styles.quietButton} onClick={() => void refresh()} type="button">
-                  Reintentar actualización
-                </button>
-              </div>
-            ) : null}
-          </section>
-          <aside className={styles.contentCard}>
-            <p className={styles.eyebrow}>Seguridad</p>
-            <h2 className={styles.sectionTitle}>Control de sesión</h2>
-            <p className={styles.lede}>Cerrá tu sesión cuando uses un dispositivo compartido.</p>
-            {logoutError ? <div className={styles.errorBox} ref={logoutErrorRef} role="alert" tabIndex={-1}>{logoutError}</div> : null}
-            <button aria-busy={logoutPending} className={styles.secondaryButton} disabled={logoutPending} onClick={() => void endSession()} style={{ marginTop: 22 }} type="button">
-              {logoutPending ? "Cerrando sesión…" : "Cerrar sesión"}
-            </button>
-          </aside>
-        </div>
-      </main>
+      <AccountDashboard
+        account={account}
+        gatewayError={gatewayError}
+        key={`${gatewayMode}:${session.id}`}
+        logoutError={logoutError}
+        logoutErrorRef={logoutErrorRef}
+        logoutPending={logoutPending}
+        onLogout={endSession}
+        refresh={refresh}
+        session={session}
+        status={status}
+      />
     );
   }
 

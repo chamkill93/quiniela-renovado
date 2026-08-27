@@ -26,7 +26,7 @@ export function MegaLotoCatalogCard() {
         />
       </span>
       <strong>Mega Loto</strong>
-      <p>Elegí 6 números del 1 al 45.</p>
+      <p>Elegí 6 números del 1 al 40 y ganá el Megapozo.</p>
       <span className={styles.gameCardFooter}>
         <span aria-hidden="true" className={styles.cardCta}>Jugar ↗</span>
       </span>

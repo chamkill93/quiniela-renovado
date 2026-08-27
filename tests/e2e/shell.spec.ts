@@ -48,7 +48,14 @@ test("renders the accessible product shell without horizontal overflow", async (
   const reel = hero.locator("[data-reel-source]");
   const artwork = reel.locator('img[src*="rodillo-fuego"]');
   await expect(hero).toBeVisible();
+  await expect(hero.getByRole("heading", { level: 1, name: "Tu jugada empieza acá." })).toBeVisible();
+  await expect(hero.getByRole("link", { name: /^Jugar/ })).toHaveCount(1);
+  await expect(hero.getByRole("link", { name: "Jugar Quiniela" })).toHaveAttribute("href", "/quinielas");
+  await expect(hero.getByRole("link", { name: "Jugar Sapy’aite" })).toHaveCount(0);
+  await expect(hero.getByText(/^Próximo sorteo$/i)).toHaveCount(0);
   await expect(artwork).toBeVisible();
+  await expect(artwork).toHaveCSS("opacity", "1");
+  await expect(artwork).toHaveCSS("filter", "saturate(1.08) contrast(1.03)");
   await expect.poll(() => artwork.evaluate(
     (element) => (element as HTMLImageElement).naturalWidth,
   )).toBeGreaterThan(0);
@@ -75,9 +82,8 @@ test("renders the accessible product shell without horizontal overflow", async (
       visualWidth: visualBox.width,
     };
   });
-  const theme = themeFromProjectName(testInfo.project.name);
-  expect(heroMetrics.fireAlpha).toBeGreaterThanOrEqual(theme === "dark" ? 0.75 : 0.25);
-  expect(heroMetrics.fireAlpha).toBeLessThanOrEqual(theme === "dark" ? 1 : 0.45);
+  expect(heroMetrics.fireAlpha).toBeGreaterThanOrEqual(0.75);
+  expect(heroMetrics.fireAlpha).toBeLessThanOrEqual(1);
   expect(heroMetrics.visualWidth).toBeLessThanOrEqual(761);
   expect(heroMetrics.visualRight).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
   if (page.viewportSize()!.width <= 1180) {
@@ -103,15 +109,35 @@ test("renders the accessible product shell without horizontal overflow", async (
   if (page.viewportSize()!.width < 768) expect(drawGrid.height).toBeLessThanOrEqual(212);
 
   const footer = page.locator(".q-site-footer");
+  const footerNavigation = footer.getByRole("navigation", { name: "Información y ayuda" });
   const footerLinks = footer.getByRole("link");
   await expect(footerLinks).toHaveCount(5);
-  const linkRows = await footerLinks.evaluateAll((links) =>
-    links.map((link) => Math.round(link.getBoundingClientRect().top)),
-  );
-  expect(new Set(linkRows).size).toBe(1);
-  for (const link of await footerLinks.all()) {
-    await expectInsideHorizontalViewport(link, page);
+  // Different OS fallback fonts have wider labels; keep the complete links visible.
+  for (const fontFamily of ["", "Verdana, sans-serif"]) {
+    await footerNavigation.evaluate((element, font) => {
+      (element as HTMLElement).style.fontFamily = font;
+    }, fontFamily);
+    const linkLayout = await footerLinks.evaluateAll((links) =>
+      links.map((link) => ({
+        top: Math.round(link.getBoundingClientRect().top),
+        height: link.getBoundingClientRect().height,
+        clientWidth: link.clientWidth,
+        scrollWidth: link.scrollWidth,
+      })),
+    );
+    expect(new Set(linkLayout.map((link) => link.top)).size).toBe(1);
+    for (const link of linkLayout) {
+      expect(link.height).toBeGreaterThanOrEqual(44);
+      expect(link.scrollWidth).toBeLessThanOrEqual(link.clientWidth + 1);
+    }
+    for (const link of await footerLinks.all()) {
+      await expectInsideHorizontalViewport(link, page);
+    }
+    await expectNoHorizontalOverflow(page);
   }
+  await footerNavigation.evaluate((element) => {
+    (element as HTMLElement).style.removeProperty("font-family");
+  });
   const footerGap = await page.getByRole("main").evaluate((element) => {
     const footer = document.querySelector(".q-site-footer")!;
     return footer.getBoundingClientRect().top - element.lastElementChild!.getBoundingClientRect().bottom;
@@ -145,6 +171,29 @@ test("shows six compact Quinielas cards with Sapy’aite and green Mega Loto", a
   const allCards = grid.getByRole("link");
   await expect(allCards).toHaveCount(6);
   await expect(grid.getByTestId("mega-loto-card")).toHaveAttribute("data-tone", "green");
+  const megaDescription = grid.getByTestId("mega-loto-card").locator("p");
+  await expect(megaDescription).toHaveText("Elegí 6 números del 1 al 40 y ganá el Megapozo.");
+  const descriptionSize = await megaDescription.evaluate((element) => ({
+    contentHeight: element.scrollHeight,
+    visibleHeight: element.clientHeight,
+  }));
+  expect(descriptionSize.contentHeight).toBeLessThanOrEqual(descriptionSize.visibleHeight + 1);
+  const instantCategory = grid.getByRole("region", { name: "Instantáneas", exact: true });
+  const lotosCategory = grid.getByRole("region", { name: "Lotos", exact: true });
+  for (const category of [instantCategory, lotosCategory]) {
+    const subtitle = category.getByRole("heading", { level: 2 });
+    await expect(subtitle).toBeVisible();
+    await expectInsideHorizontalViewport(subtitle, page);
+    const subtitleBox = (await subtitle.boundingBox())!;
+    const cardBox = (await category.getByRole("link").boundingBox())!;
+    expect(subtitleBox.y + subtitleBox.height).toBeLessThanOrEqual(cardBox.y);
+    expect(cardBox.y - subtitleBox.y - subtitleBox.height).toBeLessThanOrEqual(8);
+    expect(Math.abs(subtitleBox.x - cardBox.x)).toBeLessThanOrEqual(1);
+  }
+  const instantCardBox = (await instantCategory.getByRole("link").boundingBox())!;
+  const megaLotoCardBox = (await lotosCategory.getByRole("link").boundingBox())!;
+  expect(Math.abs(instantCardBox.y - megaLotoCardBox.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(instantCardBox.width - megaLotoCardBox.width)).toBeLessThanOrEqual(1);
   const redoblona = grid.getByRole("link", { name: "Jugar Redoblona", exact: true });
   const head = grid.getByRole("link", { name: "Jugar A la Cabeza", exact: true });
   await expect(redoblona).toHaveAttribute("data-tone", "teal");
@@ -165,6 +214,32 @@ test("shows six compact Quinielas cards with Sapy’aite and green Mega Loto", a
   }
   await expectNoHorizontalOverflow(page);
   await page.screenshot({ path: testInfo.outputPath("quinielas-responsive.png"), fullPage: true });
+});
+
+test("opens Reglas from mobile navigation while Jugar still opens Quinielas", async ({ page }) => {
+  test.skip(page.viewportSize()!.width >= 980, "Mobile navigation is hidden on desktop");
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  const navigation = page.getByRole("navigation", { name: "Navegación móvil", exact: true });
+  const links = navigation.getByRole("link");
+  await expect(navigation).toBeVisible();
+  await expect(links).toHaveText(["Inicio", "Reglas", "Jugar", "Resultados", "Cuenta"]);
+  await expect(navigation.locator('a[href="/quinielas"]')).toHaveCount(1);
+  await expect(navigation.getByRole("link", { name: /Quiniela/i })).toHaveCount(0);
+  for (const link of await links.all()) {
+    await expectInsideHorizontalViewport(link, page);
+  }
+
+  const rules = navigation.getByRole("link", { name: "Reglas", exact: true });
+  await expect(rules).toHaveAttribute("href", "/reglas");
+  await rules.click();
+  await expect(page).toHaveURL(/\/reglas$/);
+  await expect(page.getByRole("heading", { name: "Cómo jugar", level: 1 })).toBeVisible();
+  await expect(rules).toHaveAttribute("aria-current", "page");
+
+  await navigation.getByRole("link", { name: "Jugar", exact: true }).click();
+  await expect(page).toHaveURL(/\/quinielas$/);
+  await expect(page.getByRole("heading", { name: "Quinielas", level: 1 })).toBeVisible();
+  await expect(rules).not.toHaveAttribute("aria-current", "page");
 });
 
 test("keeps current rules brief and expands their details accessibly", async ({ page }, testInfo) => {
@@ -235,19 +310,41 @@ test("calculates reference prizes without creating plays", async ({ page }, test
   await page.screenshot({ path: testInfo.outputPath("rules-calculator.png"), fullPage: true });
 });
 
-test("fills a responsive grid with six sample results per modality", async ({ page }, testInfo) => {
+test("keeps all positions of the latest draw responsive in each modality", async ({ page }, testInfo) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   const section = page.getByTestId("home-results-section");
-  await expect(section.getByText("Resultados de muestra", { exact: true })).toBeVisible();
-  for (const tab of await section.getByRole("tab").all()) {
-    await tab.click();
-    await expect(section.getByTestId("home-result-card")).toHaveCount(6);
-  }
-  const columns = await section.getByRole("tabpanel").evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").length);
+  await expect(section.getByText("Resultados de muestra", { exact: true })).toHaveCount(0);
+  await expect(section.getByTestId("home-results-draw")).toBeVisible();
+  const latestDraw = await section.getByTestId("home-results-draw").innerText();
   const width = page.viewportSize()!.width;
-  expect(columns).toBe(width >= 1280 ? 6 : width >= 768 ? 3 : 2);
-  await expectNoHorizontalOverflow(page);
-  await page.screenshot({ path: testInfo.outputPath("home-six-results.png"), fullPage: true });
+  const regularColumns = width >= 1280 ? 7 : width >= 768 ? 4 : 3;
+  const cases = [
+    { name: "A LA CABEZA", modality: "head", count: 1, firstPosition: 1, columns: 1 },
+    { name: "A LOS PREMIOS", modality: "prizes", count: 13, firstPosition: 2, columns: regularColumns },
+    { name: "REDOBLONA", modality: "redoblona", count: 13, firstPosition: 2, columns: regularColumns },
+    { name: "INVERTIDA", modality: "invert", count: 14, firstPosition: 1, columns: width >= 1280 ? 4 : width >= 768 ? 3 : 2 },
+  ];
+  for (const expected of cases) {
+    const tab = section.getByRole("tab", { name: expected.name, exact: true });
+    await tab.click();
+    await expect(tab).toHaveAttribute("aria-selected", "true");
+    const cards = section.getByTestId("home-result-card");
+    await expect(cards).toHaveCount(expected.count);
+    expect(await cards.evaluateAll((elements) => elements.map((element) => element.getAttribute("data-position"))))
+      .toEqual(Array.from({ length: expected.count }, (_, index) => String(index + expected.firstPosition)));
+    await expect(section.getByTestId("home-results-draw")).toHaveText(latestDraw, { useInnerText: true });
+    const grid = section.getByRole("tabpanel").locator(`[data-modality="${expected.modality}"]`);
+    const metrics = await grid.evaluate((element) => ({
+      columns: getComputedStyle(element).gridTemplateColumns.split(" ").filter(Boolean).length,
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+    }));
+    expect(metrics.columns).toBe(expected.columns);
+    expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
+    await expectInsideHorizontalViewport(grid, page);
+    await expectNoHorizontalOverflow(page);
+  }
+  await page.screenshot({ path: testInfo.outputPath("home-latest-draw-results.png"), fullPage: true });
 });
 
 test("groups results by date into four responsive colored draws", async ({ page }, testInfo) => {
@@ -273,54 +370,87 @@ test("groups results by date into four responsive colored draws", async ({ page 
   const firstGrid = days.first().getByTestId("daily-results-grid");
   const columns = await firstGrid.evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").length);
   expect(columns).toBe(page.viewportSize()!.width >= 1280 ? 4 : 2);
-  const dateInput = page.getByLabel("Buscar por fecha");
-  await dateInput.fill(dates[0]);
-  await expect(days).toHaveCount(1);
+  await expect(page.getByLabel("Buscar por fecha")).toHaveCount(0);
+  await expect(page.locator('input[type="date"]')).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Ver todas las fechas" })).toHaveCount(0);
   await expect(days.first()).toHaveAttribute("data-date", dates[0]);
   const card = days.first().getByTestId("daily-draw-card").first();
-  await card.locator("summary").click();
-  await expect(card.getByRole("heading", { name: "A los Premios", exact: true })).toBeVisible();
+  const detail = card.locator("details");
+  const summary = detail.locator("summary");
+  const table = detail.getByRole("table", { name: "Posturas de Tempranero", exact: true });
+  const headNumber = await card.getByTestId("daily-draw-number").innerText();
+  await expect(detail).toHaveJSProperty("open", false);
+  await summary.click();
+  await expect(detail).toHaveJSProperty("open", true);
+  await expect(table).toBeVisible();
+  await expect(detail.getByRole("table")).toHaveCount(1);
+  await expect(table.getByRole("columnheader")).toHaveText(["Postura", "Número"]);
+  const postures = table.locator("tbody > tr");
+  await expect(postures).toHaveCount(14);
+  expect(await postures.evaluateAll((elements) => elements.map((element) => element.getAttribute("data-position"))))
+    .toEqual(Array.from({ length: 14 }, (_, index) => String(index + 1)));
+  expect(await postures.getByRole("cell").allTextContents())
+    .toEqual(Array.from({ length: 14 }, () => expect.stringMatching(/^\d{3}$/)));
+  await expect(postures.first()).toHaveAttribute("data-head", "true");
+  await expect(table.locator('[data-head="true"]')).toHaveCount(1);
+  await expect(postures.first().getByText("A la cabeza", { exact: true })).toBeVisible();
+  await expect(postures.first().getByRole("cell")).toHaveText(headNumber);
+  const postureColors = await postures.getByRole("cell").evaluateAll((elements) => elements.map((element) => getComputedStyle(element).backgroundColor));
+  expect(postureColors[0]).not.toBe(postureColors[1]);
+  await expect(detail.getByRole("heading")).toHaveText(["Posturas del sorteo"]);
+  await expectInsideHorizontalViewport(table, page);
   await expectNoHorizontalOverflow(page);
   await page.screenshot({ path: testInfo.outputPath("results-by-date.png"), fullPage: true });
-  await dateInput.fill("2000-01-01");
-  await expect(days).toHaveCount(1);
-  await expect(days.getByText("Sin publicar", { exact: true })).toHaveCount(4);
-  await expect(days.getByTestId("daily-draw-number")).toHaveCount(0);
-  await page.getByRole("button", { name: "Ver todas las fechas" }).click();
+  await summary.click();
+  await expect(detail).toHaveJSProperty("open", false);
+  await expect(table).not.toBeVisible();
+  await expect(card.getByTestId("daily-draw-number")).toHaveText(headNumber);
   await expect(days).toHaveCount(5);
 });
 
 test("pages through ten days without showing more than five at once", async ({ page }, testInfo) => {
   await page.goto("/resultados", { waitUntil: "domcontentloaded" });
-  const top = page.getByRole("navigation", { name: "Paginación de fechas", exact: true });
-  const bottom = page.getByRole("navigation", { name: "Paginación de fechas inferior", exact: true });
+  const header = page.getByRole("main").locator(":scope > header");
+  const navigation = header.getByRole("navigation", { name: "Paginación de fechas", exact: true });
+  const moreRecent = navigation.getByRole("button", { name: "← Más recientes", exact: true });
+  const older = navigation.getByRole("button", { name: "Días anteriores →", exact: true });
+  await expect(header.getByRole("heading", { name: "Resultados", level: 1 })).toBeVisible();
+  await expect(header).toHaveText(/^\s*Resultados\s*← Más recientes\s*Días anteriores →\s*$/);
+  await expect(navigation.getByRole("button")).toHaveText(["← Más recientes", "Días anteriores →"]);
+  await expect(page.getByLabel("Buscar por fecha")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Ver todas las fechas" })).toHaveCount(0);
+  await expect(page.getByText(/Página \d+ de \d+|Días \d+[–-]\d+ de \d+/)).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: /Paginación de fechas/ })).toHaveCount(1);
+  await expect(page.getByText(/Fechas y horas de Paraguay|Resultados de muestra/)).toHaveCount(0);
   const days = page.getByTestId("results-day");
-  await expect(top.getByText("Página 1 de 2")).toBeVisible();
   await expect(days).toHaveCount(5);
   await expect(page.getByTestId("daily-draw-card")).toHaveCount(20);
   const newestDates = await days.evaluateAll((elements) => elements.map((element) => element.getAttribute("data-date")));
-  await expect(top.getByRole("button", { name: /Más recientes/ })).toBeDisabled();
+  await expect(moreRecent).toBeDisabled();
+  await expect(older).toBeEnabled();
   await page.screenshot({ path: testInfo.outputPath("results-pagination-controls.png"), fullPage: false });
-  await bottom.getByRole("button", { name: /Días anteriores/ }).click();
-  await expect(top.getByText("Página 2 de 2")).toBeVisible();
+  await older.click();
+  await expect(older).toBeDisabled();
+  await expect(moreRecent).toBeEnabled();
   await expect(days).toHaveCount(5);
+  await expect(page.getByTestId("daily-draw-card")).toHaveCount(20);
   const olderDates = await days.evaluateAll((elements) => elements.map((element) => element.getAttribute("data-date")));
   expect(new Set([...newestDates, ...olderDates]).size).toBe(10);
   expect(olderDates.every((date) => date! < newestDates[4]!)).toBe(true);
-  await expect(top.getByRole("button", { name: /Días anteriores/ })).toBeDisabled();
   await expect(page.locator("#daily-results-history")).toBeFocused();
   await expect(days.first().getByRole("heading", { level: 2 })).toBeInViewport();
   await expectNoHorizontalOverflow(page);
-  for (const control of await top.getByRole("button").all()) {
+  for (const control of await navigation.getByRole("button").all()) {
     await expectInsideHorizontalViewport(control, page);
   }
   await page.screenshot({ path: testInfo.outputPath("results-page-two.png"), fullPage: false });
-  await page.getByLabel("Buscar por fecha").fill(olderDates[4]!);
-  await expect(days).toHaveCount(1);
-  await expect(top).toHaveCount(0);
-  await page.getByRole("button", { name: "Ver todas las fechas" }).click();
-  await expect(top.getByText("Página 1 de 2")).toBeVisible();
-  expect(await days.first().getAttribute("data-date")).toBe(newestDates[0]);
+  await moreRecent.click();
+  await expect(moreRecent).toBeDisabled();
+  await expect(older).toBeEnabled();
+  await expect(days).toHaveCount(5);
+  expect(await days.evaluateAll((elements) => elements.map((element) => element.getAttribute("data-date"))))
+    .toEqual(newestDates);
+  await expect(page.locator("#daily-results-history")).toBeFocused();
 });
 
 test("keeps the original HD logo crisp and its ring red across both themes", async ({ page }, testInfo) => {

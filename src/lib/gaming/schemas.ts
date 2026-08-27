@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { HUNDRED_RANGE_OPTIONS, PROTOTYPE_AMOUNTS } from "./catalog";
+import { WALLET_MAX_AMOUNT, WALLET_METHODS, WALLET_MIN_AMOUNT } from "./types";
 
 const amountValues = new Set<number>(PROTOTYPE_AMOUNTS);
 const hundredRangeValues = HUNDRED_RANGE_OPTIONS.map((option) => option.value) as [
@@ -169,17 +170,26 @@ export const mockLoginRequestSchema = z.object({
   password: z.string().min(8).max(128),
 });
 
-export const walletTopupRequestSchema = z.object({
-  amount: z.union([
-    z.literal(20_000),
-    z.literal(50_000),
-    z.literal(100_000),
-    z.literal(200_000),
-  ]),
-  method: z.enum(["CARD", "BANK_TRANSFER", "CASH_POINT", "PUNTO_RECARGA"]),
+export const walletAmountSchema = z
+  .number({ error: "Ingresá un monto válido." })
+  .int("Ingresá un monto entero en guaraníes.")
+  .min(WALLET_MIN_AMOUNT, "El monto mínimo es Gs. 10.000.")
+  .max(WALLET_MAX_AMOUNT, "El monto máximo por operación es Gs. 5.000.000.");
+
+export const walletMethodSchema = z.enum(WALLET_METHODS, {
+  error: "Seleccioná un canal disponible.",
 });
+
+// These operations only need an amount and channel; no payment credentials are accepted.
+export const walletTopupRequestSchema = z.object({
+  amount: walletAmountSchema,
+  method: walletMethodSchema,
+}).strict();
+
+export const walletWithdrawalRequestSchema = walletTopupRequestSchema;
 
 export type InstantPlayRequest = z.infer<typeof instantPlayRequestSchema>;
 export type TraditionalPlayRequest = z.infer<typeof traditionalPlayRequestSchema>;
 export type MockLoginRequest = z.infer<typeof mockLoginRequestSchema>;
 export type WalletTopupRequest = z.infer<typeof walletTopupRequestSchema>;
+export type WalletWithdrawalRequest = z.infer<typeof walletWithdrawalRequestSchema>;

@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
+import { accountLimitsSchema, accountPauseSchema, accountProfileSchema, type AccountLimits, type AccountSettings } from "@/lib/account/contracts";
 
-import { buildGamingCatalog, findTraditionalGame } from "./catalog";
+import { buildGamingCatalog, buildMockDraws, findTraditionalGame } from "./catalog";
+import { DAILY_DRAW_SLOTS } from "./daily-draw-schedule";
 import { drawDateKey, drawWallTime } from "./draw-calendar";
 import { GamingDomainError } from "./errors";
 import {
@@ -8,6 +10,7 @@ import {
   instantPlayRequestSchema,
   traditionalPlayRequestSchema,
   walletTopupRequestSchema,
+  walletWithdrawalRequestSchema,
 } from "./schemas";
 import {
   evaluateInstantPlay,
@@ -17,6 +20,7 @@ import {
 } from "./rules";
 import {
   CURRENCY,
+  DRAW_POSTURE_COUNT,
   type GamingCatalog,
   type InstantGameId,
   type GamingPlay,
@@ -28,6 +32,7 @@ import {
   type PyaeNeutralPolicy,
   type TopupResponse,
   type WalletMovement,
+  type WithdrawalResponse,
 } from "./types";
 
 interface StoredIdempotency {
@@ -37,6 +42,9 @@ interface StoredIdempotency {
 
 interface InternalSession extends MockSessionView {
   lastAccessedAtMs: number;
+  startedAtMs: number;
+  accountLimits: AccountLimits | null;
+  pausedUntilMs: number | null;
   plays: GamingPlay[];
   tickets: Map<string, GamingTicket>;
   results: GamingResult[];
@@ -162,6 +170,9 @@ export class MockGamingProvider {
       balance: this.startingBalance,
       currency: CURRENCY,
       lastAccessedAtMs: accessedAtMs,
+      startedAtMs: accessedAtMs,
+      accountLimits: null,
+      pausedUntilMs: null,
       plays: [],
       tickets: new Map(),
       results: [],
@@ -186,8 +197,82 @@ export class MockGamingProvider {
     return clone(publicSession(this.requireSession(sessionId)));
   }
 
+  getAccountSettings(sessionId: string): AccountSettings {
+    const session = this.requireSession(sessionId);
+    const nowMs = this.now().getTime();
+    const amountsSince = (windowMs: number) => session.plays.reduce((sum, play) => {
+      const age = nowMs - Date.parse(play.createdAt);
+      return age >= 0 && age < windowMs ? sum + play.amount : sum;
+    }, 0);
+    return {
+      sessionId, scope: "session",
+      sessionStartedAt: new Date(session.startedAtMs).toISOString(),
+      limits: clone(session.accountLimits),
+      pausedUntil: session.pausedUntilMs && session.pausedUntilMs > nowMs ? new Date(session.pausedUntilMs).toISOString() : null,
+      usage: {
+        daily: amountsSince(86_400_000), weekly: amountsSince(7 * 86_400_000),
+        minutes: Math.max(0, Math.floor((nowMs - session.startedAtMs) / 60_000)),
+      },
+    };
+  }
+
+  updateAccountProfile(sessionId: string, rawInput: unknown, rawIdempotencyKey: unknown) {
+    const input = accountProfileSchema.parse(rawInput);
+    const key = idempotencyKeySchema.parse(rawIdempotencyKey);
+    const session = this.requireSession(sessionId);
+    return this.idempotent(session, "account-profile", key, input, () => {
+      session.displayName = input.displayName;
+      return { session: clone(publicSession(session)), replayed: false };
+    });
+  }
+
+  saveAccountLimits(sessionId: string, rawInput: unknown, rawIdempotencyKey: unknown) {
+    const input = accountLimitsSchema.parse(rawInput);
+    const key = idempotencyKeySchema.parse(rawIdempotencyKey);
+    const session = this.requireSession(sessionId);
+    return this.idempotent(session, "account-limits", key, input, () => {
+      const previous = session.accountLimits;
+      if (previous && (input.daily > previous.daily || input.weekly > previous.weekly || input.minutes > previous.minutes)) {
+        throw new GamingDomainError("ACCOUNT_LIMIT_INCREASE", "Los límites ya establecidos solo pueden reducirse durante esta sesión.");
+      }
+      session.accountLimits = { ...input };
+      return { settings: this.getAccountSettings(sessionId), replayed: false };
+    });
+  }
+
+  pauseAccount(sessionId: string, rawInput: unknown, rawIdempotencyKey: unknown) {
+    const input = accountPauseSchema.parse(rawInput);
+    const key = idempotencyKeySchema.parse(rawIdempotencyKey);
+    const session = this.requireSession(sessionId);
+    return this.idempotent(session, "account-pause", key, input, () => {
+      const pausedUntilMs = this.now().getTime() + input.durationMinutes * 60_000;
+      if (session.pausedUntilMs && session.pausedUntilMs > pausedUntilMs) {
+        throw new GamingDomainError("ACCOUNT_PAUSE_SHORTENED", "No podés acortar una pausa que todavía está vigente.");
+      }
+      session.pausedUntilMs = pausedUntilMs;
+      return { settings: this.getAccountSettings(sessionId), replayed: false };
+    });
+  }
+
+  private assertAccountCanPlay(session: InternalSession, amount?: number) {
+    const nowMs = this.now().getTime();
+    if (session.pausedUntilMs && session.pausedUntilMs > nowMs) {
+      throw new GamingDomainError("ACCOUNT_PAUSED", "Tu sesión está en pausa. Podés consultar tus jugadas y tu saldo, pero no jugar ni recargar hasta que finalice.");
+    }
+    const limits = session.accountLimits;
+    if (!limits) return;
+    if (nowMs - session.startedAtMs >= limits.minutes * 60_000) {
+      throw new GamingDomainError("ACCOUNT_TIME_LIMIT", "Alcanzaste el tiempo máximo de esta sesión. No podés realizar nuevas jugadas ni recargas.");
+    }
+    if (amount === undefined) return;
+    const { usage } = this.getAccountSettings(session.id);
+    if (usage.daily + amount > limits.daily || usage.weekly + amount > limits.weekly) {
+      throw new GamingDomainError("ACCOUNT_AMOUNT_LIMIT", "Esta jugada supera tus autolímites. Revisalos en Cuenta antes de continuar.");
+    }
+  }
+
   getCatalog(): GamingCatalog {
-    return clone(this.catalog);
+    return clone({ ...this.catalog, draws: buildMockDraws(this.now()) });
   }
 
   getBootstrap(sessionId: string): MockBootstrap {
@@ -209,6 +294,7 @@ export class MockGamingProvider {
     const session = this.requireSession(sessionId);
 
     return this.idempotent(session, "instant", idempotencyKey, input, () => {
+      this.assertAccountCanPlay(session, input.amount);
       const game = this.catalog.instant.find(
         (definition) => definition.id === input.gameId,
       );
@@ -306,6 +392,7 @@ export class MockGamingProvider {
     const session = this.requireSession(sessionId);
 
     return this.idempotent(session, "traditional", idempotencyKey, input, () => {
+      this.assertAccountCanPlay(session, input.amount);
       if (session.balance < input.amount) {
         throw new GamingDomainError(
           "INSUFFICIENT_BALANCE",
@@ -381,16 +468,57 @@ export class MockGamingProvider {
     const session = this.requireSession(sessionId);
 
     return this.idempotent(session, "wallet-topup", idempotencyKey, input, () => {
+      this.assertAccountCanPlay(session);
       const createdAt = this.now().toISOString();
-      session.balance += input.amount;
+      const balanceAfter = session.balance + input.amount;
       const balanceEntry = this.walletMovement(
         "TOPUP",
         input.amount,
-        session.balance,
+        balanceAfter,
         null,
         input.method,
         createdAt,
       );
+      session.balance = balanceAfter;
+      session.movements.unshift(balanceEntry);
+
+      return {
+        session: clone(publicSession(session)),
+        balanceEntry: clone(balanceEntry),
+        replayed: false,
+      };
+    });
+  }
+
+  withdraw(
+    sessionId: string,
+    rawInput: unknown,
+    rawIdempotencyKey: unknown,
+  ): WithdrawalResponse {
+    const input = walletWithdrawalRequestSchema.parse(rawInput);
+    const idempotencyKey = idempotencyKeySchema.parse(rawIdempotencyKey);
+    const session = this.requireSession(sessionId);
+
+    return this.idempotent(session, "wallet-withdrawal", idempotencyKey, input, () => {
+      // Account pauses and play limits must never prevent access to an available balance.
+      if (session.balance < input.amount) {
+        throw new GamingDomainError(
+          "INSUFFICIENT_BALANCE",
+          "El monto a retirar supera tu saldo disponible.",
+        );
+      }
+
+      const createdAt = this.now().toISOString();
+      const balanceAfter = session.balance - input.amount;
+      const balanceEntry = this.walletMovement(
+        "WITHDRAWAL",
+        -input.amount,
+        balanceAfter,
+        null,
+        input.method,
+        createdAt,
+      );
+      session.balance = balanceAfter;
       session.movements.unshift(balanceEntry);
 
       return {
@@ -434,6 +562,10 @@ export class MockGamingProvider {
       return undefined;
     }
 
+    // Initialize controls for sessions preserved across a development hot update.
+    session.startedAtMs ??= accessedAtMs;
+    session.accountLimits ??= null;
+    session.pausedUntilMs ??= null;
     session.lastAccessedAtMs = accessedAtMs;
     // Refresh Map insertion order as a deterministic LRU tie-breaker when
     // several requests happen within the same millisecond.
@@ -470,7 +602,7 @@ export class MockGamingProvider {
 
   private idempotent<T extends { replayed: boolean }>(
     session: InternalSession,
-    operation: "instant" | "traditional" | "wallet-topup",
+    operation: "instant" | "traditional" | "wallet-topup" | "wallet-withdrawal" | "account-profile" | "account-limits" | "account-pause",
     key: string,
     request: unknown,
     action: () => T,
@@ -504,13 +636,17 @@ export class MockGamingProvider {
     method: WalletMovement["method"],
     createdAt: string,
   ): WalletMovement {
+    const id = this.idFactory();
+    const walletReference = type === "TOPUP"
+      ? `DEP-${id.toUpperCase()}`
+      : type === "WITHDRAWAL" ? `RET-${id.toUpperCase()}` : null;
     return {
-      id: this.idFactory(),
+      id,
       type,
       amount,
       currency: CURRENCY,
       balanceAfter,
-      referenceId,
+      referenceId: referenceId ?? walletReference,
       method,
       createdAt,
     };
@@ -550,22 +686,32 @@ export class MockGamingProvider {
       { gameId: "invert", gameName: "Invertida", numbers: ["749", "820", "137", "404", "291", "830", "600", "253"] },
       { gameId: "redoblona", gameName: "Redoblona", numbers: ["044", "012", "083", "025", "067", "091", "015", "026"] },
     ] as const;
-    const slots = [
-      { id: "night", hour: 20, minute: 30 },
-      { id: "evening", hour: 16, minute: 30 },
-      { id: "morning", hour: 13, minute: 0 },
-      { id: "early", hour: 10, minute: 30 },
-    ] as const;
+    const slots = [...DAILY_DRAW_SLOTS].reverse();
     const today = drawDateKey(now.getTime())!;
     const schedule = Array.from({ length: 10 }, (_, index) => index + 1).flatMap((daysAgo) => {
       const day = new Date(Date.parse(`${today}T12:00:00Z`) - daysAgo * 86_400_000).toISOString().slice(0, 10);
       return slots.map((slot) => ({ id: slot.id, at: new Date(drawWallTime(day, slot.hour, slot.minute)).toISOString() }));
     });
-    return examples.flatMap(({ gameId, gameName, numbers }) => schedule.map((slot, index) => {
-      // Deterministic sample values; no remote results or real payouts change.
+    const sampleNumber = (numbers: readonly string[], index: number) => {
       const cycle = Math.floor(index / numbers.length);
-      const result = cycle === 0 ? numbers[index]
+      return cycle === 0 ? numbers[index]
         : String((Number(numbers[index % numbers.length]) + cycle * 137) % 999 + 1).padStart(3, "0");
+    };
+    // One canonical preview draw per date and slot; no real result is generated here.
+    const drawNumbersByDraw = schedule.map((slot, index) => {
+      const seed = Array.from(`${slot.at}:${slot.id}`).reduce(
+        (value, character) => (value * 31 + character.charCodeAt(0)) % 1000,
+        0,
+      );
+      return Array.from({ length: DRAW_POSTURE_COUNT }, (_, postureIndex) => ({
+        position: postureIndex + 1,
+        value: postureIndex === 0 ? sampleNumber(examples[0].numbers, index)
+          : String((seed + postureIndex * 137) % 1000).padStart(3, "0"),
+      }));
+    });
+    return examples.flatMap(({ gameId, gameName, numbers }) => schedule.map((slot, index) => {
+      // Preserve legacy modality fields used by Home and other existing views.
+      const result = sampleNumber(numbers, index);
       return {
       id: `draw-result-${gameId}-${index + 1}`,
       source: "DRAW" as const,
@@ -574,6 +720,7 @@ export class MockGamingProvider {
       drawId: slot.id,
       result,
       resultNumbers: [result],
+      drawNumbers: drawNumbersByDraw[index],
       occurredAt: slot.at,
       };
     }));

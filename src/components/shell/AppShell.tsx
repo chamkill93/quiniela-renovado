@@ -51,9 +51,8 @@ export const defaultShellNavItems: ShellNavItem[] = [
     icon: "head",
     section: "play",
     match: ["/quinielas", "/jugar", "/instantaneas"],
-    mobile: true,
   },
-  { href: "/reglas", label: "Reglas", icon: "rules", section: "play" },
+  { href: "/reglas", label: "Reglas", icon: "rules", section: "play", mobile: true },
   {
     href: "/mis-jugadas",
     label: "Mis Jugadas",
@@ -128,6 +127,7 @@ function ShellLink({ item, active }: ShellLinkProps) {
 type MobileNavIconName =
   | "home"
   | "quiniela"
+  | "rules"
   | "play"
   | "results"
   | "account";
@@ -145,6 +145,12 @@ function MobileNavIcon({ name }: { name: MobileNavIconName }) {
         <path d="m12 3.5 7.4 4.3v8.4L12 20.5l-7.4-4.3V7.8Z" />
         <circle cx="12" cy="12" r="2.1" />
         <path d="m4.9 8 3.2 1.9M19.1 8l-3.2 1.9M12 16.4v4" />
+      </>
+    ),
+    rules: (
+      <>
+        <path d="M12 6c-2.7-2-6-2-9-1v14c3-1 6.3-1 9 1 2.7-2 6-2 9-1V5c-3-1-6.3-1-9 1Z" />
+        <path d="M12 6v14M6 9h3m-3 4h3m6-4h3m-3 4h3" />
       </>
     ),
     play: <path d="m9 6 9 6-9 6Z" />,
@@ -186,6 +192,9 @@ function mobileNavPresentation(item: ShellNavItem): {
   if (item.href === "/") return { icon: "home", label: "Inicio" };
   if (item.href.startsWith("/quinielas")) {
     return { icon: "quiniela", label: "Quiniela" };
+  }
+  if (item.href.startsWith("/reglas")) {
+    return { icon: "rules", label: "Reglas" };
   }
   if (item.href.startsWith("/resultados")) {
     return { icon: "results", label: "Resultados" };
@@ -326,7 +335,6 @@ function AppShellFrame({
         <footer className="q-site-footer">
           <div className="q-site-footer__brand">
             <Logo size="sm" />
-            <span>Quiniela online · Paraguay</span>
           </div>
           <nav className="q-site-footer__links" aria-label="Información y ayuda">
             <Link href="/ayuda" aria-label="Centro de ayuda"><span className="q-site-footer__help-prefix">Centro de&nbsp;</span>Ayuda</Link>

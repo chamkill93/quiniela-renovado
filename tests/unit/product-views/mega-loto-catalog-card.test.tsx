@@ -14,7 +14,8 @@ describe("MegaLotoCatalogCard", () => {
     expect(markup).toContain('rel="noopener noreferrer"');
     expect(markup).toContain('target="_blank"');
     expect(markup).toContain("abre en una nueva pestaña");
-    expect(markup).toContain("Elegí 6 números del 1 al 45.");
+    expect(markup).toContain("Elegí 6 números del 1 al 40 y ganá el Megapozo.");
+    expect(markup).not.toContain("1 al 45");
     expect(markup).not.toContain("/quinielas/megaloto");
     expect(markup).not.toContain("Desde");
   });

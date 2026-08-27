@@ -1,7 +1,9 @@
-import type { GamingCatalog } from "@/lib/gaming/types";
+import { DRAW_POSTURE_COUNT, type GamingCatalog, type PositionedDrawNumber } from "@/lib/gaming/types";
 import type { MockResult } from "@/lib/product/api-types";
 import { drawDateKey, DRAW_TIME_ZONE, isDrawDateKey } from "@/lib/gaming/draw-calendar";
-import { HOME_DRAW_SLOTS, type HomeDrawId } from "./home-sections-data";
+import { DAILY_DRAW_SLOTS as HOME_DRAW_SLOTS } from "@/lib/gaming/daily-draw-schedule";
+
+type HomeDrawId = (typeof HOME_DRAW_SLOTS)[number]["id"];
 
 const dateFormatter = new Intl.DateTimeFormat("es-PY", { dateStyle: "full", timeZone: DRAW_TIME_ZONE });
 const timeFormatter = new Intl.DateTimeFormat("es-PY", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: DRAW_TIME_ZONE });
@@ -11,6 +13,7 @@ export interface DailyPublication {
   gameId: string | null;
   label: string;
   values: readonly string[];
+  drawNumbers?: readonly PositionedDrawNumber[];
   occurredAt: string | null;
   timeLabel: string | null;
   dateKey: string | null;
@@ -66,6 +69,30 @@ function publicNumbers(result: MockResult): string[] {
     .map((value) => /^\d{1,3}$/.test(value) ? value.padStart(3, "0") : value);
 }
 
+function positionedDrawNumbers(result: MockResult): PositionedDrawNumber[] {
+  const seen = new Set<number>();
+  return (result.drawNumbers ?? []).flatMap(({ position, value }) => {
+    const normalized = value.trim();
+    if (!Number.isInteger(position) || position < 1 || position > DRAW_POSTURE_COUNT || seen.has(position) || !/^\d{1,3}$/.test(normalized)) return [];
+    seen.add(position);
+    return [{ position, value: normalized.padStart(3, "0") }];
+  }).sort((a, b) => a.position - b.position);
+}
+
+/** Use one draw snapshot across all modalities; never assign a modality to a posture. */
+export function selectDrawPostures(draw: DailyDraw) {
+  const publication = draw.publications.find((item) => item.drawNumbers !== undefined);
+  const numbers = new Map(publication?.drawNumbers?.map(({ position, value }) => [position, value]));
+  if (!publication) {
+    const head = draw.publications.find((item) => item.gameId === "head");
+    if (head?.values[0]) numbers.set(1, head.values[0]);
+  }
+  return Array.from({ length: DRAW_POSTURE_COUNT }, (_, index) => ({
+    position: index + 1,
+    value: numbers.get(index + 1) ?? null,
+  }));
+}
+
 export function emptyDrawDay(dateKey: string): DailyDrawResults {
   const dateLabel = dateFormatter.format(new Date(`${dateKey}T12:00:00Z`));
   return {
@@ -85,8 +112,10 @@ export function selectDailyDrawResults(catalog: GamingCatalog, results: readonly
 
   for (const { result, time } of ordered) {
     if (seen.has(result.id)) continue;
-    const values = publicNumbers(result);
-    if (!values.length) continue;
+    const drawNumbers = result.drawNumbers === undefined ? undefined : positionedDrawNumbers(result);
+    const receivedValues = publicNumbers(result);
+    const values = receivedValues.length ? receivedValues : drawNumbers?.map(({ value }) => value) ?? [];
+    if (!values.length && drawNumbers === undefined) continue;
     seen.add(result.id);
     const dateKey = time === null ? null : drawDateKey(time);
     if (selectedDate && dateKey !== selectedDate) continue;
@@ -94,7 +123,7 @@ export function selectDailyDrawResults(catalog: GamingCatalog, results: readonly
     const publication: DailyPublication = {
       id: result.id, gameId: result.gameId ?? null,
       label: result.gameName?.trim() || game?.name || result.label?.trim() || "Resultado",
-      values, dateKey, occurredAt: time === null ? null : new Date(time).toISOString(),
+      values, drawNumbers, dateKey, occurredAt: time === null ? null : new Date(time).toISOString(),
       timeLabel: time === null ? null : timeFormatter.format(time),
     };
     const slot = canonicalDraw(catalog, result);

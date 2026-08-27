@@ -110,6 +110,24 @@ function completeFixtures(): FixtureProductGatewayConfig {
 }
 
 describe("FixtureProductGateway", () => {
+  it("returns isolated withdrawal receipts without calculating a balance", async () => {
+    const withdrawal: ProductTopUpResponse = {
+      session: { ...session, balance: 40_000 },
+      balanceEntry: { ...movement, id: "fixture-withdrawal", type: "WITHDRAWAL", amount: -10_000, balanceAfter: 40_000, method: "PERSONAL" },
+      replayed: false,
+    };
+    const gateway = createFixtureProductGateway({ ...completeFixtures(), withdrawal });
+    const input = { amount: 10_000, method: "PERSONAL" } as const;
+
+    const first = await gateway.withdraw(input);
+    first.session.balance = 0;
+    expect(gateway.capabilities.withdrawal).toBe(true);
+    await expect(gateway.withdraw(input)).resolves.toEqual(withdrawal);
+    await expect(gateway.bootstrap()).resolves.toMatchObject({ session });
+    await expect(createFixtureProductGateway(completeFixtures()).withdraw(input))
+      .rejects.toMatchObject({ operation: "withdraw" });
+  });
+
   it("returns deterministic clones and keeps registration explicitly non-persistent", async () => {
     const fixtures = completeFixtures();
     const gateway = createFixtureProductGateway(fixtures);
@@ -142,6 +160,7 @@ describe("FixtureProductGateway", () => {
     ).resolves.toEqual({ session, source: "preview-fixture" });
     expect(gateway.capabilities).toEqual({
       wallet: true,
+      withdrawal: false,
       persistentRegistration: false,
     });
   });

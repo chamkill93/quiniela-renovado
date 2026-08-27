@@ -15,8 +15,10 @@ import {
   createBackofficeClient,
 } from "@/lib/backoffice";
 import { buildGamingCatalog } from "@/lib/gaming";
+import { DRAW_POSTURE_COUNT } from "@/lib/gaming/types";
 import type {
   GamingPlay,
+  GamingResult,
   GamingTicket,
   PlacePlayResponse,
   TopupResponse,
@@ -45,6 +47,17 @@ const session: BackofficeSession = {
 };
 
 const catalog = buildGamingCatalog("REFUND", new Date("2026-08-25T12:00:00Z"));
+
+const drawResult: GamingResult = {
+  id: "draw-result",
+  source: "DRAW",
+  gameId: "head",
+  gameName: "A la Cabeza",
+  drawId: "early",
+  result: "497",
+  resultNumbers: ["497"],
+  occurredAt: "2026-08-25T12:00:00Z",
+};
 
 const play: GamingPlay = {
   id: "play-1",
@@ -415,6 +428,54 @@ describe("HttpBackofficeClient", () => {
         expect.objectContaining({ path: expect.arrayContaining(["session"]) }),
       ]),
     );
+  });
+
+  it.each([
+    { name: "legacy", drawNumbers: undefined },
+    { name: "empty", drawNumbers: [] },
+    { name: "partial", drawNumbers: [{ position: DRAW_POSTURE_COUNT, value: "007" }, { position: 1, value: "497" }] },
+    { name: "trimmed with leading zeroes", drawNumbers: [{ position: 1, value: " 000 " }, { position: DRAW_POSTURE_COUNT, value: "7" }] },
+    { name: "complete with repeated values", drawNumbers: Array.from({ length: DRAW_POSTURE_COUNT }, (_, index) => ({ position: index + 1, value: "497" })) },
+  ])("accepts $name draw positions without filling or reordering them", async ({ drawNumbers }) => {
+    const result = { ...drawResult, ...(drawNumbers ? { drawNumbers } : {}) };
+    const expected = {
+      ...drawResult,
+      ...(drawNumbers ? { drawNumbers: drawNumbers.map((number) => ({ ...number, value: number.value.trim() })) } : {}),
+    };
+    const client = createBackofficeClient({
+      baseUrl: "https://backoffice.example",
+      endpoints,
+      fetch: vi.fn(async () => jsonResponse({ session, catalog, plays: [], results: [result] })),
+    });
+
+    await expect(client.getResults()).resolves.toEqual({ results: [expected] });
+    expect((await client.bootstrap()).results).toEqual([expected]);
+  });
+
+  it.each([
+    { name: "zero", drawNumbers: [{ position: 0, value: "007" }] },
+    { name: "out of range", drawNumbers: [{ position: DRAW_POSTURE_COUNT + 1, value: "007" }] },
+    { name: "fractional", drawNumbers: [{ position: 1.5, value: "007" }] },
+    { name: "repeated", drawNumbers: [{ position: 1, value: "007" }, { position: 1, value: "497" }] },
+    { name: "non-numeric", drawNumbers: [{ position: 1, value: "abc" }] },
+    { name: "overlong", drawNumbers: [{ position: 1, value: "1234" }] },
+    { name: "blank", drawNumbers: [{ position: 1, value: "   " }] },
+  ])("rejects $name draw entries in results and bootstrap payloads", async ({ drawNumbers }) => {
+    const client = createBackofficeClient({
+      baseUrl: "https://backoffice.example",
+      endpoints,
+      fetch: vi.fn(async () => jsonResponse({ session, catalog, plays: [], results: [{ ...drawResult, drawNumbers }] })),
+    });
+    const invalidPositions = {
+      name: "BackofficeProtocolError",
+      reason: "INVALID_PAYLOAD",
+      details: expect.arrayContaining([
+        expect.objectContaining({ path: expect.arrayContaining(["results", 0, "drawNumbers"]) }),
+      ]),
+    };
+
+    await expect(client.getResults()).rejects.toMatchObject(invalidPositions);
+    await expect(client.bootstrap()).rejects.toMatchObject(invalidPositions);
   });
 
   it("rejects non-ISO dates before they reach date formatting in the UI", async () => {

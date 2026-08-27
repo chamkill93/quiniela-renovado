@@ -27,6 +27,8 @@ export type {
   ProductSnapshot,
   ProductTopUpInput,
   ProductTopUpResponse,
+  ProductWithdrawalInput,
+  ProductWithdrawalResponse,
   PublicProductGatewayEnvironment,
 } from "./contracts";
 export {
@@ -68,5 +70,6 @@ export type {
 export {
   assertPlayResponseMatchesCommand,
   assertTopUpResponseMatchesInput,
+  assertWithdrawalResponseMatchesInput,
   ProductGatewayProtocolError,
 } from "./response-contract";

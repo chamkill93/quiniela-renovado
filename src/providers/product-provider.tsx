@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import type { RegisterUserRequest } from "@/lib/backoffice";
+import type { AccountGateway, AccountRequestOptions } from "@/lib/account/contracts";
 import type { GamingCatalog, WalletMovement } from "@/lib/gaming/types";
 import type {
   MockPlay,
@@ -22,9 +23,14 @@ import { publicProductErrorMessage } from "@/lib/product/public-error";
 import {
   createProductGateway,
   createProductIdempotencyKey,
+  assertTopUpResponseMatchesInput,
+  assertWithdrawalResponseMatchesInput,
   isProductGatewayUnauthorizedError,
+  ProductGatewayCapabilityError,
+  ProductGatewayProtocolError,
   ProductOperationSupersededError,
   ProductRequestEpoch,
+  ProductSessionUnavailableError,
   requireAuthenticatedProductSnapshot,
   type ProductGateway,
   type ProductGatewayMode,
@@ -33,9 +39,12 @@ import {
   type ProductSnapshot,
   type ProductTopUpInput,
   type ProductTopUpResponse,
+  type ProductWithdrawalInput,
+  type ProductWithdrawalResponse,
 } from "@/lib/product/gateway";
 
 export interface ProductContextValue {
+  account?: AccountGateway;
   session: MockSession | null;
   catalog: GamingCatalog | null;
   plays: MockPlay[];
@@ -48,12 +57,15 @@ export interface ProductContextValue {
   unauthorized: boolean;
   gatewayMode: ProductGatewayMode;
   walletAvailable: boolean;
+  withdrawalAvailable: boolean;
   persistentRegistration: boolean;
   refresh: () => Promise<void>;
   refreshMovements: () => Promise<void>;
   requestPlay: (command: ProductPlayCommand) => Promise<PlayResponse>;
   getTicket: (ticketId: string) => Promise<MockTicket>;
-  requestTopUp: (input: ProductTopUpInput) => Promise<ProductTopUpResponse>;
+  getPendingWalletOperationKey: (kind: "topup" | "withdrawal", input: ProductTopUpInput) => string | undefined;
+  requestTopUp: (input: ProductTopUpInput, idempotencyKey?: string) => Promise<ProductTopUpResponse>;
+  requestWithdrawal: (input: ProductWithdrawalInput, idempotencyKey?: string) => Promise<ProductWithdrawalResponse>;
   login: (documentOrPhone: string, password: string) => Promise<void>;
   register: (input: RegisterUserRequest) => Promise<void>;
   logout: () => Promise<void>;
@@ -96,6 +108,10 @@ function cloneTicket(ticket: MockTicket): MockTicket {
   };
 }
 
+function walletOperationFingerprint(kind: "topup" | "withdrawal", input: ProductTopUpInput) {
+  return `wallet:${kind}:${JSON.stringify({ amount: input.amount, method: input.method })}`;
+}
+
 export interface ProductProviderProps {
   children: React.ReactNode;
   /** Optional host composition seam; normal app usage resolves from public env. */
@@ -113,6 +129,7 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
   const resultsRequestRef = useRef(0);
   const stateRevisionRef = useRef(0);
   const authGenerationRef = useRef(0);
+  const activeSessionIdRef = useRef<string | null>(null);
   const mutationQueueRef = useRef<Promise<void>>(Promise.resolve());
   const mutationKeysRef = useRef(new Map<string, string>());
   const inFlightMutationsRef = useRef(new Map<string, Promise<unknown>>());
@@ -141,6 +158,7 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
 
   const clearUserState = useCallback(() => {
     authGenerationRef.current += 1;
+    activeSessionIdRef.current = null;
     inFlightMutationsRef.current.clear();
     inFlightTicketRequestsRef.current.clear();
     ticketCacheRef.current.clear();
@@ -169,6 +187,14 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
   );
 
   const applySnapshot = useCallback((data: ProductSnapshot) => {
+    const nextSessionId = data.session?.id ?? null;
+    if (activeSessionIdRef.current !== nextSessionId) {
+      authGenerationRef.current += 1;
+      activeSessionIdRef.current = nextSessionId;
+      inFlightMutationsRef.current.clear();
+      mutationKeysRef.current.clear();
+      resetMovements();
+    }
     inFlightTicketRequestsRef.current.clear();
     ticketCacheRef.current.clear();
     setSession(data.session);
@@ -176,7 +202,7 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
     setPlays([...data.plays]);
     setResults([...data.results]);
     setUnauthorized(false);
-  }, []);
+  }, [resetMovements]);
 
   const loadMovements = useCallback(
     async (
@@ -189,6 +215,7 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
       }
 
       const requestId = ++movementsRequestRef.current;
+      const authGeneration = authGenerationRef.current;
       if (scope.isCurrent()) {
         setMovementsLoading(true);
         setMovementsError(null);
@@ -197,11 +224,12 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
       try {
         const data = await gateway.getMovements({ signal: scope.signal });
         scope.assertCurrent();
+        if (authGeneration !== authGenerationRef.current) return;
         if (requestId !== movementsRequestRef.current) return;
         setMovements([...data]);
         setMovementsError(null);
       } catch (reason) {
-        if (!scope.isCurrent() || isAbortError(reason)) return;
+        if (!scope.isCurrent() || isAbortError(reason) || authGeneration !== authGenerationRef.current) return;
         const sessionUnavailable = handleGatewayError(reason);
         if (!sessionUnavailable && requestId === movementsRequestRef.current) {
           setMovementsError(errorMessage(reason, failureMessage));
@@ -219,7 +247,7 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
   );
 
   const refreshMovements = useCallback(async () => {
-    if (!session || !gateway.capabilities.wallet) {
+    if (!activeSessionIdRef.current || !gateway.capabilities.wallet) {
       resetMovements();
       return;
     }
@@ -229,7 +257,7 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
     } finally {
       scope.close();
     }
-  }, [coordinator, gateway, loadMovements, resetMovements, session]);
+  }, [coordinator, gateway, loadMovements, resetMovements]);
 
   const refresh = useCallback(async () => {
     const scope = coordinator.open();
@@ -271,6 +299,9 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
 
   useEffect(() => {
     coordinator.advance();
+    authGenerationRef.current += 1;
+    inFlightMutationsRef.current.clear();
+    mutationKeysRef.current.clear();
     const scope = coordinator.open();
     const requestId = ++bootstrapRequestRef.current;
     const revision = stateRevisionRef.current;
@@ -327,22 +358,24 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
   const refreshAfterAcceptedPlay = useCallback(
     (kind: ProductPlayCommand["kind"]) => {
       const scope = coordinator.open();
+      const authGeneration = authGenerationRef.current;
       const resultsRequestId = ++resultsRequestRef.current;
       const run = async () => {
         if (kind === "instant") {
           try {
             const nextResults = await gateway.getResults({ signal: scope.signal });
             scope.assertCurrent();
+            if (authGeneration !== authGenerationRef.current) return;
             if (resultsRequestId === resultsRequestRef.current) {
               setResults([...nextResults]);
             }
           } catch (reason) {
-            if (!scope.isCurrent() || isAbortError(reason)) return;
+            if (!scope.isCurrent() || isAbortError(reason) || authGeneration !== authGenerationRef.current) return;
             handleGatewayError(reason);
           }
         }
 
-        if (scope.isCurrent()) {
+        if (scope.isCurrent() && authGeneration === authGenerationRef.current) {
           await loadMovements(
             scope,
             "No pudimos actualizar los movimientos.",
@@ -364,8 +397,44 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
     return result;
   }, []);
 
+  const refreshBalanceAfterReplay = useCallback(() => {
+    const scope = coordinator.open();
+    const revision = stateRevisionRef.current;
+    const bootstrapRequestId = bootstrapRequestRef.current;
+    const isLatest = () =>
+      scope.isCurrent() &&
+      revision === stateRevisionRef.current &&
+      bootstrapRequestId === bootstrapRequestRef.current;
+
+    const reconcile = async () => {
+      try {
+        const data = await gateway.bootstrap({ signal: scope.signal });
+        if (!isLatest()) return;
+        const snapshot = requireAuthenticatedProductSnapshot(data);
+        setSession((current) => current?.id === snapshot.session.id
+          ? { ...current, balance: snapshot.session.balance, currency: snapshot.session.currency }
+          : current);
+        setError(null);
+      } catch (reason) {
+        if (!isLatest() || isAbortError(reason)) return;
+        if (!handleGatewayError(reason)) {
+          setError("La operación fue confirmada, pero no pudimos actualizar el saldo. Actualizá la sesión antes de volver a jugar.");
+        }
+      } finally {
+        scope.close();
+      }
+    };
+
+    // An idempotent response contains the original balance, which may precede
+    // another payment. Reconcile it without delaying or rejecting the receipt.
+    void reconcile();
+  }, [coordinator, gateway, handleGatewayError]);
+
   const requestPlay = useCallback(
     (command: ProductPlayCommand) => {
+      const sessionId = session?.id;
+      if (!sessionId) return Promise.reject(new ProductSessionUnavailableError());
+      if (activeSessionIdRef.current !== sessionId) return Promise.reject(supersededError());
       const logicalOperation = `play:${JSON.stringify(command)}`;
       const existing = inFlightMutationsRef.current.get(logicalOperation) as
         | Promise<PlayResponse>
@@ -373,7 +442,7 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
       if (existing) return existing;
       const authGeneration = authGenerationRef.current;
       const result = enqueueMutation(async () => {
-        if (authGeneration !== authGenerationRef.current) throw supersededError();
+        if (authGeneration !== authGenerationRef.current || activeSessionIdRef.current !== sessionId) throw supersededError();
         const scope = coordinator.open();
         const idempotencyKey =
           mutationKeysRef.current.get(logicalOperation) ??
@@ -383,8 +452,13 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
           const data = await gateway.requestPlay(command, {
             idempotencyKey,
             signal: scope.signal,
+            expectedSessionId: sessionId,
           });
           scope.assertCurrent();
+          if (authGeneration !== authGenerationRef.current || activeSessionIdRef.current !== sessionId) throw supersededError();
+          if (data.session.id !== undefined && data.session.id !== sessionId) {
+            throw new ProductGatewayProtocolError("La jugada no corresponde a la sesión actual.");
+          }
           mutationKeysRef.current.delete(logicalOperation);
           stateRevisionRef.current += 1;
           const acceptedTicket = cloneTicket(data.ticket);
@@ -393,11 +467,11 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
             ticketCacheRef.current.set(data.play.ticketId, acceptedTicket);
           }
           setSession((current) =>
-            current
+            current?.id === sessionId && !data.replayed
               ? {
                   ...current,
-                  ...data.session,
                   balance: data.session.balance,
+                  currency: data.session.currency ?? current.currency,
                 }
               : current,
           );
@@ -409,10 +483,11 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
           // Histories are secondary reads. They must never turn an accepted play
           // into a visible failure or delay its ticket/reel response.
           refreshAfterAcceptedPlay(command.kind);
+          if (data.replayed) refreshBalanceAfterReplay();
           return data;
         } catch (reason) {
           if (isSupersededError(reason)) throw reason;
-          if (!scope.isCurrent() || isAbortError(reason)) throw supersededError();
+          if (!scope.isCurrent() || isAbortError(reason) || authGeneration !== authGenerationRef.current || activeSessionIdRef.current !== sessionId) throw supersededError();
           handleGatewayError(reason);
           throw reason;
         } finally {
@@ -434,7 +509,7 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
       );
       return result;
     },
-    [coordinator, enqueueMutation, gateway, handleGatewayError, refreshAfterAcceptedPlay],
+    [coordinator, enqueueMutation, gateway, handleGatewayError, refreshAfterAcceptedPlay, refreshBalanceAfterReplay, session?.id],
   );
 
   const getTicket = useCallback(
@@ -495,43 +570,79 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
     [coordinator, gateway, handleGatewayError],
   );
 
-  const requestTopUp = useCallback(
-    (input: ProductTopUpInput) => {
-      const logicalOperation = `topup:${JSON.stringify(input)}`;
+  const getPendingWalletOperationKey = useCallback(
+    (kind: "topup" | "withdrawal", input: ProductTopUpInput) => {
+      const sessionId = session?.id;
+      if (!sessionId || activeSessionIdRef.current !== sessionId) return undefined;
+      return mutationKeysRef.current.get(walletOperationFingerprint(kind, input));
+    },
+    [session?.id],
+  );
+
+  const requestWalletOperation = useCallback(
+    (kind: "topup" | "withdrawal", input: ProductTopUpInput, providedKey?: string) => {
+      if (!gateway.capabilities.wallet) {
+        return Promise.reject(new ProductGatewayCapabilityError("wallet"));
+      }
+      if (kind === "withdrawal" && (!gateway.capabilities.withdrawal || !gateway.withdraw)) {
+        return Promise.reject(new ProductGatewayCapabilityError("withdrawal"));
+      }
+      const sessionId = session?.id;
+      if (!sessionId) return Promise.reject(new ProductSessionUnavailableError());
+      if (activeSessionIdRef.current !== sessionId) return Promise.reject(supersededError());
+      if (providedKey !== undefined && !providedKey.trim()) {
+        return Promise.reject(new TypeError("La referencia de la operación no puede estar vacía."));
+      }
+      // Copy the command before queueing so the caller cannot change the
+      // amount or channel while another mutation is pending.
+      const command: ProductTopUpInput = { amount: input.amount, method: input.method };
+      // An unresolved payment belongs to the session, not to one mounted dialog.
+      // A reopened form must recover it even when it supplies a newly generated key.
+      const logicalOperation = walletOperationFingerprint(kind, command);
       const existing = inFlightMutationsRef.current.get(logicalOperation) as
         | Promise<ProductTopUpResponse>
         | undefined;
       if (existing) return existing;
       const authGeneration = authGenerationRef.current;
       const result = enqueueMutation(async () => {
-        if (authGeneration !== authGenerationRef.current) throw supersededError();
+        if (authGeneration !== authGenerationRef.current || activeSessionIdRef.current !== sessionId) throw supersededError();
         const scope = coordinator.open();
         const idempotencyKey =
           mutationKeysRef.current.get(logicalOperation) ??
+          providedKey ??
           createProductIdempotencyKey();
         mutationKeysRef.current.set(logicalOperation, idempotencyKey);
         try {
-          const data = await gateway.topUp(input, {
-            idempotencyKey,
-            signal: scope.signal,
-          });
+          const options = { idempotencyKey, signal: scope.signal, expectedSessionId: sessionId };
+          const data = kind === "topup"
+            ? assertTopUpResponseMatchesInput(await gateway.topUp(command, options), command)
+            : assertWithdrawalResponseMatchesInput(await gateway.withdraw!(command, options), command);
           scope.assertCurrent();
+          if (authGeneration !== authGenerationRef.current || activeSessionIdRef.current !== sessionId) throw supersededError();
+          if (data.session.id !== sessionId) {
+            throw new ProductGatewayProtocolError("La operación no corresponde a la sesión actual.");
+          }
           mutationKeysRef.current.delete(logicalOperation);
           stateRevisionRef.current += 1;
           movementsRequestRef.current += 1;
           setMovementsLoading(false);
-          setSession(data.session);
+          if (!data.replayed) {
+            setSession((current) => current?.id === sessionId
+              ? { ...current, balance: data.session.balance, currency: data.session.currency }
+              : current);
+          }
           setMovementsError(null);
           setMovements((current) => {
             const existing = current.some(
               (movement) => movement.id === data.balanceEntry.id,
             );
-            return existing ? current : [data.balanceEntry, ...current];
+            return existing ? current : [{ ...data.balanceEntry }, ...current];
           });
+          if (data.replayed) refreshBalanceAfterReplay();
           return data;
         } catch (reason) {
           if (isSupersededError(reason)) throw reason;
-          if (!scope.isCurrent() || isAbortError(reason)) throw supersededError();
+          if (!scope.isCurrent() || isAbortError(reason) || authGeneration !== authGenerationRef.current || activeSessionIdRef.current !== sessionId) throw supersededError();
           handleGatewayError(reason);
           throw reason;
         } finally {
@@ -553,7 +664,17 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
       );
       return result;
     },
-    [coordinator, enqueueMutation, gateway, handleGatewayError],
+    [coordinator, enqueueMutation, gateway, handleGatewayError, refreshBalanceAfterReplay, session?.id],
+  );
+
+  const requestTopUp = useCallback(
+    (input: ProductTopUpInput, idempotencyKey?: string) => requestWalletOperation("topup", input, idempotencyKey),
+    [requestWalletOperation],
+  );
+
+  const requestWithdrawal = useCallback(
+    (input: ProductWithdrawalInput, idempotencyKey?: string) => requestWalletOperation("withdrawal", input, idempotencyKey),
+    [requestWalletOperation],
   );
 
   const hydrateAfterAuthentication = useCallback(
@@ -594,6 +715,7 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
   const applyAuthentication = useCallback(
     (authenticatedSession: MockSession) => {
       authGenerationRef.current += 1;
+      activeSessionIdRef.current = authenticatedSession.id;
       inFlightMutationsRef.current.clear();
       inFlightTicketRequestsRef.current.clear();
       ticketCacheRef.current.clear();
@@ -676,7 +798,7 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
 
         if (requestId !== bootstrapRequestRef.current) throw supersededError();
         applyAuthentication(data.session);
-        if (data.source === "backoffice") hydrateAfterAuthentication(requestId);
+        if (data.source === "backoffice" || data.source === "preview-session") hydrateAfterAuthentication(requestId);
       } catch (reason) {
         if (isSupersededError(reason)) throw reason;
         if (!scope.isCurrent() || isAbortError(reason)) throw supersededError();
@@ -735,8 +857,101 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
     }
   }, [clearUserState, coordinator, gateway, handleGatewayError]);
 
+  const requestAccount = useCallback(
+    async <T,>(sessionId: string, operation: (options: AccountRequestOptions) => Promise<T>, options?: AccountRequestOptions) => {
+      const scope = coordinator.open();
+      try {
+        const signal = options?.signal ? AbortSignal.any([scope.signal, options.signal]) : scope.signal;
+        signal.throwIfAborted();
+        const response = await operation({ ...options, signal, expectedSessionId: sessionId });
+        signal.throwIfAborted();
+        scope.assertCurrent();
+        return response;
+      } catch (reason) {
+        if (!scope.isCurrent() || options?.signal?.aborted || isAbortError(reason)) throw supersededError();
+        handleGatewayError(reason);
+        throw reason;
+      } finally { scope.close(); }
+    },
+    [coordinator, handleGatewayError],
+  );
+
+  const mutateAccount = useCallback(
+    <T,>(sessionId: string, kind: string, input: unknown, operation: (options: AccountRequestOptions) => Promise<T>, options?: AccountRequestOptions) => {
+      const generation = authGenerationRef.current;
+      const logicalKey = `account:${kind}:${JSON.stringify(input)}`;
+      return enqueueMutation(async () => {
+        if (generation !== authGenerationRef.current) throw supersededError();
+        const idempotencyKey = options?.idempotencyKey ?? mutationKeysRef.current.get(logicalKey) ?? createProductIdempotencyKey();
+        mutationKeysRef.current.set(logicalKey, idempotencyKey);
+        const response = await requestAccount(sessionId, operation, { ...options, idempotencyKey });
+        mutationKeysRef.current.delete(logicalKey);
+        return response;
+      });
+    },
+    [enqueueMutation, requestAccount],
+  );
+
+  const getAccountSettings = useCallback<AccountGateway["getSettings"]>(async (options) => {
+    const service = gateway.account;
+    const sessionId = session?.id;
+    if (!service || !sessionId) throw supersededError();
+    return requestAccount(sessionId, async (next) => {
+      const settings = await service.getSettings(next);
+      if (settings.sessionId !== sessionId) throw new Error("No pudimos validar los datos de tu cuenta.");
+      return settings;
+    }, options);
+  }, [gateway, requestAccount, session?.id]);
+
+  const saveAccountLimits = useCallback<AccountGateway["saveLimits"]>(async (input, options) => {
+    const service = gateway.account;
+    const sessionId = session?.id;
+    if (!service || !sessionId) throw supersededError();
+    return mutateAccount(sessionId, "limits", input, async (next) => {
+      const settings = await service.saveLimits(input, next);
+      if (settings.sessionId !== sessionId) throw new Error("No pudimos validar los datos de tu cuenta.");
+      return settings;
+    }, options);
+  }, [gateway, mutateAccount, session?.id]);
+
+  const pauseAccount = useCallback<AccountGateway["pause"]>(async (input, options) => {
+    const service = gateway.account;
+    const sessionId = session?.id;
+    if (!service || !sessionId) throw supersededError();
+    return mutateAccount(sessionId, "pause", input, async (next) => {
+      const settings = await service.pause(input, next);
+      if (settings.sessionId !== sessionId) throw new Error("No pudimos validar los datos de tu cuenta.");
+      return settings;
+    }, options);
+  }, [gateway, mutateAccount, session?.id]);
+
+  const updateAccountProfile = useCallback<AccountGateway["updateProfile"]>(async (input, options) => {
+    const service = gateway.account;
+    const sessionId = session?.id;
+    if (!service || !sessionId) throw supersededError();
+    const updated = await mutateAccount(sessionId, "profile", input, async (next) => {
+      const result = await service.updateProfile(input, next);
+      if (result.id !== sessionId) throw new Error("No pudimos validar los datos de tu cuenta.");
+      return result;
+    }, options);
+    stateRevisionRef.current += 1;
+    // Profile updates must not overwrite a balance received from a concurrent play.
+    setSession((current) => current?.id === updated.id ? { ...current, displayName: updated.displayName } : current);
+    return updated;
+  }, [gateway, mutateAccount, session?.id]);
+
+  const account = useMemo<AccountGateway | undefined>(() => (
+    gateway.account && session?.id ? {
+      getSettings: getAccountSettings,
+      saveLimits: saveAccountLimits,
+      pause: pauseAccount,
+      updateProfile: updateAccountProfile,
+    } : undefined
+  ), [gateway, getAccountSettings, pauseAccount, saveAccountLimits, session?.id, updateAccountProfile]);
+
   const value = useMemo(
     () => ({
+      account,
       session,
       catalog,
       plays,
@@ -749,17 +964,21 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
       unauthorized,
       gatewayMode: gateway.mode,
       walletAvailable: gateway.capabilities.wallet,
+      withdrawalAvailable: Boolean(gateway.capabilities.wallet && gateway.capabilities.withdrawal && gateway.withdraw),
       persistentRegistration: gateway.capabilities.persistentRegistration,
       refresh,
       refreshMovements,
       requestPlay,
       getTicket,
+      getPendingWalletOperationKey,
       requestTopUp,
+      requestWithdrawal,
       login,
       register,
       logout,
     }),
     [
+      account,
       session,
       catalog,
       plays,
@@ -775,7 +994,9 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
       refreshMovements,
       requestPlay,
       getTicket,
+      getPendingWalletOperationKey,
       requestTopUp,
+      requestWithdrawal,
       login,
       register,
       logout,

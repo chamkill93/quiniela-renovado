@@ -4,6 +4,7 @@ import {
   instantPlayRequestSchema,
   traditionalPlayRequestSchema,
   walletTopupRequestSchema,
+  walletWithdrawalRequestSchema,
 } from "../../../src/lib/gaming/schemas";
 
 describe("server-side gaming schemas", () => {
@@ -80,16 +81,32 @@ describe("server-side gaming schemas", () => {
     ).toThrow();
   });
 
-  it("validates wallet top-ups on the server", () => {
-    expect(
-      walletTopupRequestSchema.parse({ amount: 50_000, method: "CARD" }),
-    ).toEqual({ amount: 50_000, method: "CARD" });
+  describe.each([
+    { operation: "top-up", schema: walletTopupRequestSchema },
+    { operation: "withdrawal", schema: walletWithdrawalRequestSchema },
+  ])("wallet $operation", ({ schema }) => {
+    it.each(["CARD", "QR", "CASH_POINT", "TIGO", "CLARO", "PERSONAL", "BANK_TRANSFER", "PUNTO_RECARGA"])(
+      "accepts %s without payment credentials",
+      (method) => {
+        expect(schema.parse({ amount: 75_000, method })).toEqual({ amount: 75_000, method });
+      },
+    );
 
-    expect(() =>
-      walletTopupRequestSchema.parse({ amount: 75_000, method: "CARD" }),
-    ).toThrow();
-    expect(() =>
-      walletTopupRequestSchema.parse({ amount: 50_000, method: "CRYPTO" }),
-    ).toThrow();
+    it.each([10_000, 10_001, 75_000, 5_000_000])("accepts the integer amount %i", (amount) => {
+      expect(schema.parse({ amount, method: "QR" }).amount).toBe(amount);
+    });
+
+    it.each([0, -10_000, 9_999, 10_000.5, 5_000_001, Infinity, NaN, "50000", null])(
+      "rejects an invalid amount: %j",
+      (amount) => {
+        expect(() => schema.parse({ amount, method: "CARD" })).toThrow();
+      },
+    );
+
+    it("rejects unknown channels and extraneous payment data", () => {
+      expect(() => schema.parse({ amount: 50_000, method: "CRYPTO" })).toThrow();
+      expect(() => schema.parse({ amount: 50_000, method: "CARD", cardNumber: "not-collected" })).toThrow();
+      expect(() => schema.parse({ amount: 50_000, method: "TIGO", phone: "not-collected" })).toThrow();
+    });
   });
 });

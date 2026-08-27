@@ -24,6 +24,8 @@ import type {
   ProductPlayCommand,
   ProductSnapshot,
   ProductTopUpInput,
+  ProductWithdrawalInput,
+  ProductWithdrawalResponse,
 } from "./contracts";
 import {
   assertPlayResponseMatchesCommand,
@@ -31,11 +33,13 @@ import {
 } from "./response-contract";
 
 export class ProductGatewayCapabilityError extends Error {
-  readonly capability: "wallet";
+  readonly capability: "wallet" | "withdrawal";
 
-  constructor(capability: "wallet") {
+  constructor(capability: "wallet" | "withdrawal") {
     super(
-      "La billetera requiere endpoints explícitos del backoffice antes de habilitarse.",
+      capability === "withdrawal"
+        ? "Los retiros no están habilitados para esta cuenta."
+        : "La billetera requiere endpoints explícitos del backoffice antes de habilitarse.",
     );
     this.name = "ProductGatewayCapabilityError";
     this.capability = capability;
@@ -109,6 +113,7 @@ function toMockResult(result: GamingResult): MockResult {
     source: result.source,
     result: result.result,
     resultNumbers: [...result.resultNumbers],
+    ...(result.drawNumbers ? { drawNumbers: result.drawNumbers.map((number) => ({ ...number })) } : {}),
     occurredAt: result.occurredAt,
   };
 }
@@ -132,6 +137,7 @@ export class BackofficeProductGateway implements ProductGateway {
     this.client = config.client;
     this.capabilities = {
       wallet: Boolean(config.walletAvailable),
+      withdrawal: false,
       persistentRegistration: true,
     } as const;
   }
@@ -255,6 +261,17 @@ export class BackofficeProductGateway implements ProductGateway {
     if (!this.capabilities.wallet) {
       throw new ProductGatewayCapabilityError("wallet");
     }
+  }
+
+  async withdraw(
+    input: ProductWithdrawalInput,
+    options?: ProductGatewayMutationOptions,
+  ): Promise<ProductWithdrawalResponse> {
+    void input;
+    void options;
+    // No external withdrawal endpoint has been contracted. Never route a real
+    // wallet mutation to preview or infer an endpoint from another operation.
+    throw new ProductGatewayCapabilityError("withdrawal");
   }
 }
 

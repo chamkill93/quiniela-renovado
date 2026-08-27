@@ -9,6 +9,8 @@ export default defineConfig({
   },
   test: {
     name: "unit",
+    // Bound jsdom concurrency so local/CI CPU contention does not cause false timeouts.
+    maxWorkers: 2,
     environment: "node",
     include: ["tests/unit/**/*.{test,spec}.{ts,tsx}"],
     exclude: [

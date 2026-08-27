@@ -4,9 +4,11 @@ import type { PlayResponse } from "@/lib/product/api-types";
 import {
   assertPlayResponseMatchesCommand,
   assertTopUpResponseMatchesInput,
+  assertWithdrawalResponseMatchesInput,
   ProductGatewayProtocolError,
   type ProductPlayCommand,
   type ProductTopUpResponse,
+  type ProductWithdrawalResponse,
 } from "@/lib/product/gateway";
 
 const command: ProductPlayCommand = {
@@ -44,6 +46,44 @@ const response: PlayResponse = {
 };
 
 describe("product mutation response contract", () => {
+  const withdrawal: ProductWithdrawalResponse = {
+    session: { id: "user-1", displayName: "Ana", role: "PLAYER", balance: 10_000, currency: "PYG" },
+    balanceEntry: {
+      id: "withdrawal-1", type: "WITHDRAWAL", amount: -20_000, currency: "PYG",
+      balanceAfter: 10_000, referenceId: "RET-1", method: "TIGO", createdAt: "2026-08-27T12:00:00.000Z",
+    },
+    replayed: false,
+  };
+
+  it("correlates a withdrawal with the submitted amount, channel and resulting balance", () => {
+    expect(assertWithdrawalResponseMatchesInput(withdrawal, { amount: 20_000, method: "TIGO" })).toBe(withdrawal);
+  });
+
+  it.each([
+    { amount: 20_000 },
+    { amount: -10_000 },
+    { method: "CLARO" as const },
+    { type: "TOPUP" as const },
+    { balanceAfter: 30_000 },
+  ])("rejects a withdrawal receipt with mismatched fields: %j", (entryChanges) => {
+    expect(() => assertWithdrawalResponseMatchesInput({
+      ...withdrawal,
+      balanceEntry: { ...withdrawal.balanceEntry, ...entryChanges },
+    }, { amount: 20_000, method: "TIGO" })).toThrow(ProductGatewayProtocolError);
+  });
+
+  it.each([0, -10_000, Number.POSITIVE_INFINITY, 10_000.5])("rejects invalid submitted withdrawal amount %s", (amount) => {
+    expect(() => assertWithdrawalResponseMatchesInput(withdrawal, { amount, method: "TIGO" })).toThrow(ProductGatewayProtocolError);
+  });
+
+  it("rejects a negative resulting withdrawal balance", () => {
+    expect(() => assertWithdrawalResponseMatchesInput({
+      ...withdrawal,
+      session: { ...withdrawal.session, balance: -10_000 },
+      balanceEntry: { ...withdrawal.balanceEntry, balanceAfter: -10_000 },
+    }, { amount: 20_000, method: "TIGO" })).toThrow(ProductGatewayProtocolError);
+  });
+
   it("accepts a play correlated to the exact command", () => {
     expect(assertPlayResponseMatchesCommand(response, command)).toBe(response);
   });

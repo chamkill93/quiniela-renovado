@@ -59,8 +59,24 @@ Quiniela tradicional:
 - A los Premios
 - Invertida
 - Redoblona
-- Sapy’aite tradicional
-- Megaloto, seis números únicos del 1 al 45
+
+El catálogo reúne además Sapy’aite bajo **Instantáneas** y la tarjeta verde de
+**Mega Loto** bajo **Lotos**. Mega Loto enlaza al sitio oficial externo: elegí
+seis números del 1 al 40. Los contratos tradicionales heredados de Sapy’aite y
+Megaloto se conservan para compatibilidad, pero no se ofrecen como juegos
+tradicionales en la interfaz.
+
+Los formularios de Cabeza, Premios, Invertida y Redoblona comparten tres pasos:
+sorteo, números e importe. Incluyen selección aleatoria sin consumir saldo,
+validación antes del envío y una revisión explícita antes de pagar. El resumen
+permanece al costado en escritorio y el botón de pago queda sobre la navegación
+en celular. El sorteo inicial es el próximo abierto por fecha y hora; una jugada
+en revisión no cambia silenciosamente de sorteo al llegar al cierre.
+
+El importe se descuenta sólo al aceptar la jugada en el servicio. El saldo
+estimado es informativo; el saldo disponible siempre proviene del servicio.
+Los reintentos conservan su idempotencia y, si la respuesta es una repetición,
+se consulta el saldo actual para no restaurar un saldo histórico.
 
 Instantáneas:
 
@@ -76,6 +92,21 @@ de QA y no forman parte del contrato productivo. En modo `backoffice` la UI
 presenta únicamente la aceptación, el resultado y el saldo autoritativos que
 recibe del sistema externo.
 
+## Inicio y salas de sorteo
+
+En preview, la programación compartida en `src/lib/gaming/daily-draw-schedule.ts`
+usa 10:30, 13:00, 16:30 y 20:30 en `America/Asuncion`. Inicio destaca el próximo
+sorteo y permite desplegar el streaming debajo de las tarjetas sin cambiar de página.
+La misma tarjeta lo contrae y otra cambia el sorteo mostrado; solo se monta un reproductor.
+La selección conserva la fecha y hora al llegar a cero, sin saltar al día siguiente.
+Las salas con enlaces directos siguen aceptando `?fecha=YYYY-MM-DD`.
+
+Las salas preview reproducen en bucle `public/assets/video/quinie-streaming-simulado.mp4`,
+con controles e inicio silenciado. La sala muestra únicamente el nombre, el video
+y un contador compacto debajo, que desaparece al llegar a cero sin interrumpir el video.
+El video no publica resultados. En modo backoffice se conservan la programación
+recibida y las fuentes de transmisión configuradas, sin recurrir al video de muestra.
+
 ## Arquitectura de FASE 2
 
 ```text
@@ -88,7 +119,7 @@ React UI
    └── AppShell / login / registro / catálogos / rodillos / historiales
 ```
 
-Los componentes no llaman rutas mock ni calculan saldo, premios o resultados. El modo `backoffice` falla de forma explícita si falta configuración; nunca cae silenciosamente al proveedor de preview. En un build de producción el modo es obligatorio: omitir `NEXT_PUBLIC_PRODUCT_GATEWAY_MODE` también detiene la composición. En producción, identidad, catálogo, saldo, jugadas, comprobantes y resultados llegan exclusivamente del backoffice externo.
+Los componentes no llaman rutas mock ni modifican el saldo autoritativo, los premios o los resultados. La estimación del saldo posterior al pago es sólo informativa. El modo `backoffice` falla de forma explícita si falta configuración; nunca cae silenciosamente al proveedor de preview. En un build de producción el modo es obligatorio: omitir `NEXT_PUBLIC_PRODUCT_GATEWAY_MODE` también detiene la composición. En producción, identidad, catálogo, saldo, jugadas, comprobantes y resultados llegan exclusivamente del backoffice externo.
 
 ## Conectores de backoffice
 
@@ -108,7 +139,7 @@ El detalle de DTO, transporte, errores y checklist de UAT está en `docs/BACKOFF
 
 La matriz visual cubre dark y light en:
 
-`360×800`, `390×844`, `430×932`, `768×1024`, `1024×768`, `1366×768`, `1440×900` y `1920×1080`.
+`320×568`, `360×800`, `390×844`, `430×932`, `768×1024`, `1024×768`, `1366×768`, `1440×900` y `1920×1080`.
 
 Los flujos E2E validan los seis conectores tradicionales, Sapy’aite como única Instantánea habilitada, el rechazo de juegos omitidos por el catálogo, comprobantes consultados desde Mis Jugadas, saldo autoritativo, recarga, idempotencia, historiales, login/logout, registro preview no persistente, sesión expirada y error de red con reintento.
 
@@ -126,11 +157,18 @@ Las capturas internas se mantienen fuera de `public/` para no exponer datos pers
 
 ## Git y despliegue
 
-El repositorio usa la rama `main`. No se versionan `.env`, `node_modules`, `.next`, reportes ni resultados temporales. Antes de cualquier push ejecutá:
+El repositorio usa la rama `main`. Las entregas para revisión se suben a una rama
+`release/*`, sin actualizar `main` ni activar su despliegue. No se versionan
+`.env`, `node_modules`, `.next`, reportes ni resultados temporales. Antes de
+cualquier push ejecutá:
 
 ```bash
 npm run verify
 npm run test:e2e
 ```
+
+La entrega `0.2.0` y sus condiciones de publicación se describen en
+[`docs/RELEASE_0.2.0.md`](docs/RELEASE_0.2.0.md). Las pruebas unitarias limitan
+la concurrencia a dos procesos para mantener estable la ejecución local y en CI.
 
 El despliegue queda diferido. `project-docs/HOSTINGER_DEPLOY.md` registra únicamente los prerrequisitos del frontend; ya no exige base de datos, secretos de sesión ni un proveedor local. Producción requiere el contrato y credenciales del backoffice, validación UAT y aprobación de Negocio/Legal.

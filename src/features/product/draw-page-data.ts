@@ -1,7 +1,8 @@
 import type { DrawDefinition } from "@/lib/gaming/types";
 import type { MockResult } from "@/lib/product/api-types";
+import { drawDateKey, DRAW_TIME_ZONE, isDrawDateKey } from "@/lib/gaming/draw-calendar";
 
-const ASUNCION_TIME_ZONE = "America/Asuncion";
+const ASUNCION_TIME_ZONE = DRAW_TIME_ZONE;
 
 const DRAW_TIME_FORMATTER = new Intl.DateTimeFormat("es-PY", {
   hour: "2-digit",
@@ -106,16 +107,27 @@ export interface DrawPageSchedule {
 export function selectDrawPageSchedule(
   draws: readonly DrawDefinition[],
   definition: DrawPageDefinition,
+  selectedDate?: string | null,
+  nowMs?: number | null,
 ): DrawPageSchedule | null {
-  const draw = draws.find(
-    (candidate) =>
-      candidate.id === definition.drawId && candidate.family === "QUINIELA",
-  );
+  if (selectedDate && !isDrawDateKey(selectedDate)) return null;
+  const candidates = draws
+    .filter((candidate) => candidate.id === definition.drawId && candidate.family === "QUINIELA")
+    .flatMap((draw) => {
+      const timestamp = parseTimestamp(draw.drawsAt);
+      if (!timestamp || (selectedDate && drawDateKey(timestamp.milliseconds) !== selectedDate)) return [];
+      return [{ draw, at: timestamp.milliseconds }];
+    })
+    .sort((left, right) => left.at - right.at);
+  const draw = typeof nowMs === "number" && Number.isFinite(nowMs)
+    ? (candidates.find((candidate) => candidate.at > nowMs) ?? candidates.at(-1))?.draw
+    : candidates[0]?.draw;
   if (!draw) return null;
 
   const drawsAt = parseTimestamp(draw.drawsAt);
   if (!drawsAt) return null;
-  const closesAt = parseTimestamp(draw.closesAt);
+  const closing = parseTimestamp(draw.closesAt);
+  const closesAt = closing && closing.milliseconds <= drawsAt.milliseconds ? closing : null;
 
   return {
     draw,

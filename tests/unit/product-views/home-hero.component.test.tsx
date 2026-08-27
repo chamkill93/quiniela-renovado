@@ -50,6 +50,24 @@ afterEach(() => {
 });
 
 describe("HomeHero", () => {
+  it("mantiene solo Jugar Quiniela como acción del hero", () => {
+    useProductMock.mockReturnValue({
+      catalog,
+      error: null,
+      gatewayMode: "backoffice",
+      loading: false,
+      results: [],
+    });
+
+    render(<HomeHero />);
+
+    expect(screen.getByRole("heading", { level: 1, name: "Tu jugada empieza acá." })).toBeTruthy();
+    expect(screen.getAllByRole("link", { name: /^Jugar/ })).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "Jugar Quiniela" }).getAttribute("href"))
+      .toBe("/quinielas");
+    expect(screen.queryByRole("link", { name: "Jugar Sapy’aite" })).toBeNull();
+  });
+
   it("mantiene el resultado publicado cuando el gateway es backoffice", () => {
     const random = vi.spyOn(Math, "random");
     useProductMock.mockReturnValue({

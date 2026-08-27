@@ -7,6 +7,16 @@ export type IconName =
   | "theme"
   | "user"
   | "wallet"
+  | "card"
+  | "qr"
+  | "cash"
+  | "phone"
+  | "arrowDownLeft"
+  | "arrowUpRight"
+  | "refresh"
+  | "search"
+  | "shield"
+  | "whatsapp"
   | "head"
   | "prize"
   | "invert"
@@ -44,6 +54,7 @@ const assetIcons: Partial<Record<IconName, string>> = {
   theme: "/assets/icons/ui/theme.svg",
   user: "/assets/icons/ui/user.svg",
   wallet: "/assets/icons/ui/wallet.svg",
+  whatsapp: "/assets/icons/ui/whatsapp.svg",
   head: "/assets/icons/game/head.svg",
   prize: "/assets/icons/game/prize.svg",
   invert: "/assets/icons/game/invert.svg",
@@ -61,6 +72,15 @@ const assetIcons: Partial<Record<IconName, string>> = {
 };
 
 const lineIcons: Partial<Record<IconName, ReactNode>> = {
+  card: <><rect x="3" y="5" width="18" height="14" rx="3" /><path d="M3 10h18M7 15h3M14 15h3" /></>,
+  qr: <><rect x="3" y="3" width="6" height="6" rx="1" /><rect x="15" y="3" width="6" height="6" rx="1" /><rect x="3" y="15" width="6" height="6" rx="1" /><path d="M15 15h3v3h3M15 21h3M21 12v3M12 3v3M3 12h3M12 12h3M12 18v3" /></>,
+  cash: <><rect x="2" y="5" width="20" height="14" rx="3" /><circle cx="12" cy="12" r="3" /><path d="M6 9v6M18 9v6" /></>,
+  phone: <><rect x="6" y="2" width="12" height="20" rx="3" /><path d="M10 5h4M11 18h2" /></>,
+  arrowDownLeft: <path d="M18 6 6 18M6 7v11h11" />,
+  arrowUpRight: <path d="M6 18 18 6M7 6h11v11" />,
+  refresh: <><path d="M20 7v5h-5M4 17v-5h5" /><path d="M6.5 6.5A7.5 7.5 0 0 1 20 12M4 12a7.5 7.5 0 0 0 13.5 5.5" /></>,
+  search: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></>,
+  shield: <><path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6z" /><path d="m8.5 11.5 2.5 2.5 4.5-5" /></>,
   ticket: (
     <>
       <path d="M5 4.5h14v4a2.5 2.5 0 0 0 0 5v4H5v-4a2.5 2.5 0 0 0 0-5z" />

@@ -20,5 +20,7 @@ export const mockGamingProvider =
   });
 
 if (process.env.NODE_ENV !== "production") {
+  // Refresh methods after hot updates while keeping the existing session data.
+  Object.setPrototypeOf(mockGamingProvider, MockGamingProvider.prototype);
   globalThis.__quinieMockGamingProvider = mockGamingProvider;
 }

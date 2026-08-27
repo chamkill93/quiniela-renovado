@@ -1,3 +1,4 @@
+import { buildPreviewDailyDraws } from "./daily-draw-schedule";
 import type {
   DrawDefinition,
   GamingCatalog,
@@ -242,26 +243,8 @@ export const DEFAULT_ENABLED_INSTANT_GAME_IDS = [
   "sapyaite",
 ] as const satisfies readonly InstantGameId[];
 
-function atTime(base: Date, hoursFromNow: number): string {
-  return new Date(base.getTime() + hoursFromNow * 60 * 60 * 1_000).toISOString();
-}
-
 export function buildMockDraws(now = new Date()): readonly DrawDefinition[] {
-  const definitions = [
-    ["early", "Tempranero · 10:00", "QUINIELA", 2],
-    ["morning", "Matutino · 13:00", "QUINIELA", 5],
-    ["evening", "Vespertino · 17:00", "QUINIELA", 9],
-    ["night", "Nocturno · 21:00", "QUINIELA", 13],
-  ] as const;
-
-  return definitions.map(([id, label, family, hours]) => ({
-    id,
-    label,
-    family,
-    closesAt: atTime(now, hours - 0.25),
-    drawsAt: atTime(now, hours),
-    status: "OPEN",
-  }));
+  return buildPreviewDailyDraws(now.getTime());
 }
 
 export function buildInstantGames(

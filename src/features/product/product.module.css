@@ -291,6 +291,22 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.catalogCategory {
+  display: grid;
+  min-width: 0;
+  grid-template-rows: auto 1fr;
+  gap: 6px;
+}
+
+.catalogCategoryTitle {
+  margin: 0;
+  color: var(--q-muted-strong);
+  font-family: var(--q-font-display);
+  font-size: clamp(0.75rem, 1.4vw, 0.875rem);
+  font-weight: 750;
+  line-height: 1.25;
+}
+
 .gameCard {
   --game-accent: #e30613;
   --game-accent-hot: #ff3a46;
@@ -530,7 +546,7 @@
 }
 
 .gameCard.megaLotoCard strong { color: #fff; }
-.gameCard.megaLotoCard p { color: #d6ebd4; }
+.gameCard.megaLotoCard p { display: block; color: #d6ebd4; }
 .megaLotoCard .gameEmblem { object-fit: contain; }
 .megaLotoCard .gameVisual { background: transparent; }
 

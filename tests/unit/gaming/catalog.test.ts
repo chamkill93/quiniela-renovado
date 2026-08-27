@@ -1,8 +1,37 @@
 import { describe, expect, it } from "vitest";
 
-import { buildGamingCatalog } from "../../../src/lib/gaming/catalog";
+import { buildGamingCatalog, buildMockDraws } from "../../../src/lib/gaming/catalog";
+import { buildPreviewDailyDraws } from "../../../src/lib/gaming/daily-draw-schedule";
+import { MockGamingProvider } from "../../../src/lib/gaming/mock-provider";
 
 describe("gaming catalog", () => {
+  it("shares the preview calendar instead of scheduling relative to startup", () => {
+    const now = new Date("2026-08-26T15:00:00Z");
+    expect(buildMockDraws(now)).toEqual(buildPreviewDailyDraws(now.getTime()));
+    expect(buildGamingCatalog("REFUND", now).draws).toEqual(buildMockDraws(now));
+    expect(buildMockDraws(now).map((draw) => draw.drawsAt)).toEqual([
+      "2026-08-27T13:30:00.000Z", "2026-08-26T16:00:00.000Z",
+      "2026-08-26T19:30:00.000Z", "2026-08-26T23:30:00.000Z",
+    ]);
+  });
+
+  it("refreshes mock draw dates when queried without changing games or existing snapshots", () => {
+    let nowMs = Date.parse("2026-08-26T13:29:59Z");
+    const provider = new MockGamingProvider({
+      now: () => new Date(nowMs), enabledInstantGameIds: ["sapyaite"],
+    });
+    const before = provider.getCatalog();
+    nowMs = Date.parse("2026-08-27T13:30:00Z");
+    const after = provider.getCatalog();
+    expect(before.draws[0].drawsAt).toBe("2026-08-26T13:30:00.000Z");
+    expect(after.draws).toEqual(buildMockDraws(new Date(nowMs)));
+    expect(after.draws[0].drawsAt).toBe("2026-08-28T13:30:00.000Z");
+    expect(after.amounts).toEqual(before.amounts);
+    expect(after.traditional).toEqual(before.traditional);
+    expect(after.instant).toEqual(before.instant);
+    expect(after.instant.map((game) => game.id)).toEqual(["sapyaite"]);
+  });
+
   it("publishes six traditional games and exactly nine instant games", () => {
     const catalog = buildGamingCatalog();
 

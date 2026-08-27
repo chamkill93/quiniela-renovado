@@ -1,4 +1,5 @@
 export const CURRENCY = "PYG" as const;
+export const DRAW_POSTURE_COUNT = 14;
 
 export type Currency = typeof CURRENCY;
 export type MockRole = "PLAYER" | "ADMIN";
@@ -171,6 +172,11 @@ export interface GamingTicket {
   issuedAt: string;
 }
 
+export interface PositionedDrawNumber {
+  position: number;
+  value: string;
+}
+
 export interface GamingResult {
   id: string;
   source: "DRAW" | "INSTANT";
@@ -179,6 +185,8 @@ export interface GamingResult {
   drawId: string | null;
   result: string;
   resultNumbers: readonly string[];
+  /** Canonical draw positions, shared across modalities; may be partially published. */
+  drawNumbers?: readonly PositionedDrawNumber[];
   occurredAt: string;
 }
 
@@ -189,8 +197,21 @@ export interface PlacePlayResponse {
   replayed: boolean;
 }
 
-export type WalletMovementType = "TOPUP" | "STAKE" | "PRIZE" | "REFUND";
-export type TopupMethod = "CARD" | "BANK_TRANSFER" | "CASH_POINT" | "PUNTO_RECARGA";
+export const WALLET_MIN_AMOUNT = 10_000;
+export const WALLET_MAX_AMOUNT = 5_000_000;
+export const WALLET_METHODS = [
+  "CARD",
+  "BANK_TRANSFER",
+  "CASH_POINT",
+  "PUNTO_RECARGA",
+  "QR",
+  "TIGO",
+  "CLARO",
+  "PERSONAL",
+] as const;
+
+export type WalletMovementType = "TOPUP" | "WITHDRAWAL" | "STAKE" | "PRIZE" | "REFUND";
+export type TopupMethod = (typeof WALLET_METHODS)[number];
 
 export interface WalletMovement {
   id: string;
@@ -208,3 +229,5 @@ export interface TopupResponse {
   balanceEntry: WalletMovement;
   replayed: boolean;
 }
+
+export type WithdrawalResponse = TopupResponse;

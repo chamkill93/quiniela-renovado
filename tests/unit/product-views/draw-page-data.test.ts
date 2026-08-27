@@ -80,6 +80,33 @@ describe("datos de páginas de sorteos", () => {
     ).toBeNull();
   });
 
+  it("conserva la fecha elegida y nunca sustituye una ocurrencia no publicada", () => {
+    const definition = getDrawPageDefinition("tempranero")!;
+    const schedules = [
+      draw({ drawsAt: "2026-08-27T13:30:00Z", closesAt: "2026-08-27T13:15:00Z" }),
+      draw({ drawsAt: "2026-08-26T13:30:00Z", closesAt: "2026-08-26T13:15:00Z" }),
+    ];
+    expect(selectDrawPageSchedule(schedules, definition, "2026-08-26")?.drawsAt)
+      .toBe("2026-08-26T13:30:00Z");
+    expect(selectDrawPageSchedule(schedules, definition, "2026-08-28")).toBeNull();
+    expect(selectDrawPageSchedule(schedules, definition, "2026-02-30")).toBeNull();
+    expect(selectDrawPageSchedule(
+      schedules, definition, null, Date.parse("2026-08-26T12:00:00Z"),
+    )?.drawsAt).toBe("2026-08-26T13:30:00Z");
+  });
+
+  it("no muestra un cierre que ocurre después del sorteo", () => {
+    const definition = getDrawPageDefinition("tempranero")!;
+    expect(selectDrawPageSchedule([
+      draw({ closesAt: "2026-08-26T12:15:00Z" }),
+    ], definition)).toMatchObject({
+      timeLabel: "09:00",
+      closesAt: null,
+      closesAtMs: null,
+      closingTimeLabel: null,
+    });
+  });
+
   it("ordena el historial del draw y normaliza el rango 001–999", () => {
     const results: MockResult[] = [
       {

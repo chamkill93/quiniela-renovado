@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildGamingCatalog } from "@/lib/gaming/catalog";
 import { drawDateKey, drawWallTime, isDrawDateKey } from "@/lib/gaming/draw-calendar";
-import { emptyDrawDay, paginateDrawDays, selectDailyDrawResults } from "@/features/product/results-page-data";
+import { emptyDrawDay, paginateDrawDays, selectDailyDrawResults, selectDrawPostures } from "@/features/product/results-page-data";
 import type { MockResult } from "@/lib/product/api-types";
 
 const catalog = buildGamingCatalog("REFUND", new Date("2026-08-27T12:00:00Z"));
@@ -38,6 +38,9 @@ describe("daily draw result presentation", () => {
     expect(publications).toHaveLength(2);
     expect(publications[0].values).toEqual(["000", "007", "123", "012", "009"]);
     expect(publications[1].gameId).toBe("head");
+    expect(selectDrawPostures(days[0].draws[1])).toEqual(Array.from({ length: 14 }, (_, index) => ({
+      position: index + 1, value: index === 0 ? "007" : null,
+    })));
   });
   it("filters a date, and shows unpublished slots instead of inventing numbers for an empty date", () => {
     const history = [result("one", "early", "2026-08-26T13:30:00Z")];
@@ -45,6 +48,7 @@ describe("daily draw result presentation", () => {
     const empty = selectDailyDrawResults(catalog, history, "2026-08-20");
     expect(empty.days[0].dateKey).toBe("2026-08-20");
     expect(empty.days[0].draws.every((draw) => draw.publications.length === 0)).toBe(true);
+    expect(empty.days[0].draws.every((draw) => selectDrawPostures(draw).every((posture) => posture.value === null))).toBe(true);
     expect(selectDailyDrawResults(catalog, history, "2026-02-30").days).toHaveLength(0);
   });
   it("recognizes explicit slot names and catalog aliases without guessing from the hour", () => {
@@ -71,6 +75,99 @@ describe("daily draw result presentation", () => {
     const record = result("same", "early", "invalid", { publishedAt: "2026-08-26T13:00:00Z" });
     const { days } = selectDailyDrawResults(catalog, [record, record, result("empty", "early", record.publishedAt!, { result: "" })]);
     expect(days[0].draws[0].publications).toHaveLength(1);
+  });
+});
+
+describe("draw postures", () => {
+  it("orders all 14 explicit positions while preserving leading zeroes and repeated numbers", () => {
+    const values = ["7", "0", "007", "14", "90", "123", "456", "789", "5", "32", "678", "900", "19", " 42 "];
+    const expected = values.map((value, index) => ({ position: index + 1, value: value.trim().padStart(3, "0") }));
+    const drawNumbers = values.map((value, index) => ({ position: index + 1, value })).reverse();
+    const { days } = selectDailyDrawResults(catalog, [
+      result("positioned-only", "early", "2026-08-26T13:30:00Z", { gameId: "prizes", result: "", drawNumbers }),
+    ]);
+    const draw = days[0].draws[0];
+    expect(draw.publications[0].drawNumbers).toEqual(expected);
+    expect(draw.publications[0].values).toEqual(expected.map(({ value }) => value));
+    expect(selectDrawPostures(draw)).toEqual(expected);
+  });
+
+  it("leaves gaps unknown and rejects invalid or repeated positions without renumbering", () => {
+    const { days } = selectDailyDrawResults(catalog, [
+      result("partial", "early", "2026-08-26T13:30:00Z", {
+        gameId: "prizes", result: "", drawNumbers: [
+          { position: 14, value: "99" },
+          { position: 0, value: "10" },
+          { position: 2.5, value: "20" },
+          { position: 15, value: "30" },
+          { position: NaN, value: "40" },
+          { position: 2, value: "006" },
+          { position: 2, value: "123" },
+          { position: 7, value: "NaN" },
+          { position: 9, value: " " },
+          { position: 11, value: "1234" },
+          { position: 12, value: "-7" },
+        ],
+      }),
+    ]);
+    expect(selectDrawPostures(days[0].draws[0])).toEqual(Array.from({ length: 14 }, (_, index) => ({
+      position: index + 1, value: index === 1 ? "006" : index === 13 ? "099" : null,
+    })));
+  });
+
+  it("uses the latest explicit snapshot without filling its gaps from other modalities or legacy head results", () => {
+    const { days } = selectDailyDrawResults(catalog, [
+      result("older-head", "early", "2026-08-26T13:30:00Z", {
+        drawNumbers: [{ position: 1, value: "101" }, { position: 2, value: "202" }, { position: 14, value: "999" }],
+      }),
+      result("newest-legacy-head", "early", "2026-08-26T13:34:00Z", { result: "777" }),
+      result("latest-snapshot", "early", "2026-08-26T13:33:00Z", {
+        gameId: "prizes", drawNumbers: [{ position: 2, value: "303" }],
+      }),
+      result("other-modality", "early", "2026-08-26T13:31:00Z", {
+        gameId: "redoblona", drawNumbers: [{ position: 3, value: "404" }],
+      }),
+    ]);
+    expect(selectDrawPostures(days[0].draws[0])).toEqual(Array.from({ length: 14 }, (_, index) => ({
+      position: index + 1, value: index === 1 ? "303" : null,
+    })));
+  });
+
+  it.each([
+    { kind: "empty", drawNumbers: [] },
+    { kind: "entirely invalid", drawNumbers: [{ position: 0, value: "123" }, { position: 15, value: "456" }, { position: 1, value: "invalid" }] },
+  ])("retains a new $kind snapshot instead of recovering older or legacy numbers", ({ drawNumbers }) => {
+    const { days } = selectDailyDrawResults(catalog, [
+      result("old-complete-snapshot", "early", "2026-08-26T13:30:00Z", {
+        drawNumbers: Array.from({ length: 14 }, (_, index) => ({ position: index + 1, value: String(100 + index) })),
+      }),
+      result("legacy-head", "early", "2026-08-26T13:34:00Z", { result: "888" }),
+      result("legacy-prizes", "early", "2026-08-26T13:32:00Z", { gameId: "prizes", resultNumbers: ["123", "456"] }),
+      {
+        id: "new-empty-snapshot", source: "DRAW", gameId: "prizes", drawId: "early",
+        occurredAt: "2026-08-26T13:35:00Z", drawNumbers,
+      },
+    ]);
+    const draw = days[0].draws[0];
+    expect(draw.publications).toHaveLength(4);
+    expect(draw.publications[0]).toMatchObject({ id: "new-empty-snapshot", drawNumbers: [], values: [] });
+    expect(selectDrawPostures(draw)).toEqual(Array.from({ length: 14 }, (_, index) => ({
+      position: index + 1, value: null,
+    })));
+  });
+
+  it("preserves legacy modality values without promoting them to a head or assigning postures", () => {
+    const { days } = selectDailyDrawResults(catalog, [
+      result("legacy-prizes", "early", "2026-08-26T13:30:00Z", {
+        gameId: "prizes", resultNumbers: ["7", "7", "45"],
+      }),
+    ]);
+    const draw = days[0].draws[0];
+    expect(draw.publications[0].drawNumbers).toBeUndefined();
+    expect(draw.publications[0].values).toEqual(["007", "007", "045"]);
+    expect(selectDrawPostures(draw)).toEqual(Array.from({ length: 14 }, (_, index) => ({
+      position: index + 1, value: null,
+    })));
   });
 });
 

@@ -1,7 +1,7 @@
 # E2E selector contract
 
-Playwright runs `shell.spec.ts` in the eight required QA viewports, once in dark
-mode and once in light mode (16 projects). The higher-cost transactional suite
+Playwright runs `shell.spec.ts` in the nine required QA viewports, once in dark
+mode and once in light mode (18 projects), including 320×568. The higher-cost transactional suite
 `product-flows.spec.ts` runs only in two representative projects: desktop
 1366x768 dark and mobile 390x844 light. Tests prefer semantic roles and
 accessible names; `data-testid` is reserved for stable structural hooks that

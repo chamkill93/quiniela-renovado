@@ -106,15 +106,27 @@ export function QuinielaCatalogClient() {
         data-family="traditional"
         data-testid="traditional-games-grid"
       >
-        {games.map((game, index) => (
+        {games.map((game, index) => game.id === "sapyaite" ? (
+          <section
+            aria-labelledby="catalog-instant-title"
+            className={styles.catalogCategory}
+            key={game.id}
+          >
+            <h2 className={styles.catalogCategoryTitle} id="catalog-instant-title">Instantáneas</h2>
+            <CatalogGameCard eager={index < 3} game={game} testId="instant-game-card" />
+          </section>
+        ) : (
           <CatalogGameCard
             eager={index < 3}
             game={game}
             key={game.id}
-            testId={game.id === "sapyaite" ? "instant-game-card" : "traditional-game-card"}
+            testId="traditional-game-card"
           />
         ))}
-        <MegaLotoCatalogCard />
+        <section aria-labelledby="catalog-lotos-title" className={styles.catalogCategory}>
+          <h2 className={styles.catalogCategoryTitle} id="catalog-lotos-title">Lotos</h2>
+          <MegaLotoCatalogCard />
+        </section>
       </div>
     </main>
   );

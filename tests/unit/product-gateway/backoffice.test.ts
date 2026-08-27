@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { BackofficeClient, BackofficeSession } from "@/lib/backoffice";
+import { DRAW_POSTURE_COUNT } from "@/lib/gaming/types";
 import type {
   GamingPlay,
   GamingResult,
@@ -88,6 +89,16 @@ function partialClient(
 }
 
 describe("BackofficeProductGateway", () => {
+  it("keeps withdrawals disabled without inventing an external endpoint", async () => {
+    const topUp = vi.fn();
+    const gateway = createBackofficeProductGateway({ client: partialClient({ topUp }), walletAvailable: true });
+
+    expect(gateway.capabilities.withdrawal).toBe(false);
+    await expect(gateway.withdraw({ amount: 20_000, method: "QR" }))
+      .rejects.toMatchObject({ capability: "withdrawal" });
+    expect(topUp).not.toHaveBeenCalled();
+  });
+
   it("hydrates from separated auth and gaming capabilities", async () => {
     const catalog = buildGamingCatalog(
       "REFUND",
@@ -119,6 +130,39 @@ describe("BackofficeProductGateway", () => {
     expect(getPlays).toHaveBeenCalledWith({ limit: 50 }, undefined);
     expect(getResults).toHaveBeenCalledWith({ limit: 100 }, undefined);
     expect(bootstrap).not.toHaveBeenCalled();
+  });
+
+  it("copies explicit draw positions without generating positions for legacy results", async () => {
+    const legacyResult: GamingResult = {
+      ...result,
+      id: "legacy-draw",
+      source: "DRAW",
+      gameId: "prizes",
+      gameName: "A los Premios",
+      drawId: "early",
+    };
+    const drawNumbers = [{ position: DRAW_POSTURE_COUNT, value: "007" }, { position: 1, value: "497" }];
+    const positionedResult: GamingResult = { ...legacyResult, id: "positioned-draw", drawNumbers };
+    const remoteResults = [positionedResult, legacyResult];
+    const gateway = createBackofficeProductGateway({
+      client: partialClient({
+        getSession: vi.fn(async () => ({ session })),
+        getCatalog: vi.fn(async () => ({ catalog: buildGamingCatalog("REFUND", new Date("2026-08-25T12:00:00.000Z")) })),
+        getPlays: vi.fn(async () => ({ plays: [] })),
+        getResults: vi.fn(async () => ({ results: remoteResults })),
+      }),
+    });
+
+    const snapshot = await gateway.bootstrap();
+    const refreshed = await gateway.getResults();
+    expect(snapshot.results).toEqual(remoteResults);
+    expect(refreshed).toEqual(remoteResults);
+    expect(snapshot.results[0].drawNumbers).not.toBe(drawNumbers);
+    expect(snapshot.results[0].drawNumbers?.[0]).not.toBe(drawNumbers[0]);
+    expect(snapshot.results[1]).not.toHaveProperty("drawNumbers");
+    snapshot.results[0].drawNumbers![0].value = "changed-by-consumer";
+    expect(drawNumbers[0].value).toBe("007");
+    expect(refreshed[0].drawNumbers?.[0].value).toBe("007");
   });
 
   it("bounds histories even when the backoffice returns more than requested", async () => {

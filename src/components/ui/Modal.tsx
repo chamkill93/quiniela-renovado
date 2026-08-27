@@ -21,6 +21,7 @@ export interface ModalProps {
   size?: "sm" | "md" | "lg" | "xl";
   closeLabel?: string;
   closeOnBackdrop?: boolean;
+  closeDisabled?: boolean;
   initialFocusRef?: React.RefObject<HTMLElement | null>;
 }
 
@@ -43,6 +44,7 @@ export function Modal({
   size = "md",
   closeLabel = "Cerrar",
   closeOnBackdrop = true,
+  closeDisabled = false,
   initialFocusRef,
 }: ModalProps) {
   const mounted = useSyncExternalStore(
@@ -79,7 +81,7 @@ export function Modal({
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Escape") {
       event.preventDefault();
-      onOpenChange(false);
+      if (!closeDisabled) onOpenChange(false);
       return;
     }
 
@@ -108,7 +110,7 @@ export function Modal({
         className="q-modal__backdrop"
         aria-hidden="true"
         onMouseDown={() => {
-          if (closeOnBackdrop) onOpenChange(false);
+          if (closeOnBackdrop && !closeDisabled) onOpenChange(false);
         }}
       />
       <div
@@ -129,6 +131,7 @@ export function Modal({
           <button
             type="button"
             className="q-icon-button q-modal__close"
+            disabled={closeDisabled}
             onClick={() => onOpenChange(false)}
             aria-label={closeLabel}
             title={closeLabel}

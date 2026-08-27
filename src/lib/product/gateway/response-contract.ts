@@ -4,6 +4,8 @@ import type {
   ProductPlayCommand,
   ProductTopUpInput,
   ProductTopUpResponse,
+  ProductWithdrawalInput,
+  ProductWithdrawalResponse,
 } from "./contracts";
 
 export class ProductGatewayProtocolError extends Error {
@@ -76,6 +78,10 @@ export function assertTopUpResponseMatchesInput(
 ) {
   const entry = response.balanceEntry;
   if (
+    !Number.isSafeInteger(input.amount) ||
+    input.amount <= 0 ||
+    !Number.isSafeInteger(response.session.balance) ||
+    response.session.balance < 0 ||
     entry.type !== "TOPUP" ||
     entry.amount !== input.amount ||
     entry.method !== input.method ||
@@ -84,6 +90,29 @@ export function assertTopUpResponseMatchesInput(
   ) {
     throw new ProductGatewayProtocolError(
       "La respuesta de recarga no coincide con el comando enviado al backoffice.",
+    );
+  }
+  return response;
+}
+
+export function assertWithdrawalResponseMatchesInput(
+  response: ProductWithdrawalResponse,
+  input: ProductWithdrawalInput,
+) {
+  const entry = response.balanceEntry;
+  if (
+    !Number.isSafeInteger(input.amount) ||
+    input.amount <= 0 ||
+    !Number.isSafeInteger(response.session.balance) ||
+    response.session.balance < 0 ||
+    entry.type !== "WITHDRAWAL" ||
+    entry.amount !== -input.amount ||
+    entry.method !== input.method ||
+    entry.balanceAfter !== response.session.balance ||
+    entry.currency !== response.session.currency
+  ) {
+    throw new ProductGatewayProtocolError(
+      "La respuesta de retiro no coincide con la operación solicitada.",
     );
   }
   return response;

@@ -6,13 +6,13 @@ import {
   apiError,
   jsonWithSession,
   readJson,
+  requireAccountSessionId,
   requireIdempotencyKey,
-  requireSessionId,
 } from "../_shared/http";
 
 export async function POST(request: NextRequest) {
   try {
-    const sessionId = requireSessionId(request);
+    const sessionId = requireAccountSessionId(request);
     const responseBody = mockGamingProvider.placeInstantBet(
       sessionId,
       await readJson(request),

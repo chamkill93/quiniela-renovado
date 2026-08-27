@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { useProduct } from "@/providers/product-provider";
 import { mapPublishedResults } from "./product-view-mappers";
 import { DrawIcon } from "./draw-icon";
-import { paginateDrawDays, selectDailyDrawResults, type DailyDraw, type DailyPublication } from "./results-page-data";
+import { paginateDrawDays, selectDailyDrawResults, selectDrawPostures, type DailyDraw } from "./results-page-data";
 import {
   RemoteEmptyState, RemoteErrorState, RemoteLoadingState, RemoteUnauthorizedState,
 } from "./remote-view-state";
@@ -19,20 +19,41 @@ function formatOccurredAt(value: string | null) {
   }).format(new Date(value));
 }
 
-function PublicationNumbers({ publication }: { publication: DailyPublication }) {
+function DrawPostures({ draw, postures }: { draw: DailyDraw; postures: ReturnType<typeof selectDrawPostures> }) {
+  const unpositioned = draw.publications.some((publication) => publication.drawNumbers !== undefined) ? []
+    : draw.publications.flatMap((publication) => publication.gameId === "head" ? publication.values.slice(1) : publication.values);
   return (
-    <div className={resultStyles.publication}>
-      <h4>{publication.label}</h4>
-      <ul aria-label={publication.label} className={resultStyles.values}>
-        {publication.values.map((value, index) => <li key={`${publication.id}-${index}`}>{value}</li>)}
-      </ul>
+    <div className={resultStyles.postures}>
+      <h4>Posturas del sorteo</h4>
+      <table aria-label={`Posturas de ${draw.label}`} className={resultStyles.postureTable}>
+        <thead><tr><th scope="col">Postura</th><th scope="col">Número</th></tr></thead>
+        <tbody>
+          {postures.map(({ position, value }) => (
+            <tr data-head={position === 1 ? "true" : undefined} data-position={position} key={position}>
+              <th scope="row">
+                {position}ª
+                {position === 1 ? <span className={resultStyles.headLabel}>A la cabeza</span> : null}
+              </th>
+              <td>{value ?? <span aria-label="Postura sin informar" className={resultStyles.postureUnavailable}>—</span>}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {unpositioned.length > 0 ? (
+        <div className={resultStyles.unpositioned}>
+          <p className={resultStyles.hint}>Números sin postura informada</p>
+          <ul aria-label="Números sin postura informada" className={resultStyles.values}>
+            {unpositioned.map((value, index) => <li key={index}>{value}</li>)}
+          </ul>
+        </div>
+      ) : null}
     </div>
   );
 }
 
 function DailyDrawCard({ draw, dateKey }: { draw: DailyDraw; dateKey: string }) {
-  const primary = draw.publications.find((item) => item.gameId === "head") ?? draw.publications[0];
-  const hasDetails = draw.publications.length > 1 || (primary?.values.length ?? 0) > 1;
+  const primary = draw.publications.find((item) => item.drawNumbers !== undefined) ?? draw.publications.find((item) => item.gameId === "head") ?? draw.publications[0];
+  const postures = selectDrawPostures(draw);
   const titleId = `result-${dateKey}-${draw.id}`;
   return (
     <article aria-labelledby={titleId} className={resultStyles.drawCard} data-draw-id={draw.id} data-state={primary ? "published" : "unpublished"} data-testid="daily-draw-card">
@@ -46,16 +67,14 @@ function DailyDrawCard({ draw, dateKey }: { draw: DailyDraw; dateKey: string }) 
       {primary ? (
         <>
           <div className={resultStyles.primary}>
-            <span>{primary.label}</span>
-            <strong data-testid="daily-draw-number">{primary.values[0]}</strong>
+            <span>A la Cabeza</span>
+            <strong aria-label={postures[0].value ? undefined : "A la cabeza sin informar"} data-testid="daily-draw-number">{postures[0].value ?? "—"}</strong>
             {primary.occurredAt ? <time dateTime={primary.occurredAt}>Publicado a las {primary.timeLabel}</time> : null}
           </div>
-          {hasDetails ? (
-            <details className={resultStyles.details}>
-              <summary>Ver todos los números</summary>
-              {draw.publications.map((publication) => <PublicationNumbers key={publication.id} publication={publication} />)}
-            </details>
-          ) : null}
+          <details className={resultStyles.details}>
+            <summary>Ver todos los números</summary>
+            <DrawPostures draw={draw} postures={postures} />
+          </details>
         </>
       ) : (
         <div className={resultStyles.missing}>
@@ -67,38 +86,27 @@ function DailyDrawCard({ draw, dateKey }: { draw: DailyDraw; dateKey: string }) 
   );
 }
 
-function DatePagination({ pagination, placement, onChange }: {
+function DatePagination({ pagination, onChange }: {
   pagination: ReturnType<typeof paginateDrawDays>;
-  placement: "top" | "bottom";
   onChange: (page: number) => void;
 }) {
   if (pagination.pageCount <= 1) return null;
   return (
-    <nav aria-label={placement === "top" ? "Paginación de fechas" : "Paginación de fechas inferior"} className={resultStyles.pagination}>
+    <nav aria-label="Paginación de fechas" className={resultStyles.pagination}>
       <button aria-controls="daily-results-history" disabled={pagination.page === 0} onClick={() => onChange(pagination.page - 1)} type="button">← Más recientes</button>
-      <div aria-live={placement === "top" ? "polite" : "off"} aria-atomic="true">
-        <strong>Página {pagination.page + 1} de {pagination.pageCount}</strong>
-        <span>Días {pagination.from}–{pagination.to} de {pagination.totalDays}</span>
-      </div>
       <button aria-controls="daily-results-history" disabled={pagination.page + 1 === pagination.pageCount} onClick={() => onChange(pagination.page + 1)} type="button">Días anteriores →</button>
     </nav>
   );
 }
 
 export function ResultsClient() {
-  const { catalog, results, session, loading, error, unauthorized, refresh, gatewayMode } = useProduct();
-  const [selectedDate, setSelectedDate] = useState("");
+  const { catalog, results, session, loading, error, unauthorized, refresh } = useProduct();
   const [page, setPage] = useState(0);
   const historyRef = useRef<HTMLElement>(null);
   const unavailable = !catalog && !loading;
-  const grouped = useMemo(() => catalog ? selectDailyDrawResults(catalog, results, selectedDate) : null, [catalog, results, selectedDate]);
+  const grouped = useMemo(() => catalog ? selectDailyDrawResults(catalog, results) : null, [catalog, results]);
   const instantResults = catalog ? mapPublishedResults(catalog, results, "INSTANT") : [];
-  const pagination = paginateDrawDays(grouped?.days ?? [], selectedDate ? 0 : page);
-
-  function changeDate(value: string) {
-    setSelectedDate(value);
-    setPage(0);
-  }
+  const pagination = paginateDrawDays(grouped?.days ?? [], page);
 
   function changePage(value: number) {
     setPage(value);
@@ -109,7 +117,10 @@ export function ResultsClient() {
 
   return (
     <main className={`${styles.page} ${styles.pageStack}`}>
-      <SectionHeader description="Los cuatro sorteos de cada día, ordenados por fecha." eyebrow="Sorteos diarios" title="Resultados" />
+      <header className={resultStyles.heading}>
+        <h1 className={styles.title}>Resultados</h1>
+        {catalog && grouped ? <DatePagination onChange={changePage} pagination={pagination} /> : null}
+      </header>
       {loading && !catalog ? <RemoteLoadingState label="Cargando resultados…" /> : null}
       {unavailable && unauthorized ? <RemoteUnauthorizedState message="Iniciá sesión para consultar los resultados disponibles." /> : null}
       {unavailable && !unauthorized && error ? <RemoteErrorState message={error} onRetry={() => void refresh()} /> : null}
@@ -119,18 +130,6 @@ export function ResultsClient() {
         <>
           {loading ? <RemoteLoadingState label="Actualizando resultados…" /> : null}
           {error ? <RemoteErrorState message={error} onRetry={() => void refresh()} /> : null}
-          <div className={resultStyles.toolbar}>
-            <label className={resultStyles.dateField} htmlFor="results-date">
-              Buscar por fecha
-              <input id="results-date" onChange={(event) => changeDate(event.target.value)} type="date" value={selectedDate} />
-            </label>
-            <button className={resultStyles.clear} disabled={!selectedDate} onClick={() => changeDate("")} type="button">Ver todas las fechas</button>
-            <p className={resultStyles.hint}>
-              Fechas y horas de Paraguay.{gatewayMode === "preview" ? " Resultados de muestra." : ""}
-            </p>
-          </div>
-
-          <DatePagination onChange={changePage} pagination={pagination} placement="top" />
           <section aria-label="Resultados de sorteos por fecha" className={resultStyles.days} id="daily-results-history" ref={historyRef} tabIndex={-1}>
             {pagination.days.length === 0 ? <RemoteEmptyState message="No hay sorteos publicados por fecha." /> : pagination.days.map((day) => (
               <section aria-labelledby={`results-date-${day.dateKey}`} className={resultStyles.day} data-date={day.dateKey} data-testid="results-day" key={day.dateKey}>
@@ -144,7 +143,6 @@ export function ResultsClient() {
               </section>
             ))}
           </section>
-          <DatePagination onChange={changePage} pagination={pagination} placement="bottom" />
 
           {grouped.other.length > 0 ? (
             <section aria-label="Otros resultados publicados" className={resultStyles.other}>
@@ -161,7 +159,7 @@ export function ResultsClient() {
           ) : null}
 
           <section aria-label="Resultados instantáneos de la cuenta">
-            <SectionHeader description="Tus resultados personales, separados de los sorteos diarios." eyebrow="Mi historial" headingLevel={2} title="Resultados instantáneos" />
+            <SectionHeader eyebrow="Mi historial" headingLevel={2} title="Resultados instantáneos" />
             {unauthorized || !session ? (
               <RemoteUnauthorizedState message="Iniciá sesión para ver tus resultados instantáneos." />
             ) : instantResults.length === 0 ? (

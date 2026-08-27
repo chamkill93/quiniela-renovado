@@ -2,6 +2,8 @@ import {
   backofficeResponseParsers,
   type BackofficeResponseParser,
 } from "@/lib/backoffice";
+import { accountSettingsResponseSchema, type AccountGateway, type AccountRequestOptions } from "@/lib/account/contracts";
+import type { RegisterUserRequest } from "@/lib/backoffice";
 import type {
   GamingPlay,
   GamingResult,
@@ -23,6 +25,8 @@ import type {
   ProductSnapshot,
   ProductTopUpInput,
   ProductTopUpResponse,
+  ProductWithdrawalInput,
+  ProductWithdrawalResponse,
 } from "./contracts";
 import {
   createProductIdempotencyKey,
@@ -34,10 +38,16 @@ import {
 import {
   assertPlayResponseMatchesCommand,
   assertTopUpResponseMatchesInput,
+  assertWithdrawalResponseMatchesInput,
 } from "./response-contract";
 
 export const PREVIEW_PRODUCT_ENDPOINTS: Readonly<PreviewProductEndpoints> = {
   bootstrap: "/api/mock/bootstrap",
+  register: "/api/mock/session/register",
+  account: "/api/mock/account",
+  accountLimits: "/api/mock/account/limits",
+  accountPause: "/api/mock/account/pause",
+  accountProfile: "/api/mock/account/profile",
   login: "/api/mock/session/login",
   logout: "/api/mock/session/logout",
   instantPlay: "/api/mock/instant",
@@ -46,6 +56,7 @@ export const PREVIEW_PRODUCT_ENDPOINTS: Readonly<PreviewProductEndpoints> = {
   results: "/api/mock/results",
   walletMovements: "/api/mock/wallet/movements",
   walletTopUp: "/api/mock/wallet/topup",
+  walletWithdrawal: "/api/mock/wallet/withdrawal",
 };
 
 export const DEFAULT_PREVIEW_PRODUCT_TIMEOUT_MS = 15_000;
@@ -161,22 +172,6 @@ function callerAbortError(signal: AbortSignal) {
   return new DOMException("Preview request aborted", "AbortError");
 }
 
-/** Explicit, deterministic and non-persistent preview registration fixture. */
-function previewRegistrationFixture(
-  displayName: string,
-): ProductAuthenticationResponse {
-  return {
-    source: "preview-fixture",
-    session: {
-      id: "preview-registration-fixture",
-      displayName: displayName.trim() || "Usuario preview",
-      role: "PLAYER",
-      balance: 250_000,
-      currency: "PYG",
-    },
-  };
-}
-
 function toPreviewPlay(play: GamingPlay): MockPlay {
   return {
     ...play,
@@ -185,9 +180,11 @@ function toPreviewPlay(play: GamingPlay): MockPlay {
 }
 
 function toPreviewResult(result: GamingResult): MockResult {
+  const { drawNumbers, ...legacyResult } = result;
   return {
-    ...result,
+    ...legacyResult,
     resultNumbers: [...result.resultNumbers],
+    ...(drawNumbers ? { drawNumbers: drawNumbers.map((number) => ({ ...number })) } : {}),
   };
 }
 
@@ -216,9 +213,16 @@ function previewTicketPath(template: string, ticketId: string) {
 }
 
 export class PreviewProductGateway implements ProductGateway {
+  readonly account: AccountGateway = {
+    getSettings: async (options) => (await this.get(this.endpoints.account, accountSettingsResponseSchema.parse, options)).settings,
+    saveLimits: async (input, options) => (await this.post(this.endpoints.accountLimits, input, accountSettingsResponseSchema.parse, options)).settings,
+    pause: async (input, options) => (await this.post(this.endpoints.accountPause, input, accountSettingsResponseSchema.parse, options)).settings,
+    updateProfile: async (input, options) => (await this.post(this.endpoints.accountProfile, input, backofficeResponseParsers.authentication, options)).session,
+  };
   readonly mode = "preview" as const;
   readonly capabilities = {
     wallet: true,
+    withdrawal: true,
     persistentRegistration: false,
   } as const;
 
@@ -308,8 +312,9 @@ export class PreviewProductGateway implements ProductGateway {
     return { session: data.session, source: "preview-fixture" };
   }
 
-  async register(input: { displayName: string }) {
-    return previewRegistrationFixture(input.displayName);
+  async register(input: RegisterUserRequest, options?: ProductGatewayRequestOptions): Promise<ProductAuthenticationResponse> {
+    const response = await this.post(this.endpoints.register, input, backofficeResponseParsers.authentication, options);
+    return { session: response.session, source: "preview-session" };
   }
 
   async logout(options?: ProductGatewayRequestOptions) {
@@ -343,13 +348,29 @@ export class PreviewProductGateway implements ProductGateway {
     return assertTopUpResponseMatchesInput(response, input);
   }
 
+  async withdraw(
+    input: ProductWithdrawalInput,
+    options?: ProductGatewayMutationOptions,
+  ) {
+    const response = await this.post<ProductWithdrawalResponse>(
+      this.endpoints.walletWithdrawal,
+      input,
+      backofficeResponseParsers.walletWithdrawal,
+      options,
+    );
+    return assertWithdrawalResponseMatchesInput(response, input);
+  }
+
   private get<T>(
     endpoint: string,
     parser: BackofficeResponseParser<T>,
-    options?: ProductGatewayRequestOptions,
+    options?: AccountRequestOptions,
   ) {
+    const headers = new Headers({ Accept: "application/json" });
+    if (options?.expectedSessionId) headers.set("X-Account-Session", options.expectedSessionId);
     return this.request<T>(endpoint, {
       method: "GET",
+      headers,
       cache: "no-store",
       signal: options?.signal,
     }, parser);
@@ -359,9 +380,10 @@ export class PreviewProductGateway implements ProductGateway {
     endpoint: string,
     body: unknown,
     parser: BackofficeResponseParser<T>,
-    options?: ProductGatewayMutationOptions,
+    options?: AccountRequestOptions,
   ) {
     const headers = new Headers({ Accept: "application/json" });
+    if (options?.expectedSessionId) headers.set("X-Account-Session", options.expectedSessionId);
     if (body !== undefined) headers.set("Content-Type", "application/json");
     headers.set(
       "Idempotency-Key",
@@ -403,7 +425,7 @@ export class PreviewProductGateway implements ProductGateway {
         throw new ProductGatewayHttpError(
           0,
           "GATEWAY_TIMEOUT",
-          `El servicio de vista previa no respondió dentro de ${this.timeoutMs} ms.`,
+          "El servicio no respondió a tiempo. Intentá nuevamente.",
         );
       }
       if (callerSignal?.aborted) throw callerAbortError(callerSignal);
@@ -414,7 +436,7 @@ export class PreviewProductGateway implements ProductGateway {
       throw new ProductGatewayHttpError(
         0,
         "GATEWAY_NETWORK_ERROR",
-        "No se pudo conectar con el servicio de vista previa.",
+        "No se pudo conectar con el servicio. Intentá nuevamente.",
       );
     } finally {
       composed.cleanup();

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { DRAW_POSTURE_COUNT, WALLET_METHODS, type WithdrawalResponse } from "@/lib/gaming/types";
 import type {
   AuthenticationResponse,
   BootstrapResponse,
@@ -322,6 +323,14 @@ const gamingTicketSchema = z.object({
   issuedAt: isoDateTimeSchema,
 });
 
+const positionedDrawNumbersSchema = z.array(z.object({
+  position: z.number().int().min(1).max(DRAW_POSTURE_COUNT),
+  value: z.string().trim().regex(/^\d{1,3}$/),
+})).refine(
+  (numbers) => new Set(numbers.map((number) => number.position)).size === numbers.length,
+  { message: "Las posturas publicadas no pueden repetirse." },
+);
+
 const gamingResultSchema = z.object({
   id: z.string(),
   source: z.enum(["DRAW", "INSTANT"]),
@@ -330,20 +339,39 @@ const gamingResultSchema = z.object({
   drawId: z.string().nullable(),
   result: z.string(),
   resultNumbers: z.array(z.string()),
+  drawNumbers: positionedDrawNumbersSchema.optional(),
   occurredAt: isoDateTimeSchema,
 });
 
-const walletMovementSchema = z.object({
+const walletMethodSchema = z.enum(WALLET_METHODS);
+
+const walletMovementBaseSchema = z.object({
   id: z.string(),
-  type: z.enum(["TOPUP", "STAKE", "PRIZE", "REFUND"]),
+  type: z.enum(["TOPUP", "WITHDRAWAL", "STAKE", "PRIZE", "REFUND"]),
   amount: signedMoneySchema,
   currency: currencySchema,
   balanceAfter: balanceSchema,
   referenceId: z.string().nullable(),
-  method: z
-    .enum(["CARD", "BANK_TRANSFER", "CASH_POINT", "PUNTO_RECARGA"])
-    .nullable(),
+  method: walletMethodSchema.nullable(),
   createdAt: isoDateTimeSchema,
+});
+
+const walletMovementSchema = walletMovementBaseSchema.superRefine((movement, context) => {
+  const debit = movement.type === "WITHDRAWAL" || movement.type === "STAKE";
+  if (debit !== (movement.amount < 0)) {
+    context.addIssue({
+      code: "custom",
+      message: "El importe no corresponde al tipo de movimiento.",
+      path: ["amount"],
+    });
+  }
+  if ((movement.type === "TOPUP" || movement.type === "WITHDRAWAL") && movement.method === null) {
+    context.addIssue({
+      code: "custom",
+      message: "La operación debe indicar su canal.",
+      path: ["method"],
+    });
+  }
 });
 
 const sessionResponseSchema = z.object({
@@ -474,10 +502,10 @@ const walletMovementsResponseSchema = z.object({
 const walletTopUpResponseSchema = z
   .object({
     session: backofficeSessionSchema,
-    balanceEntry: walletMovementSchema.extend({
+    balanceEntry: walletMovementBaseSchema.extend({
       type: z.literal("TOPUP"),
       amount: positiveMoneySchema,
-      method: z.enum(["CARD", "BANK_TRANSFER", "CASH_POINT", "PUNTO_RECARGA"]),
+      method: walletMethodSchema,
     }),
     replayed: z.boolean(),
   })
@@ -489,6 +517,29 @@ const walletTopUpResponseSchema = z
       context.addIssue({
         code: "custom",
         message: "La recarga no coincide con el saldo de sesión devuelto.",
+        path: ["balanceEntry"],
+      });
+    }
+  });
+
+const walletWithdrawalResponseSchema = z
+  .object({
+    session: backofficeSessionSchema,
+    balanceEntry: walletMovementBaseSchema.extend({
+      type: z.literal("WITHDRAWAL"),
+      amount: z.number().int().negative(),
+      method: walletMethodSchema,
+    }),
+    replayed: z.boolean(),
+  })
+  .superRefine(({ session, balanceEntry }, context) => {
+    if (
+      session.currency !== balanceEntry.currency ||
+      session.balance !== balanceEntry.balanceAfter
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "El retiro no coincide con el saldo de sesión devuelto.",
         path: ["balanceEntry"],
       });
     }
@@ -516,5 +567,7 @@ export const backofficeResponseParsers = {
     walletMovementsResponseSchema.parse(value),
   walletTopUp: (value: unknown): WalletTopUpResponse =>
     walletTopUpResponseSchema.parse(value),
+  walletWithdrawal: (value: unknown): WithdrawalResponse =>
+    walletWithdrawalResponseSchema.parse(value),
   ticket: (value: unknown): TicketResponse => ticketResponseSchema.parse(value),
 } satisfies Record<string, BackofficeResponseParser<unknown>>;

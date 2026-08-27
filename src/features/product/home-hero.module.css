@@ -281,8 +281,7 @@
   padding: 8px clamp(26px, 2.25vw, 34px) clamp(20px, 1.65vw, 28px);
 }
 
-.primaryAction,
-.secondaryAction {
+.primaryAction {
   min-height: 44px;
   display: inline-flex;
   align-items: center;
@@ -306,14 +305,7 @@
   color: #fff;
 }
 
-.secondaryAction {
-  border-color: var(--hero-line);
-  background: var(--hero-panel-raised);
-  color: var(--hero-text);
-}
-
-.primaryAction:hover,
-.secondaryAction:hover {
+.primaryAction:hover {
   transform: translateY(-1px);
   filter: brightness(1.05);
 }
@@ -408,12 +400,11 @@
   .actions {
     width: 100%;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     padding-inline: 15px;
   }
 
-  .primaryAction,
-  .secondaryAction {
+  .primaryAction {
     width: 100%;
     padding-inline: 9px;
     font-size: 0.67rem;
@@ -432,16 +423,11 @@
   .timeUnit {
     min-width: 41px;
   }
-
-  .actions {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .nextDraw,
-  .primaryAction,
-  .secondaryAction {
+  .primaryAction {
     transition: none;
   }
 }
