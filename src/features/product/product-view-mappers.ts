@@ -4,6 +4,7 @@ import type {
   TraditionalGameDefinition,
 } from "@/lib/gaming/types";
 import type { MockResult } from "@/lib/product/api-types";
+import { SAPYAITE_PATH } from "./product-links";
 
 import {
   isQuinieGameIconId,
@@ -11,7 +12,7 @@ import {
 } from "./game-icon-map";
 
 export type CatalogFamily = "instant" | "traditional";
-export type GameTone = "red" | "orange" | "blue" | "purple" | "green";
+export type GameTone = "red" | "orange" | "blue" | "purple" | "green" | "teal";
 
 interface GameVisualMetadata {
   iconKey: QuinieGameIconId;
@@ -86,7 +87,7 @@ export const GAME_VISUALS: Readonly<Record<string, GameVisualMetadata>> = {
   head: { iconKey: "head", tone: "red" },
   prizes: { iconKey: "prizes", tone: "orange" },
   invert: { iconKey: "invert", tone: "blue" },
-  redoblona: { iconKey: "redoblona", tone: "red" },
+  redoblona: { iconKey: "redoblona", tone: "teal" },
   "sapyaite-traditional": { iconKey: "sapyaite-traditional", tone: "purple" },
   megaloto: { iconKey: "megaloto", tone: "blue" },
   sapyaite: { iconKey: "sapyaite", tone: "purple" },
@@ -173,11 +174,21 @@ export function mapCatalogGames(
       tone: visual?.tone ?? DEFAULT_VISUAL.tone,
       baseAmount: amount,
       href:
-        family === "instant"
+        family === "instant" && game.id === "sapyaite"
+          ? SAPYAITE_PATH
+          : family === "instant"
           ? `/instantaneas/${game.id}`
           : `/quinielas/${game.id}`,
     };
   });
+}
+
+/** Group the public catalog without changing game contracts or enabled status. */
+export function mapQuinielaCatalogGames(catalog: GamingCatalog): CatalogGameView[] {
+  return [
+    ...mapCatalogGames(catalog, "traditional"),
+    ...mapCatalogGames(catalog, "instant").filter((game) => game.id === "sapyaite"),
+  ];
 }
 
 function resultNumbers(result: MockResult) {

@@ -36,6 +36,20 @@ function providerWithResults(
 }
 
 describe("MockGamingProvider", () => {
+  it("provides ten full days of four draws per modality in the sample history", () => {
+    const provider = providerWithResults([]);
+    const session = provider.createSession();
+    const history = provider.listResults(session.id);
+    expect(new Set(history.map((result) => result.id)).size).toBe(160);
+    for (const id of ["head", "prizes", "invert", "redoblona"]) {
+      const results = history.filter((result) => result.gameId === id);
+      expect(results).toHaveLength(40);
+      expect(results.map((result) => result.drawId)).toEqual(Array.from({ length: 10 }, () => ["night", "evening", "morning", "early"]).flat());
+      expect(results[0].result).not.toBe(results[8].result);
+      expect(results.every((result) => result.source === "DRAW")).toBe(true);
+      expect(results.map((result) => result.occurredAt)).toEqual(results.map((result) => result.occurredAt).sort().reverse());
+    }
+  });
   it("expires idle sessions with the same sliding eight-hour lifetime as the cookie", () => {
     let currentTimeMs = Date.parse("2026-08-25T12:00:00.000Z");
     let id = 0;

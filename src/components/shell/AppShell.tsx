@@ -50,15 +50,7 @@ export const defaultShellNavItems: ShellNavItem[] = [
     label: "Quinielas",
     icon: "head",
     section: "play",
-    match: ["/quinielas", "/jugar"],
-    mobile: true,
-  },
-  {
-    href: "/instantaneas",
-    label: "Instantáneas",
-    icon: "bolt",
-    section: "play",
-    match: ["/instantaneas"],
+    match: ["/quinielas", "/jugar", "/instantaneas"],
     mobile: true,
   },
   { href: "/reglas", label: "Reglas", icon: "rules", section: "play" },
@@ -136,7 +128,6 @@ function ShellLink({ item, active }: ShellLinkProps) {
 type MobileNavIconName =
   | "home"
   | "quiniela"
-  | "instant"
   | "play"
   | "results"
   | "account";
@@ -154,12 +145,6 @@ function MobileNavIcon({ name }: { name: MobileNavIconName }) {
         <path d="m12 3.5 7.4 4.3v8.4L12 20.5l-7.4-4.3V7.8Z" />
         <circle cx="12" cy="12" r="2.1" />
         <path d="m4.9 8 3.2 1.9M19.1 8l-3.2 1.9M12 16.4v4" />
-      </>
-    ),
-    instant: (
-      <>
-        <path d="M5 7.5 17.8 4l-3.3 12.8-3.2-3.2-3.1 3.1-.9-4.9Z" />
-        <path d="m11.3 13.6 4-4M4 18.5h5M5.5 21h4" />
       </>
     ),
     play: <path d="m9 6 9 6-9 6Z" />,
@@ -201,9 +186,6 @@ function mobileNavPresentation(item: ShellNavItem): {
   if (item.href === "/") return { icon: "home", label: "Inicio" };
   if (item.href.startsWith("/quinielas")) {
     return { icon: "quiniela", label: "Quiniela" };
-  }
-  if (item.href.startsWith("/instantaneas")) {
-    return { icon: "instant", label: "Instantáneas" };
   }
   if (item.href.startsWith("/resultados")) {
     return { icon: "results", label: "Resultados" };
@@ -271,7 +253,7 @@ function AppShellFrame({
   const routerPath = usePathname();
   const pathname = currentPath ?? routerPath ?? "/";
   const visibleItems = navItems.filter((item) => !item.adminOnly || role === "admin");
-  const mobileItems = visibleItems.filter((item) => item.mobile).slice(0, 5);
+  const mobileItems = visibleItems.filter((item) => item.mobile).slice(0, 4);
   const activeItem = visibleItems.find((item) => isPathActive(pathname, item));
   const pageTitle = title ?? activeItem?.label ?? "quinie.LA";
 
@@ -359,11 +341,11 @@ function AppShellFrame({
 
       <nav className="mobileNav" aria-label="Navegación móvil">
         <div className="mobileNavInner">
-          {mobileItems.slice(0, 3).map((item) => (
+          {mobileItems.slice(0, 2).map((item) => (
             <MobileShellLink key={item.href} item={item} active={isPathActive(pathname, item)} />
           ))}
           <MobilePlayAction />
-          {mobileItems.slice(3, 5).map((item) => (
+          {mobileItems.slice(2, 4).map((item) => (
             <MobileShellLink key={item.href} item={item} active={isPathActive(pathname, item)} />
           ))}
         </div>

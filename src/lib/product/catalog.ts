@@ -22,7 +22,7 @@ export interface ProductGame<TId extends string> {
   description: string;
   icon: string;
   art: string;
-  tone: "red" | "orange" | "blue" | "purple" | "green";
+  tone: "red" | "orange" | "blue" | "purple" | "green" | "teal";
   basePrice: number;
 }
 
@@ -64,7 +64,7 @@ export const TRADITIONAL_GAMES: ProductGame<TraditionalGameId>[] = [
     description: "Combiná un número de cabeza con una terminación de dos cifras.",
     icon: "/assets/icons/game/redoblona.svg",
     art: "/assets/game-art/redoblona.webp",
-    tone: "red",
+    tone: "teal",
     basePrice: 1_000,
   },
 ];

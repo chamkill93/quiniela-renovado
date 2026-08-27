@@ -328,6 +328,7 @@
 .gameCard[data-tone="blue"] { --game-accent: #075da8; --game-accent-hot: #2da2ff; }
 .gameCard[data-tone="purple"] { --game-accent: #5b1fa0; --game-accent-hot: #a259ff; }
 .gameCard[data-tone="green"] { --game-accent: #0d762d; --game-accent-hot: #31d667; }
+.gameCard[data-tone="teal"] { --game-accent: #087b85; --game-accent-hot: #29d9df; }
 
 :global([data-theme="light"]) .gameCard {
   border-color: color-mix(in srgb, var(--game-accent) 30%, var(--q-line));
@@ -519,6 +520,19 @@
   padding: 0;
   border-top: 0;
 }
+
+.gameCard.megaLotoCard {
+  border-color: #32a344;
+  background:
+    radial-gradient(ellipse at 90% 0%, rgb(102 213 30 / 28%), transparent 65%),
+    linear-gradient(135deg, #153f0a, #062b10 62%, #031b09);
+  color: #fff;
+}
+
+.gameCard.megaLotoCard strong { color: #fff; }
+.gameCard.megaLotoCard p { color: #d6ebd4; }
+.megaLotoCard .gameEmblem { object-fit: contain; }
+.megaLotoCard .gameVisual { background: transparent; }
 
 .megaBanner {
   position: relative;

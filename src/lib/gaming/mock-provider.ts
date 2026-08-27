@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { buildGamingCatalog, findTraditionalGame } from "./catalog";
+import { drawDateKey, drawWallTime } from "./draw-calendar";
 import { GamingDomainError } from "./errors";
 import {
   idempotencyKeySchema,
@@ -541,15 +542,40 @@ export class MockGamingProvider {
   }
 
   private buildDrawResults(now: Date): readonly GamingResult[] {
-    return ["497", "208", "731", "044", "912"].map((result, index) => ({
-      id: `draw-result-${index + 1}`,
+    // Preview-only history: ten complete past days, four draws per day.
+    // Home still limits the visible history to its latest six publications.
+    const examples = [
+      { gameId: "head", gameName: "A la Cabeza", numbers: ["497", "208", "731", "044", "912", "083", "006", "325"] },
+      { gameId: "prizes", gameName: "A los Premios", numbers: ["325", "006", "718", "462", "150", "294", "519", "602"] },
+      { gameId: "invert", gameName: "Invertida", numbers: ["749", "820", "137", "404", "291", "830", "600", "253"] },
+      { gameId: "redoblona", gameName: "Redoblona", numbers: ["044", "012", "083", "025", "067", "091", "015", "026"] },
+    ] as const;
+    const slots = [
+      { id: "night", hour: 20, minute: 30 },
+      { id: "evening", hour: 16, minute: 30 },
+      { id: "morning", hour: 13, minute: 0 },
+      { id: "early", hour: 10, minute: 30 },
+    ] as const;
+    const today = drawDateKey(now.getTime())!;
+    const schedule = Array.from({ length: 10 }, (_, index) => index + 1).flatMap((daysAgo) => {
+      const day = new Date(Date.parse(`${today}T12:00:00Z`) - daysAgo * 86_400_000).toISOString().slice(0, 10);
+      return slots.map((slot) => ({ id: slot.id, at: new Date(drawWallTime(day, slot.hour, slot.minute)).toISOString() }));
+    });
+    return examples.flatMap(({ gameId, gameName, numbers }) => schedule.map((slot, index) => {
+      // Deterministic sample values; no remote results or real payouts change.
+      const cycle = Math.floor(index / numbers.length);
+      const result = cycle === 0 ? numbers[index]
+        : String((Number(numbers[index % numbers.length]) + cycle * 137) % 999 + 1).padStart(3, "0");
+      return {
+      id: `draw-result-${gameId}-${index + 1}`,
       source: "DRAW" as const,
-      gameId: "head" as const,
-      gameName: "A la Cabeza",
-      drawId: `previous-quiniela-${index + 1}`,
+      gameId,
+      gameName,
+      drawId: slot.id,
       result,
       resultNumbers: [result],
-      occurredAt: new Date(now.getTime() - (index + 1) * 3_600_000).toISOString(),
+      occurredAt: slot.at,
+      };
     }));
   }
 }

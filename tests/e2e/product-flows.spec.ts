@@ -178,9 +178,9 @@ test("renders the promotional Home hero in dark, light and responsive layouts", 
     "href",
     "/quinielas",
   );
-  await expect(hero.getByRole("link", { name: "Ver Instantáneas" })).toHaveAttribute(
+  await expect(hero.getByRole("link", { name: "Jugar Sapy’aite" })).toHaveAttribute(
     "href",
-    "/instantaneas",
+    "/quinielas/sapyaite",
   );
   await expect(hero.locator("[data-reel-column]")).toHaveCount(3);
   const promotionalReel = hero.locator('[data-reel-source="promotional"]');
@@ -359,7 +359,7 @@ test("completes Home with scheduled draws, tabbed results and the official Mega 
   const resultCards = page.getByTestId("home-result-card");
 
   await expect(drawCards).toHaveCount(4);
-  await expect(resultCards).toHaveCount(8);
+  await expect(resultCards).toHaveCount(6);
   await expect(
     page.getByRole("heading", { name: "Instantáneas habilitadas" }),
   ).toHaveCount(0);
@@ -392,7 +392,7 @@ test("completes Home with scheduled draws, tabbed results and the official Mega 
   ).toHaveText(/^EN \d{2}H \d{2}M \d{2}S$/);
   await expect(drawsSection.locator("time")).toHaveCount(1);
 
-  for (const [index, value] of ["497", "208", "731", "044", "912", "083", "006", "325"].entries()) {
+  for (const [index, value] of ["497", "208", "731", "044", "912", "083"].entries()) {
     await expect(resultCards.nth(index).getByText(value, { exact: true })).toBeVisible();
   }
   await expect(resultsSection.getByText("999", { exact: true })).toHaveCount(0);
@@ -421,7 +421,9 @@ test("completes Home with scheduled draws, tabbed results and the official Mega 
   await expect(resultCards).toHaveCount(1);
   await expect(resultsSection.getByText("012", { exact: true })).toBeVisible();
   await tabs.nth(0).click();
-  await expect(resultCards).toHaveCount(8);
+  await expect(resultCards).toHaveCount(6);
+  await expect(resultsSection.getByText("006", { exact: true })).toHaveCount(0);
+  await expect(resultsSection.getByText("325", { exact: true })).toHaveCount(0);
 
   await expect(megaCta).toHaveAttribute(
     "href",
@@ -532,12 +534,12 @@ test("keeps a compact footer with all legal links together across the menus", as
   }
 });
 
-test("shows only four traditional games and retires the former direct routes", async ({
+test("groups Sapy’aite and green Mega Loto in Quinielas and redirects legacy links", async ({
   page,
 }) => {
   await page.goto("/quinielas", { waitUntil: "domcontentloaded" });
   await expect(
-    page.getByRole("heading", { level: 1, name: "Elegí cómo querés jugar" }),
+    page.getByRole("heading", { level: 1, name: "Quinielas" }),
   ).toBeVisible();
 
   const grid = page.getByTestId(E2E_SELECTORS.traditionalGamesGrid);
@@ -547,44 +549,50 @@ test("shows only four traditional games and retires the former direct routes", a
   await expect(grid.getByText("A los Premios", { exact: true })).toBeVisible();
   await expect(grid.getByText("Invertida", { exact: true })).toBeVisible();
   await expect(grid.getByText("Redoblona", { exact: true })).toBeVisible();
-  await expect(grid.getByText("Sapy’aite", { exact: true })).toHaveCount(0);
-  await expect(grid.getByText("Megaloto", { exact: true })).toHaveCount(0);
+  await expect(grid.getByText("Sapy’aite", { exact: true })).toBeVisible();
+  const megaCard = grid.getByTestId("mega-loto-card");
+  await expect(megaCard.getByText("Mega Loto", { exact: true })).toBeVisible();
+  await expect(megaCard).toHaveAttribute("data-tone", "green");
+  await expect(megaCard).toHaveAttribute("href", "https://lotoqr.megaloto.com.py/");
+  await expect(megaCard).toHaveAttribute("target", "_blank");
+  await expect(grid.getByRole("link")).toHaveCount(6);
+  await expect(page.locator('nav a[href="/instantaneas"]')).toHaveCount(0);
   await expect(grid.getByText("Quiniela tradicional", { exact: true })).toHaveCount(0);
   await expect(grid.getByText("Desde", { exact: true })).toHaveCount(0);
   await expect(grid.getByText("Gs. 500", { exact: true })).toHaveCount(0);
 
   await page.goto("/instantaneas", { waitUntil: "domcontentloaded" });
-  const instantGrid = page.getByTestId(E2E_SELECTORS.instantGamesGrid);
-  await expect(instantGrid.getByText("Sapy’aite", { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/quinielas$/);
+  await expect(page.getByTestId(E2E_SELECTORS.instantGameCard)).toBeVisible();
+  await page.goto("/instantaneas/sapyaite", { waitUntil: "domcontentloaded" });
+  await expect(page).toHaveURL(/\/quinielas\/sapyaite$/);
+  await expect(page.getByRole("textbox", { name: "Número exacto" })).toBeVisible();
+  await page.getByRole("link", { name: "← Volver a Quinielas" }).click();
+  await expect(page).toHaveURL(/\/quinielas$/);
 
   await page.goto("/reglas", { waitUntil: "domcontentloaded" });
   await expect(
-    page.getByRole("heading", { level: 1, name: "Reglas claras, paso a paso" }),
+    page.getByRole("heading", { level: 1, name: "Cómo jugar" }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("heading", { level: 2, name: "Cómo registrar una jugada" }),
-  ).toBeVisible();
+  await expect(page.locator('main button[aria-expanded="false"]')).toHaveCount(5);
   await expect(page.getByText("Sapy’aite tradicional", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Megaloto", { exact: true })).toHaveCount(0);
   await expect(page.locator('main a[href^="/quinielas/"], main a[href^="/instantaneas/"]')).toHaveCount(5);
   const headRule = page.getByRole("link", { name: "Jugar A la Cabeza", exact: true });
   const sapyaiteRule = page.getByRole("link", { name: "Jugar Sapy’aite", exact: true });
   await expect(headRule).toHaveAttribute("href", "/quinielas/head");
-  await expect(sapyaiteRule).toHaveAttribute("href", "/instantaneas/sapyaite");
-  await expect(page.getByText("Qué tenés que hacer", { exact: true })).toHaveCount(5);
-  await expect(page.getByText("Cuánto ganás", { exact: true })).toHaveCount(5);
-  await expect(page.getByText("Premio según tabla oficial vigente", { exact: true })).toHaveCount(4);
-  await expect(page.getByText("Premio total actual: 700× el importe", { exact: true })).toBeVisible();
+  await expect(sapyaiteRule).toHaveAttribute("href", "/quinielas/sapyaite");
+  await expect(page.getByText("Multiplicador de referencia", { exact: true })).toHaveCount(4);
+  await expect(page.getByTestId("rule-card-sapyaite").getByText("700× el importe", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Ver reglas de Sapy’aite", exact: true }).click();
+  await expect(page.getByTestId("rule-card-sapyaite")).toContainText("Si acertás con Gs. 500, el premio total es Gs. 350.000.");
   await expect(
-    page.getByText("Ejemplo con Gs. 500: recibís Gs. 350.000 en total y la ganancia neta es Gs. 349.500.", { exact: true }),
+    page.getByText("Como A la Cabeza, pero instantáneo: acertá las tres cifras exactas.", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText("Elegí un número completo de 000 a 999.", { exact: true }),
+    page.getByText("Ganás si las tres cifras coinciden en el mismo orden. No tenés que esperar un sorteo.", { exact: true }),
   ).toBeVisible();
-  await expect(
-    page.getByText("Ganás únicamente si las tres cifras coinciden exactamente y en el mismo orden.", { exact: true }),
-  ).toBeVisible();
-  const ruleColumns = await page.getByTestId("traditional-rules-grid").evaluate(
+  const ruleColumns = await page.getByTestId("rules-grid").evaluate(
     (element) => getComputedStyle(element).gridTemplateColumns.split(" ").filter(Boolean).length,
   );
   expect(ruleColumns).toBe((page.viewportSize()?.width ?? 0) <= 820 ? 1 : 2);
@@ -594,7 +602,7 @@ test("shows only four traditional games and retires the former direct routes", a
   await expect(page).toHaveURL(/\/quinielas\/head$/);
   await page.goto("/reglas", { waitUntil: "domcontentloaded" });
   await page.getByRole("link", { name: "Jugar Sapy’aite", exact: true }).click();
-  await expect(page).toHaveURL(/\/instantaneas\/sapyaite$/);
+  await expect(page).toHaveURL(/\/quinielas\/sapyaite$/);
 
   for (const path of [
     "/quinielas/sapyaite-traditional",
@@ -639,8 +647,8 @@ test("uses the approved 3D icon theme and responsive catalog grid", async ({
   }
 
   await page.goto("/instantaneas", { waitUntil: "domcontentloaded" });
-  const grid = page.getByTestId(E2E_SELECTORS.instantGamesGrid);
-  const icons = grid.locator("[data-game-icon]");
+  const grid = page.getByTestId(E2E_SELECTORS.traditionalGamesGrid);
+  const icons = grid.getByTestId(E2E_SELECTORS.instantGameCard).locator("[data-game-icon]");
   await expect(icons).toHaveCount(1);
   await expect(icons.first()).toHaveAttribute("data-game-icon", "sapyaite");
   await expect(icons.first()).toHaveAttribute("data-game-icon-family", "instant");
@@ -654,7 +662,7 @@ test("uses the approved 3D icon theme and responsive catalog grid", async ({
   const columnCount = await grid.evaluate((element) =>
     getComputedStyle(element).gridTemplateColumns.split(" ").filter(Boolean).length,
   );
-  expect(columnCount).toBe(3);
+  expect(columnCount).toBe(2);
   await expect(grid.getByText("Resultado inmediato", { exact: true })).toHaveCount(0);
   await expect(grid.getByText("Desde", { exact: true })).toHaveCount(0);
   await expect(grid.getByText("Gs. 500", { exact: true })).toHaveCount(0);
@@ -672,7 +680,7 @@ test("uses the approved 3D icon theme and responsive catalog grid", async ({
   await expect
     .poll(() =>
       page
-        .getByTestId(E2E_SELECTORS.instantGamesGrid)
+        .getByTestId(E2E_SELECTORS.traditionalGamesGrid)
         .locator('[data-game-icon="sapyaite"]')
         .evaluate((element) => getComputedStyle(element).backgroundImage),
     )
@@ -764,11 +772,11 @@ test("publishes only Sapy’aite and rejects disabled instant games", async ({
 
   await page.goto("/instantaneas", { waitUntil: "domcontentloaded" });
   await expect(
-    page.getByRole("heading", { level: 1, name: "Instantáneas" }),
+    page.getByRole("heading", { level: 1, name: "Quinielas" }),
   ).toBeVisible();
   await expect(
     page
-      .getByTestId(E2E_SELECTORS.instantGamesGrid)
+      .getByTestId(E2E_SELECTORS.traditionalGamesGrid)
       .getByTestId(E2E_SELECTORS.instantGameCard),
   ).toHaveCount(1);
 
@@ -807,7 +815,7 @@ test("publishes only Sapy’aite and rejects disabled instant games", async ({
 
 test("keeps the reel active and opens the receipt only from Mis Jugadas", async ({
   page,
-}) => {
+}, testInfo) => {
   test.slow();
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/instantaneas/sapyaite", { waitUntil: "domcontentloaded" });
@@ -848,6 +856,11 @@ test("keeps the reel active and opens the receipt only from Mis Jugadas", async 
 
   const ticket = page.getByRole("dialog", { name: "Jugada registrada" });
   await expect(ticket).toBeVisible({ timeout: 45_000 });
+  const receiptLogo = ticket.locator(".q-logo");
+  await expect(receiptLogo.locator(".q-logo__letters")).toHaveCSS("fill", "rgb(23, 25, 29)");
+  await expect(receiptLogo.locator(".q-logo__ring")).toHaveCSS("fill", "rgb(230, 36, 60)");
+  await expectInsideHorizontalViewport(receiptLogo, page);
+  await ticket.screenshot({ path: testInfo.outputPath("original-logo-receipt.png") });
   await expect(
     ticket.getByRole("heading", { level: 2, name: "Jugada registrada" }),
   ).toBeVisible();
@@ -1251,11 +1264,11 @@ test("stays stable through repeated Home and instant-game navigation", async ({ 
   const initialHomeNodeCount = await page.locator("body *").count();
 
   for (let cycle = 0; cycle < 4; cycle += 1) {
-    await page.locator('a[href="/instantaneas"]:visible').first().click();
-    await expect(page).toHaveURL(/\/instantaneas$/);
+    await page.locator('a[href="/quinielas"]:visible').first().click();
+    await expect(page).toHaveURL(/\/quinielas$/);
 
-    await page.locator('main a[href="/instantaneas/sapyaite"]:visible').first().click();
-    await expect(page).toHaveURL(/\/instantaneas\/sapyaite$/);
+    await page.locator('main a[href="/quinielas/sapyaite"]:visible').first().click();
+    await expect(page).toHaveURL(/\/quinielas\/sapyaite$/);
     await expect(page.locator('[data-continuous="true"]')).toHaveAttribute(
       "data-motion-active",
       "true",

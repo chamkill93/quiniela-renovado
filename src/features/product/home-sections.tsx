@@ -22,7 +22,7 @@ import {
 } from "./home-sections-data";
 import styles from "./home-sections.module.css";
 
-const MEGA_LOTO_URL = "https://lotoqr.megaloto.com.py/";
+import { MEGA_LOTO_LOGO, MEGA_LOTO_URL } from "./product-links";
 
 function useDrawClock() {
   const [now, setNow] = useState<number | null>(null);
@@ -153,14 +153,16 @@ function PublishedResultsPanel({
   results,
   loading,
   emptyMessage,
+  preview,
 }: {
   results: readonly HomePublishedResultView[];
   loading: boolean;
   emptyMessage: string;
+  preview: boolean;
 }) {
   const [selectedTab, setSelectedTab] = useState<HomeResultTabId>("head");
   const visibleResults = useMemo(
-    () => results.filter((result) => result.tabId === selectedTab),
+    () => results.filter((result) => result.tabId === selectedTab).slice(0, 6),
     [results, selectedTab],
   );
 
@@ -199,6 +201,7 @@ function PublishedResultsPanel({
       </header>
 
       <div className={styles.resultsToolbar}>
+        {preview ? <span className={styles.previewLabel}>Resultados de muestra</span> : null}
         <div aria-label="Modalidad de resultado" className={styles.resultTabs} role="tablist">
           {HOME_RESULT_TABS.map((tab, tabIndex) => (
             <button
@@ -267,7 +270,7 @@ function MegaLotoBanner() {
           className={styles.megaLogo}
           height={164}
           sizes="(max-width: 767px) 106px, (max-width: 1279px) 124px, 146px"
-          src="/assets/quinie-home-final/megaloto/logo-mega-loto-circular-transparente.png"
+          src={MEGA_LOTO_LOGO}
           unoptimized
           width={164}
         />
@@ -293,7 +296,7 @@ function MegaLotoBanner() {
 }
 
 export function HomeSections() {
-  const { catalog, results, loading, error } = useProduct();
+  const { catalog, results, loading, error, gatewayMode } = useProduct();
   const publishedResults = useMemo(
     () => (catalog ? selectHomePublishedResults(catalog, results) : []),
     [catalog, results],
@@ -309,6 +312,7 @@ export function HomeSections() {
       <PublishedResultsPanel
         emptyMessage={emptyResultsMessage}
         loading={waitingForResults}
+        preview={gatewayMode === "preview"}
         results={publishedResults}
       />
       <MegaLotoBanner />

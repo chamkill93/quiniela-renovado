@@ -25,7 +25,7 @@ const results = ["head", "prizes"].flatMap((gameId) =>
 afterEach(cleanup);
 
 describe("HomeSections compact grids", () => {
-  it("keeps all four draws and every result in the selected grid without carousel controls", () => {
+  it("keeps all four draws and only the latest six results per selected modality", () => {
     useProductMock.mockReturnValue({ catalog, results, loading: false, error: null });
     render(<HomeSections />);
 
@@ -33,15 +33,17 @@ describe("HomeSections compact grids", () => {
     expect(screen.queryByRole("button", { name: "Ver más resultados" })).toBeNull();
     const panel = screen.getByRole("tabpanel");
     expect(panel.id).toBe("home-results-grid");
-    expect(within(panel).getAllByTestId("home-result-card")).toHaveLength(8);
+    expect(within(panel).getAllByTestId("home-result-card")).toHaveLength(6);
     expect(within(panel).getByText("001")).toBeTruthy();
-    expect(within(panel).getByText("008")).toBeTruthy();
+    expect(within(panel).getByText("006")).toBeTruthy();
+    expect(within(panel).queryByText("007")).toBeNull();
+    expect(within(panel).queryByText("008")).toBeNull();
 
     const prizesTab = screen.getByRole("tab", { name: "A LOS PREMIOS" });
     fireEvent.click(prizesTab);
     expect(prizesTab.getAttribute("aria-selected")).toBe("true");
     expect(prizesTab.getAttribute("aria-controls")).toBe(panel.id);
-    expect(within(screen.getByRole("tabpanel")).getAllByTestId("home-result-card")).toHaveLength(8);
+    expect(within(screen.getByRole("tabpanel")).getAllByTestId("home-result-card")).toHaveLength(6);
 
     fireEvent.keyDown(prizesTab, { key: "ArrowRight" });
     expect(screen.getByRole("tab", { name: "REDOBLONA" }).getAttribute("aria-selected")).toBe("true");
@@ -58,5 +60,28 @@ describe("HomeSections compact grids", () => {
     rerender(<HomeSections />);
     expect(screen.getByRole("status").textContent).toContain("no están disponibles");
     expect(screen.queryAllByTestId("home-result-card")).toHaveLength(0);
+  });
+
+  it("orders unsorted publications before limiting, and never fills missing remote results", () => {
+    const history = Array.from({ length: 8 }, (_, index) => ({
+      id: String(index), source: "DRAW", gameId: "head", result: String(index + 1),
+      occurredAt: new Date(Date.UTC(2026, 7, 26, index)).toISOString(),
+    }));
+    useProductMock.mockReturnValue({ catalog, results: history, loading: false, error: null, gatewayMode: "backoffice" });
+    const { rerender } = render(<HomeSections />);
+    const cards = screen.getAllByTestId("home-result-card");
+    expect(cards).toHaveLength(6);
+    expect(cards[0].textContent).toContain("008");
+    expect(cards[5].textContent).toContain("003");
+    expect(screen.queryByText("Resultados de muestra")).toBeNull();
+    useProductMock.mockReturnValue({ catalog, results: history.slice(0, 2), loading: false, error: null, gatewayMode: "backoffice" });
+    rerender(<HomeSections />);
+    expect(screen.getAllByTestId("home-result-card")).toHaveLength(2);
+  });
+
+  it("labels preview history as sample results", () => {
+    useProductMock.mockReturnValue({ catalog, results, loading: false, error: null, gatewayMode: "preview" });
+    render(<HomeSections />);
+    expect(screen.getByText("Resultados de muestra")).toBeTruthy();
   });
 });

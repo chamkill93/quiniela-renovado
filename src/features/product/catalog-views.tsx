@@ -3,11 +3,13 @@
 import { useProduct } from "@/providers/product-provider";
 
 import { CatalogGameCard } from "./catalog-game-card";
+import { MegaLotoCatalogCard } from "./mega-loto-catalog-card";
 import { DrawIcon } from "./draw-icon";
 import drawIconStyles from "./draw-icon.module.css";
 import {
   mapCatalogGames,
   mapPublishedResults,
+  mapQuinielaCatalogGames,
   type CatalogFamily,
 } from "./product-view-mappers";
 import {
@@ -81,6 +83,39 @@ export function CatalogPageClient({
           )}
         </>
       )}
+    </main>
+  );
+}
+
+export function QuinielaCatalogClient() {
+  const { catalog, loading, error, unauthorized, refresh } = useProduct();
+  const games = catalog ? mapQuinielaCatalogGames(catalog) : [];
+
+  return (
+    <main className={styles.page}>
+      <SectionHeader
+        description="Elegí tu juego y tocá la tarjeta para empezar."
+        eyebrow="Elegí cómo querés jugar"
+        title="Quinielas"
+      />
+      {!catalog
+        ? unavailableCatalogState({ loading, unauthorized, error, onRetry: () => void refresh() })
+        : error ? <RemoteErrorState message={error} onRetry={() => void refresh()} /> : null}
+      <div
+        className={`${styles.gameGrid} ${styles.traditionalGameGrid}`}
+        data-family="traditional"
+        data-testid="traditional-games-grid"
+      >
+        {games.map((game, index) => (
+          <CatalogGameCard
+            eager={index < 3}
+            game={game}
+            key={game.id}
+            testId={game.id === "sapyaite" ? "instant-game-card" : "traditional-game-card"}
+          />
+        ))}
+        <MegaLotoCatalogCard />
+      </div>
     </main>
   );
 }

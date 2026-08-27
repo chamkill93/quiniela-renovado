@@ -13,6 +13,7 @@ import {
 } from "./home-hero-data";
 import { HeroVisual } from "./hero-visual";
 import { createRandomHeroValue } from "./home-hero-random";
+import { SAPYAITE_PATH } from "./product-links";
 import styles from "./home-hero.module.css";
 
 type DrawIconStyle = CSSProperties & {
@@ -207,11 +208,11 @@ export function HomeHero() {
             <path d="m8 5 11 7-11 7Z" fill="currentColor" />
           </svg>
         </Link>
-        <Link className={styles.secondaryAction} href="/instantaneas">
+        <Link className={styles.secondaryAction} href={SAPYAITE_PATH}>
           <svg aria-hidden="true" className={styles.actionIcon} viewBox="0 0 24 24">
             <path d="m13.4 2-8 11h6l-.8 9 8-12h-5.8Z" fill="currentColor" />
           </svg>
-          Ver Instantáneas
+          Jugar Sapy’aite
         </Link>
       </div>
     </section>

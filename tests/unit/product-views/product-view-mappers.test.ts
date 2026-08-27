@@ -4,6 +4,7 @@ import {
   GAME_VISUALS,
   mapCatalogGames,
   mapPublishedResults,
+  mapQuinielaCatalogGames,
   resolveCatalogGameIconId,
 } from "@/features/product/product-view-mappers";
 import { buildGamingCatalog } from "@/lib/gaming/catalog";
@@ -36,6 +37,10 @@ function remoteCatalog(): GamingCatalog {
 }
 
 describe("mappers de vistas conectadas", () => {
+  it("distingue Redoblona con una tarjeta turquesa sin modificar su icono", () => {
+    expect(GAME_VISUALS.redoblona).toEqual({ iconKey: "redoblona", tone: "teal" });
+    expect(GAME_VISUALS.redoblona.tone).not.toBe(GAME_VISUALS.head.tone);
+  });
   it("publica cuatro rutas tradicionales y conserva Sapy’aite como instantánea", () => {
     expect(TRADITIONAL_GAMES.map((game) => game.id)).toEqual([
       "head",
@@ -57,10 +62,32 @@ describe("mappers de vistas conectadas", () => {
       name: "Nombre entregado por API",
       description: "Elegí las 3 cifras exactas.",
       baseAmount: 1_000,
-      href: "/instantaneas/sapyaite",
+      href: "/quinielas/sapyaite",
       iconKey: "sapyaite",
       tone: GAME_VISUALS.sapyaite.tone,
     });
+  });
+
+  it("agrupa las cuatro quinielas y Sapy’aite sin habilitar otros juegos", () => {
+    const games = mapQuinielaCatalogGames(remoteCatalog());
+    expect(games.map((game) => game.id)).toEqual([
+      "head", "prizes", "invert", "redoblona", "sapyaite",
+    ]);
+    expect(games[4]).toMatchObject({
+      name: "Nombre entregado por API",
+      href: "/quinielas/sapyaite",
+    });
+  });
+
+  it("no inventa una tarjeta de Sapy’aite cuando está deshabilitado", () => {
+    const catalog = remoteCatalog();
+    const games = mapQuinielaCatalogGames({
+      ...catalog,
+      instant: catalog.instant.filter((game) => game.id !== "sapyaite"),
+    });
+    expect(games).toHaveLength(4);
+    expect(games.some((game) => game.id === "sapyaite")).toBe(false);
+    expect(mapQuinielaCatalogGames({ ...catalog, instant: [], traditional: [] })).toEqual([]);
   });
 
   it("resuelve iconKey remotos solo contra aliases aprobados y conserva la familia tradicional", () => {
