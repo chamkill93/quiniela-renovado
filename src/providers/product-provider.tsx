@@ -61,6 +61,8 @@ export interface ProductContextValue {
   persistentRegistration: boolean;
   refresh: () => Promise<void>;
   refreshMovements: () => Promise<void>;
+  /** Capture before review; a changed revision invalidates pending payment retries. */
+  getSessionRevision: () => number;
   requestPlay: (command: ProductPlayCommand) => Promise<PlayResponse>;
   getTicket: (ticketId: string) => Promise<MockTicket>;
   getPendingWalletOperationKey: (kind: "topup" | "withdrawal", input: ProductTopUpInput) => string | undefined;
@@ -148,6 +150,8 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [unauthorized, setUnauthorized] = useState(false);
+
+  const getSessionRevision = useCallback(() => authGenerationRef.current, []);
 
   const resetMovements = useCallback(() => {
     movementsRequestRef.current += 1;
@@ -968,6 +972,7 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
       persistentRegistration: gateway.capabilities.persistentRegistration,
       refresh,
       refreshMovements,
+      getSessionRevision,
       requestPlay,
       getTicket,
       getPendingWalletOperationKey,
@@ -992,6 +997,7 @@ export function ProductProvider({ children, gateway: providedGateway }: ProductP
       gateway,
       refresh,
       refreshMovements,
+      getSessionRevision,
       requestPlay,
       getTicket,
       getPendingWalletOperationKey,

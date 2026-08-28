@@ -88,18 +88,15 @@ export function TicketDialog({
       open
       onOpenChange={(open) => { if (!open) onClose(); }}
       title="Jugada registrada"
-      description="Comprobante digital de quinie.LA"
-      size="lg"
+      size="md"
+      className={styles.compactDialog}
       footer={<button className={productStyles.primaryButton} onClick={onClose} type="button">Listo</button>}
     >
       <div className={styles.receiptFrame}>
         <article className={styles.receipt} data-testid="ticket-dialog" aria-label={`Comprobante ${code}`}>
           <header className={styles.receiptHeader}>
             <Logo className={styles.receiptLogo} size="sm" surface="light" />
-            <div className={styles.receiptHeading}>
-              <strong>Comprobante</strong>
-              <ResultStateBadge status={status} label={ticketStatusLabel(status)} />
-            </div>
+            <ResultStateBadge status={status} label={ticketStatusLabel(status)} />
           </header>
 
           <div className={styles.receiptGrid}>
@@ -115,10 +112,9 @@ export function TicketDialog({
               <div className={styles.receiptFact}><dt>Fecha</dt><dd>{formatReceiptDate(issuedAt)}</dd></div>
             </dl>
 
-            <dl className={styles.receiptFacts}>
+            <dl className={styles.receiptTotals}>
               <div className={styles.receiptFact}><dt>Monto</dt><dd>{formatMoney(amount, currency)}</dd></div>
               <div className={styles.receiptFact} data-emphasis="prize"><dt>Premio</dt><dd>{formatMoney(prize, currency)}</dd></div>
-              <div className={styles.receiptFact}><dt>Estado</dt><dd>{resultStateLabel(status)}</dd></div>
             </dl>
           </div>
 
@@ -126,8 +122,6 @@ export function TicketDialog({
             <span>Código de comprobante</span>
             <strong>{code}</strong>
           </div>
-          <div className={styles.barcode} aria-hidden="true" />
-          <p className={styles.receiptFooter}>¡Gracias por jugar!</p>
         </article>
       </div>
     </Modal>

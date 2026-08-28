@@ -19,6 +19,7 @@ export interface ModalProps {
   children: ReactNode;
   footer?: ReactNode;
   size?: "sm" | "md" | "lg" | "xl";
+  className?: string;
   closeLabel?: string;
   closeOnBackdrop?: boolean;
   closeDisabled?: boolean;
@@ -42,6 +43,7 @@ export function Modal({
   children,
   footer,
   size = "md",
+  className,
   closeLabel = "Cerrar",
   closeOnBackdrop = true,
   closeDisabled = false,
@@ -115,7 +117,7 @@ export function Modal({
       />
       <div
         ref={dialogRef}
-        className={`q-modal q-modal--${size}`}
+        className={`q-modal q-modal--${size}${className ? ` ${className}` : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

@@ -57,16 +57,17 @@ describe("Account dashboard", () => {
     expect(screen.queryByText(/backoffice|proveedor|codexa|kodexa/i)).toBeNull();
   });
 
-  it("links activity, help and legal options to existing routes", () => {
+  it("links activity and help without duplicating the site footer", () => {
     render(<AccountClient />);
     const options = within(screen.getByRole("region", { name: "Opciones de tu cuenta" }));
     expect(options.getByRole("link", { name: "Mis jugadas" }).getAttribute("href")).toBe("/mis-jugadas");
     expect(options.getByRole("link", { name: "Saldo y movimientos" }).getAttribute("href")).toBe("/saldos");
     expect(options.getByRole("link", { name: "Centro de ayuda" }).getAttribute("href")).toBe("/ayuda");
-    const legal = within(screen.getByRole("navigation", { name: "Información de tu cuenta" }));
-    expect(legal.getByRole("link", { name: "Juego responsable" }).getAttribute("href")).toBe("/legal/juego-responsable");
-    expect(legal.getByRole("link", { name: "Términos" }).getAttribute("href")).toBe("/legal/terminos");
-    expect(legal.getByRole("link", { name: "Privacidad" }).getAttribute("href")).toBe("/legal/privacidad");
+    expect(screen.queryByText("18+")).toBeNull();
+    expect(screen.queryByText("Jugá con responsabilidad.")).toBeNull();
+    for (const name of ["Juego responsable", "Términos", "Privacidad"]) {
+      expect(screen.queryByRole("link", { name })).toBeNull();
+    }
   });
 
   it("shows an honest fallback when WhatsApp is not configured", async () => {

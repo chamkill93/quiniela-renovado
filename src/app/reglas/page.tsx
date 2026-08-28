@@ -16,6 +16,7 @@ import { useProduct } from "@/providers/product-provider";
 export default function RulesPage() {
   const { catalog, error, loading, refresh, unauthorized } = useProduct();
   const rules = catalog ? selectEnabledGameRules(catalog) : null;
+  const cards = rules ? [...rules.traditional, ...rules.instant, ...rules.external] : [];
 
   let unavailable = null;
   if (!catalog) {
@@ -28,20 +29,17 @@ export default function RulesPage() {
   return (
     <main className={styles.page}>
       <SectionHeader
-        description="Elegí tu juego, conocé cómo funciona y cuánto paga."
+        description="Conocé qué elegir, cómo participar y qué condiciones debe cumplir cada acierto."
         eyebrow="Reglas"
         title="Cómo jugar"
       />
       {unavailable}
       {catalog && error ? <RemoteErrorState message={error} onRetry={() => void refresh()} /> : null}
-      {rules ? (
+      {rules && cards.length > 0 ? (
         <>
           <div className={ruleStyles.grid} data-testid="rules-grid">
-            {[...rules.traditional, ...rules.instant].map((rule) => <RuleCard key={rule.id} rule={rule} />)}
+            {cards.map((rule) => <RuleCard key={rule.id} rule={rule} />)}
           </div>
-          {rules.traditional.length + rules.instant.length === 0 ? (
-            <RemoteEmptyState message="No hay reglas disponibles en este momento." />
-          ) : null}
           <p className={ruleStyles.responsible}>
             Solo mayores de 18 años. Definí tu límite y revisá número, importe y comprobante antes de confirmar.
           </p>

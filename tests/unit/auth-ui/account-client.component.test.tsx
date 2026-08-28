@@ -137,6 +137,7 @@ describe("AccountClient integrado con ProductProvider", () => {
     const user = renderAccount(gateway);
 
     await screen.findByRole("heading", { name: "Ingresá a tu cuenta" });
+    expect(screen.queryByRole("complementary")).toBeNull();
     await user.type(
       screen.getByRole("textbox", { name: "Documento o teléfono" }),
       "0981000000",
@@ -320,6 +321,7 @@ describe("AccountClient integrado con ProductProvider", () => {
 
     await screen.findByRole("heading", { name: "Ingresá a tu cuenta" });
     await user.click(screen.getByRole("button", { name: "Registrarme" }));
+    expect(screen.queryByRole("complementary")).toBeNull();
     await user.type(screen.getByRole("textbox", { name: "Nombre visible" }), "Ana");
     await user.type(
       screen.getByRole("textbox", { name: "Documento o teléfono" }),

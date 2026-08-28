@@ -113,12 +113,46 @@ describe("HomeSections latest draw results", () => {
     return cards;
   }
 
+  function expectPositionRanks(cards: readonly HTMLElement[]) {
+    const ranksByPosition: Record<number, string> = { 1: "gold", 2: "silver", 3: "bronze" };
+    for (const card of cards) {
+      const position = Number(card.getAttribute("data-position"));
+      const expectedRank = ranksByPosition[position];
+      const icons = within(card).queryAllByTestId("home-result-rank");
+      expect(within(card).getByText(`POSICIÓN ${position}`, { exact: true })).toBeTruthy();
+      expect(icons).toHaveLength(expectedRank ? 1 : 0);
+      if (!expectedRank) continue;
+
+      expect(icons[0].tagName.toLowerCase()).toBe("svg");
+      expect(icons[0].getAttribute("data-rank")).toBe(expectedRank);
+      expect(icons[0].getAttribute("aria-hidden")).toBe("true");
+      expect(icons[0].getAttribute("focusable")).toBe("false");
+    }
+  }
+
   function expectMetadata(time = "20:30") {
     const metadata = within(resultsSection()).getAllByTestId("home-results-draw");
     expect(metadata).toHaveLength(1);
     expect(metadata[0].textContent).toContain("Nocturno");
     expect(metadata[0].textContent).toContain("26/08/2026");
     expect(metadata[0].textContent).toContain(time);
+  }
+
+  function expectCarousel(modality: "prizes" | "redoblona" | "invert", label: string) {
+    const panel = screen.getByRole("tabpanel");
+    const carousels = within(panel).getAllByTestId("home-results-carousel");
+    expect(carousels).toHaveLength(1);
+    const track = within(carousels[0]).getByTestId("home-results-carousel-track");
+    expect(within(panel).getByRole("group", { name: `Resultados de ${label}` })).toBe(track);
+    expect(track.getAttribute("aria-roledescription")).toBe("carrusel");
+    expect(track.getAttribute("data-modality")).toBe(modality);
+    expect(track.tabIndex).toBe(0);
+    expect(within(track).getAllByTestId("home-result-card")).toEqual(resultCards());
+    for (const name of ["Ver resultados anteriores", "Ver resultados siguientes"]) {
+      expect(within(carousels[0]).getByRole("button", { name }).getAttribute("aria-controls"))
+        .toBe(track.id);
+    }
+    return track;
   }
 
   const prizePositions = Array.from({ length: 13 }, (_, index) => index + 2);
@@ -141,18 +175,60 @@ describe("HomeSections latest draw results", () => {
       .toBe("/resultados");
   });
 
+  it.each([
+    ["A LA CABEZA", [1], ["497"], ["gold"]],
+    ["A LOS PREMIOS", prizePositions, latestDrawValues.slice(1), ["silver", "bronze"]],
+    ["REDOBLONA", prizePositions, latestDrawValues.slice(1).map((value) => value.slice(-2)), ["silver", "bronze"]],
+    ["INVERTIDA", allPositions, latestDrawValues, ["gold", "silver", "bronze"]],
+  ] as const)("decorates actual podium positions in %s without ranking by visible card index", (tabName, positions, values, ranks) => {
+    mountResults();
+    fireEvent.click(screen.getByRole("tab", { name: tabName }));
+    const cards = expectCards(positions, values);
+
+    expectPositionRanks(cards);
+    expect(within(screen.getByRole("tabpanel")).getAllByTestId("home-result-rank")
+      .map((icon) => icon.getAttribute("data-rank"))).toEqual(ranks);
+    expectMetadata();
+  });
+
+  it.each([
+    ["A LA CABEZA", 1, "Posición 1: número 497"],
+    ["A LOS PREMIOS", 3, "Posición 3: número 000"],
+    ["A LOS PREMIOS", 14, "Posición 14: número 044"],
+    ["REDOBLONA", 2, "Posición 2: terminación 08, del número 208"],
+    ["REDOBLONA", 3, "Posición 3: terminación 00, del número 000"],
+    ["REDOBLONA", 14, "Posición 14: terminación 44, del número 044"],
+    ["INVERTIDA", 3, "Posición 3: número 000; combinaciones 000"],
+    ["INVERTIDA", 6, "Posición 6: número 005; combinaciones 005, 050, 500"],
+    ["INVERTIDA", 14, "Posición 14: número 044; combinaciones 044, 404, 440"],
+  ] as const)("names %s position %i accessibly when its visual details are compact", (tabName, position, accessibleName) => {
+    mountResults();
+    fireEvent.click(screen.getByRole("tab", { name: tabName }));
+    const card = resultCards().find((candidate) => candidate.getAttribute("data-position") === String(position));
+
+    expect(card?.getAttribute("aria-label")).toBe(accessibleName);
+    expect(within(screen.getByRole("tabpanel")).getByRole("article", { name: accessibleName })).toBe(card);
+  });
+
   it("derives all four tabs from the same 14 positioned numbers with zeroes and unique permutations", () => {
     mountResults();
     expectCards([1], ["497"]);
+    expect(screen.queryByTestId("home-results-carousel")).toBeNull();
+    expect(screen.queryByTestId("home-results-carousel-track")).toBeNull();
+    expect(screen.queryByTestId("home-results-previous")).toBeNull();
+    expect(screen.queryByTestId("home-results-next")).toBeNull();
 
     fireEvent.click(screen.getByRole("tab", { name: "A LOS PREMIOS" }));
     expectCards(prizePositions, latestDrawValues.slice(1));
+    expectCarousel("prizes", "A LOS PREMIOS");
     expectMetadata();
 
     fireEvent.click(screen.getByRole("tab", { name: "REDOBLONA" }));
     const redoblonaCards = expectCards(prizePositions, latestDrawValues.slice(1).map((value) => value.slice(-2)));
+    const redoblonaTrack = expectCarousel("redoblona", "REDOBLONA");
     expect(screen.getAllByTestId("home-redoblona-head")).toHaveLength(1);
     expect(screen.getByTestId("home-redoblona-head").textContent).toContain("497");
+    expect(redoblonaTrack.contains(screen.getByTestId("home-redoblona-head"))).toBe(false);
     for (const [index, card] of redoblonaCards.entries()) {
       expect(card.textContent).toContain(`Del número ${latestDrawValues[index + 1]}`);
     }
@@ -160,6 +236,7 @@ describe("HomeSections latest draw results", () => {
 
     fireEvent.click(screen.getByRole("tab", { name: "INVERTIDA" }));
     const invertedCards = expectCards(allPositions, latestDrawValues);
+    expectCarousel("invert", "INVERTIDA");
     expect(screen.queryByTestId("home-redoblona-head")).toBeNull();
     const expectedCombinations = new Map([
       [1, ["497", "479", "947", "974", "749", "794"]],
@@ -179,7 +256,75 @@ describe("HomeSections latest draw results", () => {
 
     fireEvent.click(screen.getByRole("tab", { name: "A LA CABEZA" }));
     expectCards([1], ["497"]);
+    expect(screen.queryByTestId("home-results-carousel")).toBeNull();
+    expect(screen.queryByTestId("home-results-previous")).toBeNull();
+    expect(screen.queryByTestId("home-results-next")).toBeNull();
     expectMetadata();
+  });
+
+  it("keeps carousel keyboard navigation separate from modality selection", () => {
+    mountResults();
+    fireEvent.click(screen.getByRole("tab", { name: "A LOS PREMIOS" }));
+    const track = expectCarousel("prizes", "A LOS PREMIOS");
+    Object.defineProperties(track, {
+      clientWidth: { configurable: true, value: 340 },
+      scrollWidth: { configurable: true, value: 1_576 },
+      scrollBy: { configurable: true, value: vi.fn() },
+      scrollTo: { configurable: true, value: vi.fn() },
+    });
+    track.focus();
+
+    for (const key of ["ArrowRight", "ArrowLeft", "End", "Home"]) {
+      fireEvent.keyDown(track, { key });
+      expect(screen.getByRole("tab", { name: "A LOS PREMIOS" }).getAttribute("aria-selected"))
+        .toBe("true");
+      expect(screen.getByRole("tabpanel").getAttribute("aria-labelledby"))
+        .toBe("home-results-tab-prizes");
+      expect(screen.getByTestId("home-results-carousel-track")).toBe(track);
+      expect(document.activeElement).toBe(track);
+      expectCards(prizePositions, latestDrawValues.slice(1));
+    }
+  });
+
+  it("starts a fresh carousel when changing modality or the latest published draw", () => {
+    const { rerender } = mountResults();
+    fireEvent.click(screen.getByRole("tab", { name: "A LOS PREMIOS" }));
+    const firstPrizesTrack = expectCarousel("prizes", "A LOS PREMIOS");
+    firstPrizesTrack.scrollLeft = 240;
+
+    fireEvent.click(screen.getByRole("tab", { name: "REDOBLONA" }));
+    const redoblonaTrack = expectCarousel("redoblona", "REDOBLONA");
+    expect(redoblonaTrack).not.toBe(firstPrizesTrack);
+    expect(redoblonaTrack.scrollLeft).toBe(0);
+    redoblonaTrack.scrollLeft = 480;
+
+    fireEvent.click(screen.getByRole("tab", { name: "A LOS PREMIOS" }));
+    const secondPrizesTrack = expectCarousel("prizes", "A LOS PREMIOS");
+    expect(secondPrizesTrack).not.toBe(firstPrizesTrack);
+    expect(secondPrizesTrack).not.toBe(redoblonaTrack);
+    expect(secondPrizesTrack.scrollLeft).toBe(0);
+    secondPrizesTrack.scrollLeft = 240;
+
+    vi.setSystemTime(new Date("2026-08-28T12:15:00.000Z"));
+    const newValues = latestDrawValues.map(() => "604");
+    useProductMock.mockReturnValue({
+      ...base,
+      results: [...results, drawSnapshot({
+        id: "new-night-published-snapshot",
+        occurredAt: "2026-08-27T23:30:00.000Z",
+        drawNumbers: newValues.map((value, index) => ({ position: index + 1, value })),
+      })],
+    });
+    rerender(<HomeSections />);
+
+    const newDrawTrack = expectCarousel("prizes", "A LOS PREMIOS");
+    expect(newDrawTrack).not.toBe(secondPrizesTrack);
+    expect(newDrawTrack.scrollLeft).toBe(0);
+    expect(screen.getByRole("tab", { name: "A LOS PREMIOS" }).getAttribute("aria-selected"))
+      .toBe("true");
+    expectCards(prizePositions, newValues.slice(1));
+    expect(screen.getByTestId("home-results-draw").textContent).toContain("27/08/2026");
+    expect(screen.getAllByTestId("home-results-draw")).toHaveLength(1);
   });
 
   it("preserves keyboard tab semantics while the selected draw remains unchanged", () => {
@@ -220,12 +365,18 @@ describe("HomeSections latest draw results", () => {
     });
     mountResults();
     expectCards([1], ["000"]);
+    expect(within(screen.getByRole("tabpanel")).getByRole("article", { name: "Posición 1: número 000" }))
+      .toBe(resultCards()[0]);
     expectMetadata("20:35");
 
     fireEvent.click(screen.getByRole("tab", { name: "A LOS PREMIOS" }));
     const cards = expectCards(prizePositions, prizePositions.map((position) => position === 3 ? "009" : position === 14 ? "044" : "—"));
+    expectPositionRanks(cards);
     expect(within(cards[0]).getByText("Pendiente")).toBeTruthy();
     expect(within(screen.getByRole("tabpanel")).getAllByText("Pendiente")).toHaveLength(11);
+    expect(within(screen.getByRole("tabpanel")).getByRole("article", { name: "Posición 2: pendiente" })).toBe(cards[0]);
+    expect(within(screen.getByRole("tabpanel")).getByRole("article", { name: "Posición 3: número 009" })).toBe(cards[1]);
+    expect(within(screen.getByRole("tabpanel")).getByRole("article", { name: "Posición 14: número 044" })).toBe(cards[12]);
 
     fireEvent.click(screen.getByRole("tab", { name: "REDOBLONA" }));
     expectCards(prizePositions, prizePositions.map((position) => position === 3 ? "09" : position === 14 ? "44" : "—"));
@@ -234,6 +385,7 @@ describe("HomeSections latest draw results", () => {
 
     fireEvent.click(screen.getByRole("tab", { name: "INVERTIDA" }));
     const invertedCards = expectCards(allPositions, allPositions.map((position) => position === 1 ? "000" : position === 3 ? "009" : position === 14 ? "044" : "—"));
+    expectPositionRanks(invertedCards);
     expect(within(invertedCards[0]).getByTestId("home-result-combinations").textContent).toBe("000");
     expect(within(invertedCards[1]).queryByTestId("home-result-combinations")?.textContent?.match(/\d{3}/g) ?? [])
       .toEqual([]);
@@ -263,7 +415,13 @@ describe("HomeSections latest draw results", () => {
     ] as const) {
       fireEvent.click(screen.getByRole("tab", { name: tabName }));
       const cards = expectCards(positions, positions.map(() => "—"));
-      for (const card of cards) expect(within(card).getByText("Pendiente")).toBeTruthy();
+      expectPositionRanks(cards);
+      for (const card of cards) {
+        expect(within(card).getByText("Pendiente")).toBeTruthy();
+        expect(within(screen.getByRole("tabpanel")).getByRole("article", {
+          name: `Posición ${card.getAttribute("data-position")}: pendiente`,
+        })).toBe(card);
+      }
       expectMetadata("20:40");
     }
   });

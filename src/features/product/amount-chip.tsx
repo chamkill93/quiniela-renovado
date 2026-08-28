@@ -34,10 +34,14 @@ export function AmountChip({
   value,
   selected,
   onSelect,
+  additive = false,
+  disabled = false,
 }: {
   value: number;
   selected: boolean;
   onSelect: (value: number) => void;
+  additive?: boolean;
+  disabled?: boolean;
 }) {
   const assets = getAmountChipAssetSet(value);
   const assetStyle: AmountChipAssetStyle | undefined = assets
@@ -49,8 +53,9 @@ export function AmountChip({
 
   return (
     <button
-      aria-label={formatGs(value)}
-      aria-pressed={selected}
+      aria-label={(additive ? "Sumar " : "") + formatGs(value)}
+      aria-pressed={additive ? undefined : selected}
+      disabled={disabled}
       className={`${productStyles.amountChip} ${chipStyles.amountChip}`}
       data-amount-chip-asset={assets?.slug}
       data-selected={selected}

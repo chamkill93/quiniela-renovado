@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { HUNDRED_RANGE_OPTIONS, PROTOTYPE_AMOUNTS } from "./catalog";
 import { WALLET_MAX_AMOUNT, WALLET_METHODS, WALLET_MIN_AMOUNT } from "./types";
+import { isTraditionalStakeAmount } from "./traditional-stake";
 
 const amountValues = new Set<number>(PROTOTYPE_AMOUNTS);
 const hundredRangeValues = HUNDRED_RANGE_OPTIONS.map((option) => option.value) as [
@@ -95,17 +96,21 @@ export const instantPlayRequestSchema = z.discriminatedUnion("gameId", [
 ]);
 
 const drawIdSchema = z.string().trim().min(1).max(80);
+const traditionalStakeSchema = z.number().refine(
+  isTraditionalStakeAmount,
+  "El importe por sorteo debe ser múltiplo de Gs. 500 y no superar Gs. 10.000.",
+);
 
 export const traditionalPlayRequestSchema = z.discriminatedUnion("gameId", [
   z.object({
     gameId: z.literal("head"),
-    amount: prototypeAmountSchema,
+    amount: traditionalStakeSchema,
     drawId: drawIdSchema,
     selection: z.object({ number: threeDigitSchema }),
   }),
   z.object({
     gameId: z.literal("prizes"),
-    amount: prototypeAmountSchema,
+    amount: traditionalStakeSchema,
     drawId: drawIdSchema,
     selection: z.object({
       number: threeDigitSchema,
@@ -114,7 +119,7 @@ export const traditionalPlayRequestSchema = z.discriminatedUnion("gameId", [
   }),
   z.object({
     gameId: z.literal("invert"),
-    amount: prototypeAmountSchema,
+    amount: traditionalStakeSchema,
     drawId: drawIdSchema,
     selection: z.object({
       number: threeDigitSchema,
@@ -123,7 +128,7 @@ export const traditionalPlayRequestSchema = z.discriminatedUnion("gameId", [
   }),
   z.object({
     gameId: z.literal("redoblona"),
-    amount: prototypeAmountSchema,
+    amount: traditionalStakeSchema,
     drawId: drawIdSchema,
     selection: z.object({
       head: threeDigitSchema,

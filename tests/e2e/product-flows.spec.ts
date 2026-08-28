@@ -97,6 +97,13 @@ async function bootstrap(page: Page): Promise<BootstrapPayload> {
   );
 }
 
+async function prepareTraditionalCheckout(page: Page, catalog: GamingCatalog) {
+  // Functional clicks must not race smooth scrolling or the real sales cutoff.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const firstCutoff = Math.min(...catalog.draws.map((draw) => Date.parse(draw.closesAt)));
+  await page.clock.setFixedTime(new Date(firstCutoff - 60_000));
+}
+
 async function postPlay(
   page: Page,
   path: "/api/mock/instant" | "/api/mock/traditional",
@@ -693,28 +700,48 @@ test("groups Sapy’aite and green Mega Loto in Quinielas and redirects legacy l
   await expect(
     page.getByRole("heading", { level: 1, name: "Cómo jugar" }),
   ).toBeVisible();
-  await expect(page.locator('main button[aria-expanded="false"]')).toHaveCount(5);
+  const rulesGrid = page.getByTestId("rules-grid");
+  await expect(rulesGrid.getByRole("article")).toHaveCount(6);
+  await expect(page.locator('main button[aria-expanded="false"]')).toHaveCount(6);
   await expect(page.getByText("Sapy’aite tradicional", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Megaloto", { exact: true })).toHaveCount(0);
   await expect(page.locator('main a[href^="/quinielas/"], main a[href^="/instantaneas/"]')).toHaveCount(5);
+  await expect(rulesGrid.getByRole("link")).toHaveCount(6);
+  const megaRule = rulesGrid.getByTestId("rule-card-megaloto");
+  await expect(megaRule.getByRole("heading", { name: "Mega Loto", exact: true })).toBeVisible();
+  const officialMegaRule = megaRule.getByRole("link", { name: /^Sitio oficial de Mega Loto/ });
+  await expect(officialMegaRule).toHaveAttribute("href", "https://lotoqr.megaloto.com.py/");
+  await expect(officialMegaRule).toHaveAttribute("target", "_blank");
+  await expect(officialMegaRule).toHaveAttribute("rel", /noopener/);
+  await expect(officialMegaRule).toHaveAttribute("rel", /noreferrer/);
+  await expect(megaRule.getByRole("link", { name: /^Jugar/ })).toHaveCount(0);
   const headRule = page.getByRole("link", { name: "Jugar A la Cabeza", exact: true });
   const sapyaiteRule = page.getByRole("link", { name: "Jugar Sapy’aite", exact: true });
   await expect(headRule).toHaveAttribute("href", "/quinielas/head");
   await expect(sapyaiteRule).toHaveAttribute("href", "/quinielas/sapyaite");
-  await expect(page.getByText("Multiplicador de referencia", { exact: true })).toHaveCount(4);
-  await expect(page.getByTestId("rule-card-sapyaite").getByText("700× el importe", { exact: true })).toBeVisible();
+  await expect(page.getByText("Multiplicador de referencia", { exact: true })).toHaveCount(0);
+  expect(await rulesGrid.textContent()).not.toMatch(/×|multiplicador|cuánto paga|premio total|tabla de pagos|\bGs\./i);
+  const sapyaiteRuleCard = rulesGrid.getByTestId("rule-card-sapyaite");
+  await expect(sapyaiteRuleCard.getByText("000 a 999", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Ver reglas de Sapy’aite", exact: true }).click();
-  await expect(page.getByTestId("rule-card-sapyaite")).toContainText("Si acertás con Gs. 500, el premio total es Gs. 350.000.");
+  await expect(sapyaiteRuleCard.getByRole("button", { name: "Contraer reglas de Sapy’aite", exact: true })).toHaveAttribute("aria-expanded", "true");
+  for (const name of ["Paso a paso", "Condiciones del acierto", "Ejemplo"]) {
+    await expect(sapyaiteRuleCard.getByRole("heading", { name, level: 3 })).toBeVisible();
+  }
   await expect(
-    page.getByText("Como A la Cabeza, pero instantáneo: acertá las tres cifras exactas.", { exact: true }),
+    sapyaiteRuleCard.getByText("Elegí tres cifras y comparalas con un resultado inmediato.", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText("Ganás si las tres cifras coinciden en el mismo orden. No tenés que esperar un sorteo.", { exact: true }),
+    sapyaiteRuleCard.getByText("Para acertar, las tres cifras deben coincidir exactamente y en el mismo orden.", { exact: true }),
   ).toBeVisible();
-  const ruleColumns = await page.getByTestId("rules-grid").evaluate(
+  await expect(
+    sapyaiteRuleCard.getByText("Cada jugada se compara con un único resultado de tres cifras, sin esperar un sorteo programado ni elegir una postura.", { exact: true }),
+  ).toBeVisible();
+  const ruleColumns = await rulesGrid.evaluate(
     (element) => getComputedStyle(element).gridTemplateColumns.split(" ").filter(Boolean).length,
   );
-  expect(ruleColumns).toBe((page.viewportSize()?.width ?? 0) <= 820 ? 1 : 2);
+  const ruleViewportWidth = page.viewportSize()!.width;
+  expect(ruleColumns).toBe(ruleViewportWidth < 640 ? 1 : ruleViewportWidth < 1200 ? 2 : 3);
   await expectNoHorizontalOverflow(page);
 
   await headRule.click();
@@ -835,13 +862,19 @@ test("uses the approved 3D icon theme and responsive catalog grid", async ({
 for (const gameId of ["head", "prizes", "invert", "redoblona"] as const) {
   test(`traditional checkout reviews ${gameId} and pays once from the server balance`, async ({ page }) => {
     const initial = await bootstrap(page);
+    await prepareTraditionalCheckout(page, initial.catalog);
     let paymentRequests = 0;
     page.on("request", (request) => {
       if (request.method() === "POST" && new URL(request.url()).pathname === "/api/mock/traditional") paymentRequests += 1;
     });
-    const money = (value: number) => `Gs. ${new Intl.NumberFormat("es-PY").format(value)}`;
+    const money = (value: number, symbol = "Gs.") => `${symbol} ${new Intl.NumberFormat("es-PY").format(value)}`;
     await page.goto(`/quinielas/${gameId}`, { waitUntil: "domcontentloaded" });
+    const headerBalance = page.getByRole("banner").getByRole("link", { name: /^Saldo disponible:/ }).locator(".q-balance__value");
     const reviewButton = page.getByRole("button", { name: "Revisar y pagar", exact: true });
+    const stake = page.getByTestId("traditional-stake");
+    await expect(page.getByRole("combobox", { name: "Importe por sorteo", exact: true })).toHaveCount(0);
+    await expect(stake).toHaveText(money(0));
+    await expect(page.getByTestId("traditional-total")).toHaveText(money(0));
     await expect(reviewButton).toBeDisabled();
     await page.getByRole("button", { name: "Números aleatorios", exact: true }).click();
     if (gameId === "redoblona") {
@@ -849,63 +882,236 @@ for (const gameId of ["head", "prizes", "invert", "redoblona"] as const) {
       await expect(page.getByLabel("Número redoblona", { exact: true })).toHaveValue(/^\d{2}$/);
     } else {
       await expect(page.getByLabel("Número de tres cifras", { exact: true })).toHaveValue(/^(?!000)\d{3}$/);
+      await expect(page.getByRole("heading", { level: 2, name: "Número", exact: true })).toBeVisible();
+      await expect(page.locator('label[for="traditional-number"]')).toHaveClass(/q-sr-only/);
     }
-    await page.getByRole("button", { name: money(1_000), exact: true }).click();
+    await expect(reviewButton).toBeDisabled();
+    expect(paymentRequests).toBe(0);
+    await page.getByRole("button", { name: "Sumar Gs. 1.000", exact: true }).click();
+    await page.getByRole("button", { name: "Sumar Gs. 500", exact: true }).click();
+    await expect(stake).toHaveText(money(1_500));
     if (gameId !== "head") await page.getByRole("combobox", { name: "Hasta la posición", exact: true }).selectOption("10");
-    await expect(page.getByTestId("traditional-balance")).toHaveText(money(initial.session.balance));
+    await expect(headerBalance).toHaveText(money(initial.session.balance, "₲"));
     expect(paymentRequests).toBe(0);
 
     await reviewButton.click();
     const reviewDialog = page.getByRole("dialog", { name: "Confirmá tu jugada", exact: true });
     await expect(reviewDialog).toBeVisible();
-    await expect(reviewDialog).toContainText("Se descontará Gs. 1.000 de tu saldo al confirmar.");
+    await expect(page.getByRole("button", { name: "Borrar importe", exact: true })).toBeDisabled();
+    await expect(reviewDialog).toContainText("Se descontará Gs. 1.500 de tu saldo al confirmar.");
     expect(paymentRequests).toBe(0);
     await reviewDialog.getByRole("button", { name: "Volver a editar", exact: true }).click();
     await expect(reviewDialog).toBeHidden();
-    await expect(page.getByTestId("traditional-balance")).toHaveText(money(initial.session.balance));
+    await expect(page.getByRole("button", { name: "Borrar importe", exact: true })).toBeEnabled();
+    await expect(stake).toHaveText(money(1_500));
+    await expect(headerBalance).toHaveText(money(initial.session.balance, "₲"));
     await expectNoHorizontalOverflow(page);
 
     await reviewButton.click();
     const responsePromise = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/mock/traditional" && response.request().method() === "POST");
-    await reviewDialog.getByRole("button", { name: "Pagar Gs. 1.000", exact: true }).click();
+    await reviewDialog.getByRole("button", { name: "Pagar Gs. 1.500", exact: true }).click();
     const response = await responsePromise;
     expect(response.ok()).toBe(true);
     const payment = await response.json() as PlacePlayResponse;
     expect(payment.play.gameId).toBe(gameId);
-    expect(payment.play.amount).toBe(1_000);
-    expect(payment.session.balance).toBe(initial.session.balance - 1_000);
+    expect(payment.play.amount).toBe(1_500);
+    expect(payment.session.balance).toBe(initial.session.balance - 1_500);
     expect(paymentRequests).toBe(1);
     const success = page.getByRole("dialog", { name: "Jugada registrada", exact: true });
     await expect(success).toBeVisible();
     await expect(success).toContainText(money(payment.session.balance));
-    await expect(page.getByTestId("traditional-balance")).toHaveText(money(payment.session.balance));
+    await expect(headerBalance).toHaveText(money(payment.session.balance, "₲"));
     await success.getByRole("link", { name: "Ver en Mis jugadas", exact: true }).click();
     await expect(page).toHaveURL(/\/mis-jugadas$/);
     await expect(page.getByRole("main")).toContainText(money(payment.play.amount));
   });
 }
 
-test("traditional checkout fits small phones and keeps payment above navigation", async ({ page }) => {
+test("traditional checkout accepts 40,000 across four draws and a separate identical play", async ({ page }) => {
+  const initial = await bootstrap(page);
+  await prepareTraditionalCheckout(page, initial.catalog);
+  const submissions: TraditionalPlayRequest[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "POST" && new URL(request.url()).pathname === "/api/mock/traditional") {
+      submissions.push(request.postDataJSON() as TraditionalPlayRequest);
+    }
+  });
   await page.goto("/quinielas/redoblona", { waitUntil: "domcontentloaded" });
+  const stake = page.getByTestId("traditional-stake");
+  await expect(stake).toHaveText("Gs. 0");
+  await expect(page.getByRole("checkbox")).toHaveCount(4);
+  for (const draw of await page.getByRole("checkbox").all()) await draw.check();
+  await page.getByRole("button", { name: "Números aleatorios", exact: true }).click();
+  await page.getByRole("combobox", { name: "Hasta la posición", exact: true }).selectOption("10");
+  const selection = {
+    head: await page.getByLabel("Número de cabeza", { exact: true }).inputValue(),
+    redoblona: await page.getByLabel("Número redoblona", { exact: true }).inputValue(),
+    position: 10,
+  };
+  const reviewButton = page.getByRole("button", { name: "Revisar y pagar", exact: true });
+  const review = page.getByRole("dialog", { name: "Confirmá tu jugada", exact: true });
+  const success = page.getByRole("dialog", { name: "Jugadas registradas", exact: true });
+  for (let batch = 1; batch <= 2; batch += 1) {
+    await expect(stake).toHaveText("Gs. 0");
+    await expect(reviewButton).toBeDisabled();
+    await page.getByRole("button", { name: "Sumar Gs. 5.000", exact: true }).click();
+    await page.getByRole("button", { name: "Sumar Gs. 5.000", exact: true }).click();
+    await expect(stake).toHaveText("Gs. 10.000");
+    await expect(page.getByTestId("traditional-total")).toHaveText("Gs. 40.000");
+    for (const chip of await page.getByRole("button", { name: /^Sumar Gs[.]/ }).all()) await expect(chip).toBeDisabled();
+    expect(submissions).toHaveLength((batch - 1) * 4);
+    await reviewButton.click();
+    for (const draw of ["Tempranero", "Matutino", "Vespertino", "Nocturno"]) await expect(review).toContainText(draw);
+    await expect(review).toContainText("Se descontará Gs. 40.000 de tu saldo al confirmar.");
+    if (batch === 1) {
+      await review.getByRole("button", { name: "Volver a editar", exact: true }).click();
+      expect(submissions).toHaveLength(0);
+      expect((await bootstrap(page)).session.balance).toBe(initial.session.balance);
+      await reviewButton.click();
+    }
+    await review.getByRole("button", { name: "Pagar Gs. 40.000", exact: true }).click();
+    await expect(success).toBeVisible();
+    expect(submissions).toHaveLength(batch * 4);
+    for (const input of submissions) expect(input).toMatchObject({ gameId: "redoblona", amount: 10_000, selection });
+    const after = await bootstrap(page);
+    expect(after.session.balance).toBe(initial.session.balance - batch * 40_000);
+    expect(after.plays).toHaveLength(initial.plays.length + batch * 4);
+    expect(new Set(after.plays.map((play) => play.id)).size).toBe(after.plays.length);
+    await expect(page.getByRole("banner").getByRole("link", { name: /^Saldo disponible:/ }).locator(".q-balance__value"))
+      .toHaveText("₲ " + new Intl.NumberFormat("es-PY").format(after.session.balance));
+    if (batch === 1) {
+      expect(new Set(submissions.map((input) => input.drawId))).toEqual(new Set(["early", "morning", "evening", "night"]));
+      await success.getByRole("button", { name: "Nueva jugada", exact: true }).click();
+      await expect(success).toBeHidden();
+      await expect(page.getByRole("checkbox", { checked: true })).toHaveCount(4);
+      await page.getByLabel("Número de cabeza", { exact: true }).fill(selection.head);
+      await page.getByLabel("Número redoblona", { exact: true }).fill(selection.redoblona);
+      await page.getByRole("combobox", { name: "Hasta la posición", exact: true }).selectOption("10");
+    }
+  }
+  await success.getByRole("link", { name: "Ver en Mis jugadas", exact: true }).click();
+  await expect(page).toHaveURL(/\/mis-jugadas$/);
+});
+
+test("traditional checkout fits a single phone screen and keeps payment above navigation", async ({ page }, testInfo) => {
+  await prepareTraditionalCheckout(page, (await bootstrap(page)).catalog);
+  const bootstrapResponse = page.waitForResponse((response) =>
+    new URL(response.url()).pathname === "/api/mock/bootstrap" && response.request().method() === "GET",
+  );
+  await page.goto("/quinielas/redoblona", { waitUntil: "domcontentloaded" });
+  const response = await bootstrapResponse;
+  expect(response.ok()).toBe(true);
+  const checkoutBootstrap = await response.json() as BootstrapPayload;
   await expect(page.getByRole("button", { name: "Números aleatorios", exact: true })).toBeEnabled();
-  for (const width of [320, 390, 768, 1024, 1440]) {
-    await page.setViewportSize({ width, height: 900 });
+  const stake = page.getByTestId("traditional-stake");
+  await expect(stake).toHaveText("Gs. 0");
+  await expect(page.getByRole("combobox", { name: "Importe por sorteo", exact: true })).toHaveCount(0);
+  await expect(page.getByTestId("traditional-total")).toHaveText("Gs. 0");
+  await expect(page.getByRole("checkbox").first()).toBeEnabled();
+  const initiallySelected = page.getByRole("checkbox", { checked: true });
+  await expect(initiallySelected).toHaveCount(1);
+  const selectedDrawId = await initiallySelected.inputValue();
+  const selectedDraw = checkoutBootstrap.catalog.draws.find((draw) => draw.id === selectedDrawId);
+  expect(selectedDraw).toBeDefined();
+  const selectedCheckbox = page.locator('input[name="traditional-draw"][value="' + selectedDrawId + '"]');
+  await expect(page.getByRole("navigation", { name: "Modalidades de quiniela", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("main").getByText("Saldo disponible", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Varios a la vez", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Por sorteo · Gs.", { exact: true })).toHaveCount(0);
+  await expect(page.locator("[data-draw-icon]")).toHaveCount(4);
+  await expect(page.locator("[data-amount-chip-asset]")).toHaveCount(5);
+  for (const [width, height] of [[320, 568], [360, 800], [390, 844], [430, 932], [768, 1024], [1024, 768], [1440, 900]]) {
+    await page.setViewportSize({ width, height });
     await expectNoHorizontalOverflow(page);
     const pay = page.getByRole("button", { name: "Revisar y pagar", exact: true });
     await expectInsideHorizontalViewport(pay, page);
+    const randomBounds = await page.getByRole("button", { name: "Números aleatorios", exact: true }).boundingBox();
+    expect(randomBounds).not.toBeNull();
+    const numberBounds = [];
     for (const label of ["Número de cabeza", "Número redoblona"]) {
       const bounds = await page.getByLabel(label, { exact: true }).boundingBox();
       expect(bounds).not.toBeNull();
+      numberBounds.push(bounds!);
       expect(bounds!.height).toBeGreaterThanOrEqual(44);
       expect(bounds!.x).toBeGreaterThanOrEqual(0);
       expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width + 1);
+      expect(randomBounds!.y).toBeGreaterThanOrEqual(bounds!.y + bounds!.height);
     }
-    if (width <= 390) {
+    expect(Math.abs(randomBounds!.x - numberBounds[0].x)).toBeLessThanOrEqual(1);
+    if (width <= 430) {
       const payBounds = await pay.boundingBox();
       const navBounds = await page.getByRole("navigation", { name: "Navegación móvil", exact: true }).boundingBox();
       expect(payBounds).not.toBeNull();
       expect(navBounds).not.toBeNull();
-      expect(payBounds!.y + payBounds!.height).toBeLessThanOrEqual(navBounds!.y);
+      expect(payBounds!.y + payBounds!.height).toBeLessThanOrEqual(navBounds!.y - 24);
+      expect(await page.evaluate(() => window.scrollY)).toBe(0);
+      const controls = page.getByRole("form", { name: "Preparar jugada", exact: true }).locator("input, select, button");
+      for (const control of await controls.all()) {
+        const bounds = await control.boundingBox();
+        expect(bounds).not.toBeNull();
+        expect(bounds!.y).toBeGreaterThanOrEqual(0);
+        expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(navBounds!.y - 24);
+      }
+    }
+  }
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByLabel("Número de cabeza", { exact: true }).fill("123");
+  await page.getByLabel("Número redoblona", { exact: true }).fill("45");
+  const reviewButton = page.getByRole("button", { name: "Revisar y pagar", exact: true });
+  await expect(reviewButton).toBeDisabled();
+  await page.getByRole("button", { name: "Sumar Gs. 500", exact: true }).click();
+  await expect(reviewButton).toBeEnabled();
+
+  await page.clock.setFixedTime(new Date(selectedDraw!.closesAt));
+  await expect(selectedCheckbox).toBeDisabled();
+  await expect(selectedCheckbox).toBeChecked();
+  await expect(reviewButton).toBeDisabled();
+  const removeClosed = page.getByRole("button", { name: "Quitar cerrados", exact: true });
+  await expect(removeClosed).toBeEnabled();
+  await page.screenshot({ path: testInfo.outputPath("expired-draw.png") });
+
+  await removeClosed.click();
+  await expect(selectedCheckbox).toBeDisabled();
+  await expect(selectedCheckbox).not.toBeChecked();
+  await expect(page.getByRole("checkbox", { checked: true })).toHaveCount(0);
+  await expect(reviewButton).toBeDisabled();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  for (const gameId of ["head", "prizes", "invert"] as const) {
+    await prepareTraditionalCheckout(page, (await bootstrap(page)).catalog);
+    await page.setViewportSize({ width: 320, height: 568 });
+    await page.goto("/quinielas/" + gameId, { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("button", { name: "Números aleatorios", exact: true })).toBeEnabled();
+
+    for (const [width, height] of [[320, 568], [390, 844]]) {
+      await test.step(gameId + " at " + width + "x" + height, async () => {
+        await page.setViewportSize({ width, height });
+        await expectNoHorizontalOverflow(page);
+        const heading = page.getByRole("heading", { level: 2, name: "Número", exact: true });
+        await expect(heading).toBeVisible();
+        await expect(heading).not.toHaveClass(/q-sr-only/);
+        const headingBounds = await heading.boundingBox();
+        expect(headingBounds).not.toBeNull();
+        expect(headingBounds!.height).toBeGreaterThan(10);
+        expect(headingBounds!.width).toBeGreaterThan(40);
+
+        await expect(page.getByTestId("traditional-stake")).toHaveText("Gs. 0");
+        await expect(page.getByTestId("traditional-total")).toHaveText("Gs. 0");
+        await expect(page.getByRole("button", { name: "Revisar y pagar", exact: true })).toBeDisabled();
+        expect(await page.evaluate(() => window.scrollY)).toBe(0);
+        const navBounds = await page.getByRole("navigation", { name: "Navegación móvil", exact: true }).boundingBox();
+        expect(navBounds).not.toBeNull();
+        const controls = page.getByRole("form", { name: "Preparar jugada", exact: true }).locator("input, select, button");
+        for (const control of await controls.all()) {
+          const bounds = await control.boundingBox();
+          expect(bounds).not.toBeNull();
+          expect(bounds!.x).toBeGreaterThanOrEqual(0);
+          expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width + 1);
+          expect(bounds!.y).toBeGreaterThanOrEqual(0);
+          expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(navBounds!.y - 24);
+        }
+      });
     }
   }
 });
@@ -1064,6 +1270,16 @@ test("keeps the reel active and opens the receipt only from Mis Jugadas", async 
   await expect(
     ticket.getByRole("heading", { level: 2, name: "Jugada registrada" }),
   ).toBeVisible();
+
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(() => ticket.locator(".q-modal__body").evaluate(
+    (body) => body.scrollHeight - body.clientHeight,
+  )).toBeLessThanOrEqual(1);
+  await expectInsideHorizontalViewport(ticket, page);
+  await expect(ticket.getByText("Código de comprobante", { exact: true })).toBeInViewport();
+  await expect(ticket.getByRole("button", { name: "Listo", exact: true })).toBeInViewport();
+  await ticket.screenshot({ path: testInfo.outputPath("compact-receipt-mobile.png") });
+  await page.setViewportSize(viewport);
 
   await page.goto("/resultados", { waitUntil: "domcontentloaded" });
   await expect(

@@ -18,6 +18,7 @@ import {
   selectDrawPageSchedule,
 } from "./draw-page-data";
 import { DrawStreamContent } from "./draw-stream-content";
+import { HomeResultsCarousel } from "./home-results-carousel";
 import {
   HOME_RESULT_TABS,
   selectHomeDrawCards,
@@ -69,8 +70,8 @@ function DrawCard({
         size="lg"
       />
       <span className={styles.drawContent}>
-        <span className={styles.drawLabel}>{draw.label}</span>
-        <strong className={styles.drawTime}>{draw.timeLabel}</strong>
+        <span className={styles.drawLabel} data-testid="home-draw-label">{draw.label}</span>
+        <strong className={styles.drawTime} data-testid="home-draw-time">{draw.timeLabel}</strong>
         <span className={styles.drawDate}>
           {draw.dateLabel ?? "Horario por confirmar"}
         </span>
@@ -241,18 +242,56 @@ function ResultsSkeleton() {
   );
 }
 
+function ResultRankIcon({ position }: { position: number }) {
+  if (position !== 1 && position !== 2 && position !== 3) return null;
+
+  return (
+    <svg
+      aria-hidden="true"
+      className={styles.resultRankIcon}
+      data-rank={position === 1 ? "gold" : position === 2 ? "silver" : "bronze"}
+      data-testid="home-result-rank"
+      focusable="false"
+      viewBox="0 0 24 24"
+    >
+      {position === 1 ? (
+        <>
+          <path d="m3 7 4.5 3L12 3l4.5 7L21 7l-2 13H5L3 7Z" fill="currentColor" stroke="currentColor" strokeLinejoin="round" />
+          <path d="M6.5 16.5h11M9 12l3-5 3 5" fill="none" stroke="var(--result-rank-highlight)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
+        </>
+      ) : (
+        <>
+          <path d="m6 2 5 1 1 6-4 2-2-9Zm12 0-5 1-1 6 4 2 2-9Z" fill="currentColor" opacity="0.65" />
+          <circle cx="12" cy="15" r="7" fill="currentColor" />
+          <circle cx="12" cy="15" r="4.5" fill="none" stroke="var(--result-rank-highlight)" strokeWidth="1.2" />
+          <path d="m12 12 0.9 1.9 2.1 0.3-1.5 1.5 0.4 2.1-1.9-1-1.9 1 0.4-2.1L9 14.2l2.1-0.3L12 12Z" fill="var(--result-rank-highlight)" />
+        </>
+      )}
+    </svg>
+  );
+}
+
 function ResultCard({ result, tabId }: { result: HomeResultPositionView; tabId: HomeResultTabId }) {
   const displayedValue = tabId === "redoblona" ? result.ending : result.value;
+  const resultLabel = result.value === null
+    ? "pendiente"
+    : tabId === "redoblona"
+      ? `terminación ${displayedValue}, del número ${result.value}`
+      : `número ${displayedValue}${tabId === "invert" ? `; combinaciones ${result.combinations.join(", ")}` : ""}`;
 
   return (
     <article
+      aria-label={`Posición ${result.position}: ${resultLabel}`}
       className={styles.resultCard}
       data-position={result.position}
       data-pending={result.value === null ? "true" : "false"}
       data-testid="home-result-card"
     >
       <span className={styles.resultTopline}>
-        <span className={styles.resultPosition}>POSICIÓN {result.position}</span>
+        <span className={styles.resultPosition}>
+          <ResultRankIcon position={result.position} />
+          POSICIÓN {result.position}
+        </span>
       </span>
       {tabId === "invert" ? <span className={styles.resultSourceLabel}>Sorteado</span> : null}
       <strong className={styles.resultValue} data-testid="home-result-value">
@@ -367,18 +406,28 @@ function PublishedResultsPanel({
             {selectedTab === "redoblona" ? (
               <p className={styles.resultExplanation}>
                 <span>Cabeza <strong data-testid="home-redoblona-head">{headNumber ?? "—"}</strong></span>
-                <span>+ terminaciones de las posiciones 2 a 14</span>
+                <span className={styles.resultExplanationDetail}>+ terminaciones de las posiciones 2 a 14</span>
               </p>
             ) : selectedTab === "invert" ? (
-              <p className={styles.resultExplanation}>
+              <p className={`${styles.resultExplanation} ${styles.resultExplanationDetail}`}>
                 Número sorteado y órdenes posibles de sus cifras, por posición.
               </p>
             ) : null}
-            <div className={styles.resultsGrid} data-modality={selectedTab}>
-              {visibleResults.map((result) => (
-                <ResultCard key={result.position} result={result} tabId={selectedTab} />
-              ))}
-            </div>
+            {selectedTab === "head" ? (
+              <div className={styles.resultsGrid} data-modality="head">
+                {visibleResults.map((result) => <ResultCard key={result.position} result={result} tabId="head" />)}
+              </div>
+            ) : (
+              <HomeResultsCarousel
+                key={`${results.id}:${selectedTab}`}
+                label={HOME_RESULT_TABS.find((tab) => tab.id === selectedTab)!.label}
+                modality={selectedTab}
+              >
+                {visibleResults.map((result) => (
+                  <ResultCard key={result.position} result={result} tabId={selectedTab} />
+                ))}
+              </HomeResultsCarousel>
+            )}
           </>
         ) : (
           <div className={styles.emptyResults}>

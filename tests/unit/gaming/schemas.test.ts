@@ -8,6 +8,23 @@ import {
 } from "../../../src/lib/gaming/schemas";
 
 describe("server-side gaming schemas", () => {
+  it.each(["head", "prizes", "invert", "redoblona"])("accepts additive stakes up to 10,000 for %s and rejects higher amounts", (gameId) => {
+    const selection = gameId === "redoblona"
+      ? { head: "123", redoblona: "45", position: 2 }
+      : { number: "123", ...(gameId === "head" ? {} : { position: 2 }) };
+    for (const amount of [500, 1_500, 3_500, 9_500, 10_000]) {
+      expect(traditionalPlayRequestSchema.parse({ gameId, drawId: "early", amount, selection }).amount).toBe(amount);
+    }
+    for (const amount of [0, -500, 499, 750, 1_000.5, 10_001, 10_500, 20_000, 50_000, Infinity, NaN, "1000"]) {
+      expect(() => traditionalPlayRequestSchema.parse({ gameId, drawId: "early", amount, selection })).toThrow();
+    }
+  });
+
+  it("preserves the existing instant-game denominations", () => {
+    expect(instantPlayRequestSchema.parse({ gameId: "sapyaite", selection: "123", amount: 20_000 }).amount).toBe(20_000);
+    expect(() => instantPlayRequestSchema.parse({ gameId: "sapyaite", selection: "123", amount: 1_500 })).toThrow();
+  });
+
   it("accepts canonical padded selections", () => {
     for (const selection of ["000", "007", "999"]) {
       expect(

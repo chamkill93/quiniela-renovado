@@ -176,8 +176,6 @@ export function AccountDashboard({
       </footer>
     </section>
 
-    <div className={styles.legalFooter}><span className={styles.responsibleNote}><span className={styles.ageMark}>18+</span>Jugá con responsabilidad.</span><nav aria-label="Información de tu cuenta"><Link href="/legal/juego-responsable">Juego responsable</Link><Link href="/legal/terminos">Términos</Link><Link href="/legal/privacidad">Privacidad</Link></nav></div>
-
     <Modal open={panel !== null} onOpenChange={(open) => { if (!open) setPanel(null); }} title={panel ? panelTitles[panel] : "Cuenta"} size="md">
       {panel === "profile" ? <div className={styles.dialogStack}>
         <dl className={styles.profileDetails}>

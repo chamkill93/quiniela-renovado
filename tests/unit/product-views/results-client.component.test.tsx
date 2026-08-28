@@ -8,6 +8,7 @@ vi.mock("@/providers/product-provider", () => ({ useProduct: useProductMock }));
 import { ResultsClient } from "@/features/product/results-client";
 
 const catalog = buildGamingCatalog("REFUND", new Date("2026-08-27T12:00:00Z"));
+const orderedPostureValues = ["007", "000", "007", "014", "090", "123", "456", "789", "005", "032", "678", "900", "019", "042"];
 const base = {
   catalog, session: { id: "session" }, loading: false, error: null, unauthorized: false, refresh: vi.fn(), gatewayMode: "preview",
   results: [
@@ -21,6 +22,17 @@ beforeEach(() => {
   useProductMock.mockReturnValue(base);
   Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: vi.fn() });
 });
+
+function openDrawPostures(label = "Tempranero") {
+  fireEvent.click(screen.getByRole("button", { name: `Ver todos los números de ${label}` }));
+  const panel = screen.getByRole("region", { name: `Posturas de ${label}` });
+  const carousel = within(panel).getByRole("list", { name: `Números de ${label}` });
+  return { panel, carousel };
+}
+
+function shownPostureNumbers(carousel: HTMLElement) {
+  return within(carousel).getAllByTestId("draw-posture-number").map((number) => number.textContent);
+}
 
 describe("ResultsClient daily grid", () => {
   it.each(["preview", "backoffice"])("shows only the Results title without helper copy in %s mode", (gatewayMode) => {
@@ -42,41 +54,50 @@ describe("ResultsClient daily grid", () => {
     expect(within(day).getByTestId("daily-draw-number").textContent).toBe("007");
     expect(within(day).getAllByText("Sin publicar")).toHaveLength(3);
     for (const card of cards.slice(1)) {
-      expect(card.querySelector("details")).toBeNull();
+      expect(within(card).queryByTestId("daily-draw-toggle")).toBeNull();
       expect(within(card).queryByTestId("daily-draw-number")).toBeNull();
     }
+    expect(screen.queryByTestId("draw-postures-panel")).toBeNull();
     expect(within(day).queryByText("999")).toBeNull();
     expect(screen.queryByRole("heading", { name: "Sapy’aite" })).toBeNull();
   });
-  it("expands one table of 14 ordered postures, highlighting the head and retaining zeroes and repeated numbers", () => {
-    const values = ["007", "000", "007", "014", "090", "123", "456", "789", "005", "032", "678", "900", "019", "042"];
-    const drawNumbers = values.map((value, index) => ({ position: index + 1, value })).reverse();
+  it("opens one carousel of 14 ordered postures with ranked crowns, preserving zeroes and repeated numbers", () => {
+    const drawNumbers = orderedPostureValues.map((value, index) => ({ position: index + 1, value })).reverse();
     useProductMock.mockReturnValue({
       ...base,
       results: base.results.map((publication) => publication.source === "DRAW" ? { ...publication, drawNumbers } : publication),
     });
     render(<ResultsClient />);
-    const summary = screen.getByText("Ver todos los números");
-    const detail = summary.closest("details")!;
-    const card = detail.closest("article")!;
-    expect(detail.open).toBe(false);
-    fireEvent.click(summary);
-    expect(detail.open).toBe(true);
-    const table = within(detail).getByRole("table", { name: "Posturas de Tempranero" });
-    expect(within(detail).getAllByRole("table")).toHaveLength(1);
-    expect(within(table).getAllByRole("columnheader").map((header) => header.textContent)).toEqual(["Postura", "Número"]);
-    const rows = within(table).getAllByRole("row").slice(1);
-    expect(rows).toHaveLength(14);
-    expect(rows.map((row) => row.getAttribute("data-position"))).toEqual(Array.from({ length: 14 }, (_, index) => String(index + 1)));
-    expect(rows.map((row) => within(row).getByRole("cell").textContent)).toEqual(values);
-    expect(rows[0].getAttribute("data-head")).toBe("true");
-    expect(rows.slice(1).every((row) => !row.hasAttribute("data-head"))).toBe(true);
-    expect(within(rows[0]).getByText("A la cabeza")).toBeTruthy();
-    expect(within(rows[0]).getByRole("cell").textContent).toBe(within(card).getByTestId("daily-draw-number").textContent);
-    expect(within(detail).getAllByRole("heading").map((heading) => heading.textContent)).toEqual(["Posturas del sorteo"]);
-    expect(within(detail).queryByRole("list", { name: "Números sin postura informada" })).toBeNull();
-    fireEvent.click(summary);
-    expect(detail.open).toBe(false);
+    const toggle = screen.getByRole("button", { name: "Ver todos los números de Tempranero" });
+    const card = toggle.closest("article")!;
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByTestId("draw-postures-panel")).toBeNull();
+    const { panel, carousel } = openDrawPostures();
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(toggle.getAttribute("aria-controls")).toBe(panel.id);
+    expect(screen.getAllByTestId("draw-postures-panel")).toHaveLength(1);
+    expect(within(panel).getAllByRole("list")).toHaveLength(1);
+    expect(carousel.getAttribute("aria-roledescription")).toBe("carrusel");
+    expect(carousel.tabIndex).toBe(0);
+    const postures = within(carousel).getAllByRole("listitem");
+    expect(postures).toHaveLength(14);
+    expect(postures.map((posture) => posture.getAttribute("data-position"))).toEqual(Array.from({ length: 14 }, (_, index) => String(index + 1)));
+    expect(shownPostureNumbers(carousel)).toEqual(orderedPostureValues);
+    expect(postures[0].getAttribute("data-head")).toBe("true");
+    expect(postures.slice(1).every((posture) => !posture.hasAttribute("data-head"))).toBe(true);
+    expect(within(postures[0]).getByText("A la cabeza")).toBeTruthy();
+    expect(within(postures[0]).getByTestId("draw-posture-number").textContent).toBe(within(card).getByTestId("daily-draw-number").textContent);
+    expect(postures.slice(0, 3).map((posture) => within(posture).getByTestId("draw-posture-rank").getAttribute("data-rank")))
+      .toEqual(["gold", "silver", "bronze"]);
+    expect(within(carousel).getAllByTestId("draw-posture-rank")).toHaveLength(3);
+    expect(within(carousel).queryByRole("img")).toBeNull();
+    expect(within(panel).getByRole("button", { name: "Posturas anteriores de Tempranero" }).getAttribute("aria-controls")).toBe(carousel.id);
+    expect(within(panel).getByRole("button", { name: "Posturas siguientes de Tempranero" }).getAttribute("aria-controls")).toBe(carousel.id);
+    expect(within(panel).queryByRole("list", { name: "Números sin postura informada" })).toBeNull();
+    expect(screen.queryByRole("table")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Ocultar números de Tempranero" }));
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByTestId("draw-postures-panel")).toBeNull();
     expect(within(card).getByTestId("daily-draw-number").textContent).toBe("007");
   });
   it("keeps all legacy numbers visible without assigning unknown postures", () => {
@@ -86,13 +107,11 @@ describe("ResultsClient daily grid", () => {
         ? { ...publication, resultNumbers: ["007", "008"] } : publication),
     });
     render(<ResultsClient />);
-    const summary = screen.getByText("Ver todos los números");
-    const detail = summary.closest("details")!;
-    fireEvent.click(summary);
-    const table = within(detail).getByRole("table", { name: "Posturas de Tempranero" });
-    expect(within(table).getAllByRole("cell").map((cell) => cell.textContent)).toEqual(["007", ...Array<string>(13).fill("—")]);
-    expect(within(table).getAllByLabelText("Postura sin informar")).toHaveLength(13);
-    const unpositioned = within(detail).getByRole("list", { name: "Números sin postura informada" });
+    const { panel, carousel } = openDrawPostures();
+    expect(shownPostureNumbers(carousel)).toEqual(["007", ...Array<string>(13).fill("—")]);
+    expect(within(carousel).getAllByLabelText("Postura sin informar")).toHaveLength(13);
+    expect(within(carousel).getAllByTestId("draw-posture-rank").map((rank) => rank.getAttribute("data-rank"))).toEqual(["gold"]);
+    const unpositioned = within(panel).getByRole("list", { name: "Números sin postura informada" });
     expect(within(unpositioned).getAllByRole("listitem").map((item) => item.textContent))
       .toEqual(["001", "002", "003", "004", "005", "006", "007", "008"]);
   });
@@ -108,12 +127,13 @@ describe("ResultsClient daily grid", () => {
     render(<ResultsClient />);
     expect(screen.getByTestId("daily-draw-number").textContent).toBe("—");
     expect(screen.getByLabelText("A la cabeza sin informar")).toBeTruthy();
-    fireEvent.click(screen.getByText("Ver todos los números"));
-    const table = screen.getByRole("table", { name: "Posturas de Tempranero" });
-    expect(within(table).getAllByRole("cell").map((cell) => cell.textContent)).toEqual(Array.from({ length: 14 }, (_, index) => (
+    const { carousel } = openDrawPostures();
+    expect(shownPostureNumbers(carousel)).toEqual(Array.from({ length: 14 }, (_, index) => (
       index === 1 ? "006" : index === 13 ? "099" : "—"
     )));
-    expect(within(table).getAllByLabelText("Postura sin informar")).toHaveLength(12);
+    expect(within(carousel).getAllByLabelText("Postura sin informar")).toHaveLength(12);
+    expect(within(carousel).getAllByTestId("draw-posture-rank").map((rank) => rank.getAttribute("data-rank"))).toEqual(["silver"]);
+    expect(within(within(carousel).getAllByRole("listitem")[0]).queryByTestId("draw-posture-rank")).toBeNull();
     expect(screen.queryByRole("list", { name: "Números sin postura informada" })).toBeNull();
   });
   it.each([
@@ -141,11 +161,56 @@ describe("ResultsClient daily grid", () => {
     expect(card.querySelector("time")?.getAttribute("datetime")).toBe("2026-08-26T13:34:00.000Z");
     expect(within(card).getByTestId("daily-draw-number").textContent).toBe("—");
     expect(within(card).getByLabelText("A la cabeza sin informar")).toBeTruthy();
-    fireEvent.click(within(card).getByText("Ver todos los números"));
-    const table = within(card).getByRole("table", { name: "Posturas de Tempranero" });
-    expect(within(table).getAllByRole("cell").map((cell) => cell.textContent)).toEqual(Array<string>(14).fill("—"));
-    expect(within(table).getAllByLabelText("Postura sin informar")).toHaveLength(14);
-    expect(within(card).queryByRole("list", { name: "Números sin postura informada" })).toBeNull();
+    const { panel, carousel } = openDrawPostures();
+    expect(shownPostureNumbers(carousel)).toEqual(Array<string>(14).fill("—"));
+    expect(within(carousel).getAllByLabelText("Postura sin informar")).toHaveLength(14);
+    expect(within(carousel).queryByTestId("draw-posture-rank")).toBeNull();
+    expect(within(panel).queryByRole("list", { name: "Números sin postura informada" })).toBeNull();
+  });
+  it("switches one day panel between all four draws and closes it from the selected card", () => {
+    const draws = [
+      { id: "early", label: "Tempranero", head: "007" },
+      { id: "morning", label: "Matutino", head: "107" },
+      { id: "evening", label: "Vespertino", head: "207" },
+      { id: "night", label: "Nocturno", head: "307" },
+    ];
+    useProductMock.mockReturnValue({
+      ...base,
+      results: draws.map(({ id, head }) => ({
+        id: `snapshot-${id}`, source: "DRAW", gameId: "head", drawId: id,
+        drawNumbers: orderedPostureValues.map((value, index) => ({ position: index + 1, value: index === 0 ? head : value })).reverse(),
+        occurredAt: "2026-08-26T23:30:00Z",
+      })),
+    });
+    render(<ResultsClient />);
+    const day = screen.getByTestId("results-day");
+    const cards = within(day).getAllByTestId("daily-draw-card");
+    const toggles = cards.map((card) => within(card).getByTestId("daily-draw-toggle"));
+    const pairs = within(day).getAllByTestId("daily-draw-pair");
+    expect(pairs.map((pair) => within(pair).getAllByTestId("daily-draw-card").map((card) => card.getAttribute("data-draw-id"))))
+      .toEqual([["early", "morning"], ["evening", "night"]]);
+    const panelId = toggles[0].getAttribute("aria-controls");
+    expect(panelId).toBeTruthy();
+    expect(toggles.map((toggle) => toggle.getAttribute("aria-controls"))).toEqual(Array<string | null>(4).fill(panelId));
+    for (const [index, draw] of draws.entries()) {
+      fireEvent.click(toggles[index]);
+      const panel = within(day).getByRole("region", { name: `Posturas de ${draw.label}` });
+      const carousel = within(panel).getByRole("list", { name: `Números de ${draw.label}` });
+      expect(within(day).getAllByTestId("draw-postures-panel")).toHaveLength(1);
+      const activePair = pairs[Math.floor(index / 2)];
+      expect(panel.parentElement).toBe(activePair);
+      expect(activePair.lastElementChild).toBe(panel);
+      expect(panel.id).toBe(panelId);
+      expect(toggles.map((toggle) => toggle.getAttribute("aria-expanded")))
+        .toEqual(draws.map((_, drawIndex) => String(drawIndex === index)));
+      expect(toggles[index].getAttribute("aria-label")).toBe(`Ocultar números de ${draw.label}`);
+      expect(shownPostureNumbers(carousel)).toEqual(orderedPostureValues.map((value, position) => position === 0 ? draw.head : value));
+      expect(within(cards[index]).getByTestId("daily-draw-number").textContent).toBe(draw.head);
+    }
+    fireEvent.click(toggles[3]);
+    expect(within(day).queryByTestId("draw-postures-panel")).toBeNull();
+    expect(toggles.every((toggle) => toggle.getAttribute("aria-expanded") === "false")).toBe(true);
+    expect(toggles[3].getAttribute("aria-label")).toBe("Ver todos los números de Nocturno");
   });
   it("keeps a single day without instant history, date controls or pagination counters", () => {
     render(<ResultsClient />);
@@ -220,10 +285,13 @@ describe("ResultsClient daily grid", () => {
     const newestDates = ["2026-08-26", "2026-08-25", "2026-08-24", "2026-08-23", "2026-08-22"];
     expect(dates()).toEqual(newestDates);
     expect(screen.getAllByTestId("daily-draw-card")).toHaveLength(20);
+    fireEvent.click(within(screen.getAllByTestId("daily-draw-card")[0]).getByTestId("daily-draw-toggle"));
+    expect(screen.getAllByTestId("draw-postures-panel")).toHaveLength(1);
     expect((navigation().getByRole("button", { name: /Más recientes/ }) as HTMLButtonElement).disabled).toBe(true);
     expect((navigation().getByRole("button", { name: /Días anteriores/ }) as HTMLButtonElement).disabled).toBe(false);
     fireEvent.click(navigation().getByRole("button", { name: /Días anteriores/ }));
     expect(dates()).toEqual(["2026-08-21", "2026-08-20", "2026-08-19", "2026-08-18", "2026-08-17"]);
+    expect(screen.queryByTestId("draw-postures-panel")).toBeNull();
     expect(screen.getAllByTestId("daily-draw-card")).toHaveLength(20);
     expect(document.activeElement?.id).toBe("daily-results-history");
     expect((navigation().getByRole("button", { name: /Más recientes/ }) as HTMLButtonElement).disabled).toBe(false);
@@ -237,6 +305,8 @@ describe("ResultsClient daily grid", () => {
     expect(dates()[0]).toBe("2026-08-21");
     fireEvent.click(navigation().getByRole("button", { name: /Más recientes/ }));
     expect(dates()).toEqual(newestDates);
+    expect(screen.queryByTestId("draw-postures-panel")).toBeNull();
+    expect(within(screen.getAllByTestId("daily-draw-card")[0]).getByTestId("daily-draw-toggle").getAttribute("aria-expanded")).toBe("false");
     expect((navigation().getByRole("button", { name: /Más recientes/ }) as HTMLButtonElement).disabled).toBe(true);
     expect(document.activeElement?.id).toBe("daily-results-history");
     fireEvent.click(navigation().getByRole("button", { name: /Días anteriores/ }));

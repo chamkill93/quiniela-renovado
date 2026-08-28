@@ -353,12 +353,6 @@ export function AccountClient() {
             {pending ? (isRegister ? "Creando cuenta…" : "Ingresando…") : isRegister ? "Crear cuenta" : "Ingresar"}
           </button>
         </form>
-        <aside className={styles.contentCard}>
-          <p className={styles.eyebrow}>Seguridad de tu cuenta</p>
-          <h2 className={styles.sectionTitle}>Una sola fuente de verdad</h2>
-          <p className={styles.lede}>Tus datos se envían mediante una conexión segura para validar el acceso, crear la cuenta y mantener tu sesión.</p>
-          <p className={styles.lede}>Quinie.LA no replica reglas de identidad ni almacena contraseñas en este frontend.</p>
-        </aside>
       </div>
     </main>
   );

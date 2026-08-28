@@ -109,6 +109,8 @@
 .resultsLink:focus-visible,
 .resultTab:focus-visible,
 .resultsContent:focus-visible,
+.resultsCarouselTrack:focus-visible,
+.resultCarouselArrow:focus-visible,
 .megaCta:focus-visible {
   outline: 3px solid var(--q-focus);
   outline-offset: 3px;
@@ -498,12 +500,76 @@
   justify-content: center;
 }
 
-.resultsGrid[data-modality="invert"] {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+.resultsCarousel {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 8px;
 }
 
-.resultsGrid[data-modality="invert"] .resultCard {
+.resultsCarouselTrack {
+  position: relative;
+  min-width: 0;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 110px;
+  grid-template-rows: minmax(0, 1fr);
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 3px 7px;
+  border-radius: 12px;
+  overscroll-behavior-x: contain;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  scrollbar-color: color-mix(in srgb, var(--q-muted) 50%, transparent) transparent;
+  scrollbar-width: thin;
+  touch-action: pan-x pan-y pinch-zoom;
+}
+
+.resultsCarouselTrack[data-modality="invert"] {
+  grid-auto-columns: 164px;
+}
+
+.resultsCarouselTrack .resultCard {
+  scroll-snap-align: start;
+}
+
+.resultsCarouselTrack[data-modality="invert"] .resultCard {
   justify-content: flex-start;
+}
+
+.resultCarouselArrow {
+  width: 32px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--q-red) 42%, var(--q-line));
+  border-radius: var(--q-pill);
+  background: color-mix(in srgb, var(--q-red) 10%, var(--q-panel));
+  color: var(--q-red-soft);
+  cursor: pointer;
+  transition: background var(--q-duration-base) var(--q-ease-standard);
+}
+
+.resultCarouselArrow:not(:disabled):hover {
+  background: color-mix(in srgb, var(--q-red) 20%, var(--q-panel));
+}
+
+.resultCarouselArrow:disabled {
+  border-color: var(--q-line);
+  background: transparent;
+  color: var(--q-muted);
+  cursor: default;
+  opacity: 0.4;
+}
+
+.resultCarouselArrow svg {
+  width: 19px;
+  height: 19px;
 }
 
 .resultCard,
@@ -513,6 +579,7 @@
 }
 
 .resultCard {
+  --result-accent: var(--q-red);
   position: relative;
   min-width: 0;
   display: flex;
@@ -524,14 +591,32 @@
   border-radius: 12px;
   text-align: center;
   background:
-    radial-gradient(circle at 40% -45%, rgb(227 6 19 / 19%), transparent 65%),
+    radial-gradient(circle at 40% -45%, color-mix(in srgb, var(--result-accent) 19%, transparent), transparent 65%),
     linear-gradient(145deg, color-mix(in srgb, var(--q-panel-2) 96%, #171d28), color-mix(in srgb, var(--q-panel) 96%, #080b10));
   box-shadow: inset 0 1px rgb(255 255 255 / 4%), 0 9px 22px rgb(0 0 0 / 8%);
 }
 
 .resultCard[data-position="1"] {
-  border-color: color-mix(in srgb, var(--q-red) 68%, var(--q-line));
-  box-shadow: inset 0 0 25px rgb(227 6 19 / 6%), 0 0 18px rgb(227 6 19 / 9%);
+  --result-accent: #e8b742;
+  --result-rank-ink: #ffe3a0;
+  --result-rank-highlight: #fff6d8;
+}
+
+.resultCard[data-position="2"] {
+  --result-accent: #c1cedd;
+  --result-rank-ink: #e1eaf5;
+  --result-rank-highlight: #f6fbff;
+}
+
+.resultCard[data-position="3"] {
+  --result-accent: #d99b68;
+  --result-rank-ink: #f5c3a0;
+  --result-rank-highlight: #fff1df;
+}
+
+.resultCard:is([data-position="1"], [data-position="2"], [data-position="3"]) {
+  border-color: color-mix(in srgb, var(--result-accent) 62%, var(--q-line));
+  box-shadow: inset 0 1px color-mix(in srgb, var(--result-accent) 20%, transparent), 0 9px 22px rgb(0 0 0 / 8%);
 }
 
 .resultCard[data-pending="true"] {
@@ -550,9 +635,24 @@
 
 :global([data-theme="light"]) .resultCard {
   background:
-    radial-gradient(circle at 40% -50%, rgb(227 6 19 / 9%), transparent 68%),
+    radial-gradient(circle at 40% -50%, color-mix(in srgb, var(--result-accent) 9%, transparent), transparent 68%),
     linear-gradient(145deg, #fff, color-mix(in srgb, var(--q-panel) 95%, #eee6dc));
   box-shadow: inset 0 1px #fff, 0 8px 20px rgb(75 50 39 / 7%);
+}
+
+:global([data-theme="light"]) .resultCard[data-position="1"] {
+  --result-accent: #b98410;
+  --result-rank-ink: #78510f;
+}
+
+:global([data-theme="light"]) .resultCard[data-position="2"] {
+  --result-accent: #71839b;
+  --result-rank-ink: #42566d;
+}
+
+:global([data-theme="light"]) .resultCard[data-position="3"] {
+  --result-accent: #a15e36;
+  --result-rank-ink: #82431b;
 }
 
 .resultTopline {
@@ -566,6 +666,9 @@
 
 .resultPosition {
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 3px 6px;
   border: 1px solid color-mix(in srgb, var(--q-red) 32%, var(--q-line));
   border-radius: var(--q-pill);
@@ -574,6 +677,20 @@
   font-weight: 900;
   letter-spacing: 0.025em;
   white-space: nowrap;
+}
+
+.resultCard:is([data-position="1"], [data-position="2"], [data-position="3"]) .resultPosition {
+  border-color: color-mix(in srgb, var(--result-accent) 46%, var(--q-line));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--result-accent) 24%, transparent), color-mix(in srgb, var(--result-accent) 7%, var(--q-panel)));
+  color: var(--result-rank-ink);
+  box-shadow: inset 0 1px color-mix(in srgb, var(--result-rank-highlight) 16%, transparent);
+}
+
+.resultRankIcon {
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+  color: var(--result-accent);
 }
 
 .resultValue {
@@ -863,10 +980,6 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .resultsGrid[data-modality="invert"] {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
   .megaBanner {
     min-height: 170px;
     grid-template-columns: minmax(260px, 1fr) auto;
@@ -920,64 +1033,87 @@
   }
 
   .drawCard {
-    min-height: 100px;
-    grid-template-columns: 34px minmax(0, 1fr);
-    gap: 5px 6px;
-    padding: 19px 8px 8px;
+    min-height: 96px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto 32px 18px;
+    gap: 4px 6px;
+    padding: 8px;
     border-radius: 13px;
+    text-align: center;
   }
 
   .drawIcon[data-size="lg"] {
-    grid-row: 1;
-    width: 34px;
-    height: 34px;
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: end;
+    width: 32px;
+    height: 32px;
   }
 
   .drawContent,
   .drawCard:not([data-active="true"]) .drawContent {
-    grid-row: 1;
-    align-self: center;
-    padding-top: 0;
+    display: contents;
   }
 
   .drawLabel {
-    font-size: 0.62rem;
+    grid-column: 1 / -1;
+    grid-row: 1;
+    overflow: visible;
+    font-size: 0.75rem;
     letter-spacing: 0;
-    overflow-wrap: anywhere;
-    white-space: normal;
+    line-height: 1.25;
+    white-space: nowrap;
   }
 
   .drawTime {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: start;
     font-size: 1.25rem;
   }
 
+  .drawDate,
+  .drawAction {
+    display: none;
+  }
+
   .nextBadge {
-    min-height: 17px;
-    padding-inline: 6px;
-    border-radius: 0 12px 0 8px;
-    font-size: 0.5rem;
+    position: static;
+    grid-column: 1;
+    grid-row: 3;
+    justify-self: end;
+    min-height: 18px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    color: var(--q-red-soft);
+    font-size: 0.55rem;
+    letter-spacing: 0;
+    box-shadow: none;
   }
 
   .drawFooter {
-    gap: 6px;
+    grid-column: 2;
+    grid-row: 3;
+    min-width: 0;
+    justify-self: start;
+    gap: 0;
   }
 
   .drawStatus {
-    min-height: 20px;
-    font-size: 0.56rem;
+    min-height: 18px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    font-size: 0.6rem;
     letter-spacing: 0;
   }
 
-  .drawAction {
-    min-height: 20px;
-    gap: 4px;
-    padding-inline: 5px;
-    font-size: 0.6rem;
-  }
-
-  .drawActionIcon {
-    width: 10px;
-    height: 10px;
+  .drawCard[data-active="true"] .drawStatus {
+    background: none;
+    box-shadow: none;
   }
 
   .resultsToolbar {
@@ -1005,21 +1141,70 @@
     gap: 7px;
   }
 
-  .resultsGrid[data-modality="invert"] {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .resultsGrid[data-modality="head"] {
+    grid-template-columns: minmax(0, 112px);
+  }
+
+  .resultsCarousel {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .resultsCarouselTrack,
+  .resultsCarouselTrack[data-modality="invert"] {
+    grid-auto-columns: clamp(64px, 22%, 88px);
+    gap: 6px;
+    padding-block: 4px;
+    scrollbar-width: none;
+  }
+
+  .resultsCarouselTrack::-webkit-scrollbar {
+    display: none;
+  }
+
+  .resultsCarouselTrack:focus-visible {
+    outline-offset: -3px;
+  }
+
+  .resultCarouselArrow,
+  .resultTopline,
+  .resultSource,
+  .resultSourceLabel,
+  .resultPending,
+  .resultCombinations,
+  .resultExplanationDetail {
+    display: none;
+  }
+
+  .resultExplanation {
+    margin-bottom: 6px;
   }
 
   .resultCard,
   .resultSkeleton {
-    min-height: 90px;
+    min-height: 56px;
   }
 
   .resultCard {
-    padding: 9px;
+    padding: 8px 5px;
+    border-radius: 10px;
   }
 
-  .resultValue {
-    font-size: 1.75rem;
+  .resultsCarouselTrack[data-modality="invert"] .resultCard {
+    justify-content: center;
+  }
+
+  .resultsGrid[data-modality="head"] .resultCard {
+    min-height: 64px;
+  }
+
+  .resultValue,
+  .resultSourceLabel + .resultValue,
+  .resultsGrid[data-modality="head"] .resultValue {
+    margin: 0;
+    font-size: clamp(1.45rem, 7vw, 1.85rem);
+    letter-spacing: 0.035em;
+    line-height: 1.1;
   }
 
   .megaBanner {
@@ -1067,48 +1252,9 @@
   }
 }
 
-@media (max-width: 390px) {
-  .drawCard {
-    grid-template-columns: 28px minmax(0, 1fr);
-    column-gap: 5px;
-  }
-
-  .drawIcon[data-size="lg"] {
-    width: 28px;
-    height: 28px;
-  }
-
-  .drawStatus {
-    padding-inline: 6px;
-    font-size: 0.52rem;
-  }
-
-}
-
 @media (max-width: 360px) {
-  .resultTabs {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .resultTab {
-    font-size: 0.6rem;
-  }
-
-  .drawFooter {
-    gap: 4px;
-  }
-
-  .drawStatus {
-    padding-inline: 4px;
-  }
-
-  .drawAction {
-    padding-inline: 3px;
     font-size: 0.56rem;
-  }
-
-  .drawActionIcon {
-    display: none;
   }
 }
 
@@ -1116,12 +1262,17 @@
   .drawCard,
   .drawAction,
   .resultTab,
+  .resultCarouselArrow,
   .megaCta {
     transition: none;
   }
 
   .resultSkeleton {
     animation: none;
+  }
+
+  .resultsCarouselTrack {
+    scroll-behavior: auto;
   }
 
   .megaCta {

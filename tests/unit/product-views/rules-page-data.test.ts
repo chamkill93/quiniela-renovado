@@ -3,129 +3,174 @@ import { describe, expect, it } from "vitest";
 import {
   ALL_GAME_RULES,
   INSTANT_RULES,
+  MEGA_LOTO_RULE,
   selectEnabledGameRules,
   TRADITIONAL_RULES,
+  type RuleGameCard,
 } from "@/features/product/rules-page-data";
+import { MEGA_LOTO_URL } from "@/features/product/product-links";
 import { buildGamingCatalog } from "@/lib/gaming/catalog";
 
 const currentCatalog = () => buildGamingCatalog(
   "REFUND", new Date("2026-08-26T10:00:00.000Z"), ["sapyaite"],
 );
 
+function publicText(rule: RuleGameCard) {
+  return [
+    rule.title, rule.copy,
+    ...rule.facts.flatMap((fact) => [fact.label, fact.value]),
+    ...rule.instructions, ...rule.conditions, rule.example,
+  ].join(" ");
+}
+
 describe("rules page data", () => {
-  it("conserva cuatro modalidades y nueve instantáneas sin duplicados", () => {
-    expect(TRADITIONAL_RULES).toHaveLength(4);
-    expect(INSTANT_RULES).toHaveLength(9);
-    expect(ALL_GAME_RULES).toHaveLength(13);
-    expect(new Set(ALL_GAME_RULES.map((rule) => rule.id)).size).toBe(13);
+  it("defines four traditional games, only Sapy’aite as instant, and one external Mega Loto", () => {
+    expect(TRADITIONAL_RULES.map((rule) => rule.id)).toEqual(["head", "prizes", "invert", "redoblona"]);
+    expect(INSTANT_RULES.map((rule) => rule.id)).toEqual(["sapyaite"]);
+    expect(MEGA_LOTO_RULE.id).toBe("megaloto");
+    expect(ALL_GAME_RULES).toEqual([...TRADITIONAL_RULES, ...INSTANT_RULES, MEGA_LOTO_RULE]);
+    expect(ALL_GAME_RULES).toHaveLength(6);
+    expect(new Set(ALL_GAME_RULES.map((rule) => rule.id)).size).toBe(6);
+    expect(TRADITIONAL_RULES.every((rule) => rule.family === "traditional")).toBe(true);
+    expect(INSTANT_RULES[0].family).toBe("instant");
+    expect(MEGA_LOTO_RULE.family).toBe("external");
   });
 
-  it("dirige cada regla a su juego canónico", () => {
+  it("preserves canonical local game routes and directs Mega Loto to its official external site", () => {
     expect(TRADITIONAL_RULES.map((rule) => rule.href)).toEqual([
       "/quinielas/head", "/quinielas/prizes", "/quinielas/invert", "/quinielas/redoblona",
     ]);
-    expect(INSTANT_RULES.map((rule) => rule.href)).toEqual([
-      "/quinielas/sapyaite", "/instantaneas/poa", "/instantaneas/pyae",
-      "/instantaneas/petei", "/instantaneas/mokoi", "/instantaneas/mbohapy",
-      "/instantaneas/poa5", "/instantaneas/poa10", "/instantaneas/racha5",
-    ]);
+    expect(INSTANT_RULES[0].href).toBe("/quinielas/sapyaite");
+    expect(MEGA_LOTO_RULE.href).toBe(MEGA_LOTO_URL);
+    expect(ALL_GAME_RULES.some((rule) => String(rule.href) === "/quinielas/megaloto")).toBe(false);
   });
 
-  it("explica Sapy’aite como A la Cabeza instantáneo con tres cifras exactas", () => {
-    const rule = INSTANT_RULES.find((item) => item.id === "sapyaite")!;
-    expect(rule.copy).toBe("Como A la Cabeza, pero instantáneo: acertá las tres cifras exactas.");
-    expect(rule.instructions[0]).toContain("000 a 999");
-    expect(rule.instructions[1]).toContain("mismo orden");
-    expect(rule.instructions[1]).toContain("No tenés que esperar un sorteo");
-    expect(JSON.stringify(rule)).not.toMatch(/paridad|PAR|IMPAR/);
-  });
-
-  it("limita cada explicación a una frase y dos pasos breves", () => {
+  it("provides two useful facts, at least four steps, three conditions and an example for every game", () => {
     for (const rule of ALL_GAME_RULES) {
-      expect(rule.copy.length).toBeGreaterThan(10);
-      expect(rule.copy.length).toBeLessThan(100);
-      expect(rule.instructions).toHaveLength(2);
-      expect(rule.instructions.join(" ").length).toBeLessThan(200);
+      expect(rule.copy.trim().length).toBeGreaterThan(10);
+      expect(rule.facts).toHaveLength(2);
+      for (const fact of rule.facts) {
+        expect(fact.label.trim().length).toBeGreaterThan(0);
+        expect(fact.value.trim().length).toBeGreaterThan(0);
+      }
+      expect(rule.instructions.length).toBeGreaterThanOrEqual(4);
+      expect(rule.conditions.length).toBeGreaterThanOrEqual(3);
+      for (const detail of [...rule.instructions, ...rule.conditions]) {
+        expect(detail.trim().length).toBeGreaterThan(0);
+      }
+      expect(rule.example.trim().length).toBeGreaterThan(10);
+      expect(rule).not.toHaveProperty("payout");
+      expect(rule).not.toHaveProperty("calculation");
     }
   });
 
-  it("mantiene la salvedad del resultado neutral de Pya’e en el detalle", () => {
-    const rule = INSTANT_RULES.find((item) => item.id === "pyae")!;
-    expect(rule.copy).toContain("500");
-    expect(rule.instructions.join(" ")).toContain("configuración vigente");
+  it("retains the local number ranges and each traditional game's posture limits", () => {
+    for (const rule of TRADITIONAL_RULES) {
+      expect(publicText(rule)).toMatch(/\b001\s*(?:a|al|y|hasta|–|-)\s*999\b/);
+    }
+    for (const id of ["prizes", "redoblona"]) {
+      expect(publicText(TRADITIONAL_RULES.find((rule) => rule.id === id)!))
+        .toMatch(/\b2\s*(?:a|al|y|hasta|–|-)\s*14\b/);
+    }
+    expect(publicText(TRADITIONAL_RULES.find((rule) => rule.id === "invert")!))
+      .toMatch(/\b1\s*(?:a|al|y|hasta|–|-)\s*14\b/);
   });
 
-  it("describe Redoblona según las selecciones actuales del formulario", () => {
-    const rule = TRADITIONAL_RULES.find((item) => item.id === "redoblona")!;
-    expect(rule.copy).toContain("cabeza de tres cifras");
-    expect(rule.copy).toContain("terminación de dos");
-    expect(rule.instructions.join(" ")).toContain("posición de 2 a 14");
+  it("explains Sapy’aite independently with 000–999 and three exact digits in the same order", () => {
+    const text = publicText(INSTANT_RULES[0]);
+    expect(text).toMatch(/\b000\s*(?:a|al|y|hasta|–|-)\s*999\b/);
+    expect(text).toMatch(/tres cifras|3 cifras/i);
+    expect(text).toMatch(/mismo orden|orden exacto/i);
+    expect(text).toMatch(/instantáne|al instante|sin esperar/i);
+    expect(text).not.toMatch(/A la Cabeza|paridad|\bPAR\b|\bIMPAR\b/i);
   });
 
-  it("muestra únicamente los juegos habilitados por el catálogo", () => {
+  it("describes both Redoblona selections and requires both conditions for a successful result", () => {
+    const text = publicText(TRADITIONAL_RULES.find((rule) => rule.id === "redoblona")!);
+    expect(text).toMatch(/tres cifras|3 cifras/i);
+    expect(text).toMatch(/dos cifras|2 cifras/i);
+    expect(text).toMatch(/ambas|las dos|dos condiciones|dos coincidencias/i);
+  });
+
+  it("describes the external six-number Mega Loto rules instead of the legacy local 1–45 game", () => {
+    const text = publicText(MEGA_LOTO_RULE);
+    expect(text).toMatch(/(?:6|seis)\s+números/i);
+    expect(text).toMatch(/distintos|diferentes|sin repetir|no se repiten/i);
+    expect(text).toMatch(/\b1\s*(?:a|al|y|hasta|–|-)\s*40\b/);
+    expect(text).not.toMatch(/\b1\s*(?:a|al|y|hasta|–|-)\s*45\b/);
+    expect(MEGA_LOTO_RULE.href).toBe(MEGA_LOTO_URL);
+  });
+
+  it("filters enabled local IDs while always retaining the external rule for a known catalog", () => {
     const catalog = currentCatalog();
     const enabled = selectEnabledGameRules(catalog);
+    expect(enabled.traditional).toEqual(TRADITIONAL_RULES);
+    expect(enabled.instant).toEqual(INSTANT_RULES);
+    expect(enabled.external).toEqual([MEGA_LOTO_RULE]);
+    expect(selectEnabledGameRules({ ...catalog, traditional: [], instant: [] }))
+      .toEqual({ traditional: [], instant: [], external: [MEGA_LOTO_RULE] });
+
+    const restricted = selectEnabledGameRules({
+      ...catalog,
+      traditional: catalog.traditional.filter((game) => game.id === "prizes" || game.id === "redoblona"),
+      instant: [],
+    });
+    expect(restricted.traditional.map((rule) => rule.id)).toEqual(["prizes", "redoblona"]);
+    expect(restricted.instant).toEqual([]);
+    expect(restricted.external).toEqual([MEGA_LOTO_RULE]);
+  });
+
+  it("ignores all other instant games and does not duplicate the legacy traditional Mega Loto or Sapy’aite", () => {
+    const catalog = buildGamingCatalog("REFUND", new Date("2026-08-26T10:00:00.000Z"));
+    expect(catalog.instant.length).toBeGreaterThan(1);
+    const enabled = selectEnabledGameRules(catalog);
+    expect(enabled.instant.map((rule) => rule.id)).toEqual(["sapyaite"]);
+    expect([...enabled.traditional, ...enabled.instant, ...enabled.external]).toHaveLength(6);
+
+    const legacyOnly = selectEnabledGameRules({
+      ...catalog,
+      traditional: catalog.traditional.filter((game) => game.id === "megaloto" || game.id === "sapyaite-traditional"),
+      instant: catalog.instant.filter((game) => game.id !== "sapyaite"),
+    });
+    expect(legacyOnly).toEqual({ traditional: [], instant: [], external: [MEGA_LOTO_RULE] });
+  });
+
+  it("keeps canonical ordering without duplicate cards and leaves the supplied catalog unchanged", () => {
+    const catalog = currentCatalog();
+    const reordered = {
+      ...catalog,
+      traditional: [...catalog.traditional].reverse().concat(catalog.traditional[0]),
+      instant: [...catalog.instant, ...catalog.instant],
+    };
+    const original = structuredClone(reordered);
+    const enabled = selectEnabledGameRules(reordered);
     expect(enabled.traditional.map((rule) => rule.id)).toEqual(["head", "prizes", "invert", "redoblona"]);
     expect(enabled.instant.map((rule) => rule.id)).toEqual(["sapyaite"]);
-    expect(selectEnabledGameRules({ ...catalog, traditional: [], instant: [] }))
-      .toEqual({ traditional: [], instant: [] });
+    expect(enabled.external).toEqual([MEGA_LOTO_RULE]);
+    expect(reordered).toEqual(original);
   });
 
-  it("muestra el 700 configurado de Sapy’aite y un ejemplo de premio total", () => {
-    expect(selectEnabledGameRules(currentCatalog()).instant[0].payout).toEqual({
-      headline: "700× el importe",
-      detail: "Si acertás con Gs. 500, el premio total es Gs. 350.000.",
-      available: true,
-      reference: false,
-      calculation: { kind: "FIXED", multiplier: 700 },
-    });
-  });
-
-  it("toma el multiplicador y el importe de ejemplo del catálogo, sin fijarlos en el texto", () => {
+  it("does not derive public rules or financial examples from amounts and payout configuration", () => {
     const catalog = currentCatalog();
-    const game = catalog.instant[0];
-    const changed = selectEnabledGameRules({
+    const changed = {
       ...catalog,
-      amounts: [2_000, 1_000],
-      instant: [{ ...game, payout: { prototype: true, kind: "MULTIPLIER", winMultiplier: 800 } }],
-    });
-    expect(changed.instant[0].payout.headline).toBe("800× el importe");
-    expect(changed.traditional[0].payout.headline).toBe("800× el importe");
-    expect(changed.instant[0].payout.detail).toBe("Si acertás con Gs. 1.000, el premio total es Gs. 800.000.");
+      amounts: [0, -500, Number.NaN, Number.POSITIVE_INFINITY, 2_000],
+      instant: catalog.instant.map((game) => ({
+        ...game,
+        payout: { prototype: true as const, kind: "MULTIPLIER" as const, winMultiplier: 800 },
+      })),
+    };
+    expect(selectEnabledGameRules(changed)).toEqual(selectEnabledGameRules(catalog));
   });
 
-  it("no inventa importes de ejemplo si el catálogo no tiene montos válidos", () => {
-    const result = selectEnabledGameRules({ ...currentCatalog(), amounts: [0, -500, NaN, Infinity] });
-    expect(result.instant[0].payout.detail).toBe("Si acertás, el premio total es tu importe × 700.");
-  });
-
-  it("asigna referencias separadas de la liquidación real a las cuatro modalidades", () => {
-    const catalog = currentCatalog();
-    const original = structuredClone(catalog);
-    const rules = selectEnabledGameRules(catalog).traditional;
-    expect(rules.map((rule) => rule.payout.headline)).toEqual([
-      "700× el importe", "700× ÷ postura", "700× ÷ combinaciones ÷ postura", "700× · 80× ÷ postura",
-    ]);
-    expect(rules.every((rule) => rule.payout.reference)).toBe(true);
-    expect(rules.map((rule) => rule.payout.calculation.kind)).toEqual(["FIXED", "POSITION", "PERMUTATIONS", "REDOBLONA"]);
-    expect(catalog).toEqual(original);
-  });
-
-  it("conserva los pagos por cantidad de aciertos si se habilitan esos juegos", () => {
-    const catalog = buildGamingCatalog("REFUND", new Date("2026-08-26T10:00:00.000Z"), ["poa5"]);
-    const payout = selectEnabledGameRules(catalog).instant[0].payout;
-    expect(payout.headline).toBe("Multiplicador según aciertos");
-    expect(payout.rows).toEqual([
-      { label: "1 acierto", value: "60×" },
-      { label: "2 aciertos", value: "500×" },
-      { label: "3 aciertos", value: "5.000×" },
-    ]);
-  });
-
-  it("no incluye referencias documentales ni vocabulario de implementación en el contenido público", () => {
-    const catalog = buildGamingCatalog("REFUND", new Date("2026-08-26T10:00:00.000Z"));
-    const publicCopy = JSON.stringify(selectEnabledGameRules(catalog));
-    expect(publicCopy).not.toMatch(/pdf|art[ií]culo|reglamento|vista previa|formulario actual|backoffice|proveedor|codexa/i);
-    expect(publicCopy).not.toContain("sourceLabel");
+  it("keeps every game's instructions free of payouts, implementation notes and comparisons to other games", () => {
+    for (const rule of ALL_GAME_RULES) {
+      const text = publicText(rule);
+      expect(text).not.toMatch(/×|multiplicador|cuánto paga|calculadora|premio total|tabla de pagos|\bGs\./i);
+      expect(text).not.toMatch(/pdf|art[ií]culo|reglamento|vista previa|formulario actual|backoffice|proveedor|codexa/i);
+      if (rule.id !== "head") expect(text).not.toMatch(/A la Cabeza/i);
+      if (rule.id !== "sapyaite") expect(text).not.toMatch(/Sapy[’']?aite/i);
+    }
+    expect(JSON.stringify(ALL_GAME_RULES)).not.toMatch(/"payout"|"calculation"|sourceLabel/);
   });
 });

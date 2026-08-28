@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { estimatePrize, uniqueThreeDigitPermutations, type PrizeCalculation } from "@/features/product/prize-estimate";
-import { selectEnabledGameRules } from "@/features/product/rules-page-data";
-import { buildGamingCatalog } from "@/lib/gaming/catalog";
 
-const rules = selectEnabledGameRules(buildGamingCatalog("REFUND", new Date("2026-08-27T12:00:00Z"), ["sapyaite"]));
 const fixed: PrizeCalculation = { kind: "FIXED", multiplier: 700 };
-const calculation = (id: string) => [...rules.traditional, ...rules.instant].find((rule) => rule.id === id)!.payout.calculation;
+const calculations: Record<string, PrizeCalculation> = {
+  head: fixed,
+  sapyaite: fixed,
+  prizes: { kind: "POSITION", multiplier: 700, minPosition: 2, maxPosition: 14 },
+  invert: { kind: "PERMUTATIONS", multiplier: 700, minPosition: 1, maxPosition: 14 },
+  redoblona: { kind: "REDOBLONA", multiplier: 700, secondMultiplier: 80, minPosition: 2, maxPosition: 14 },
+};
+const calculation = (id: string) => calculations[id];
 
 describe("reference prize estimates", () => {
   it.each(["head", "sapyaite"])("estimates total and net separately for %s", (id) => {

@@ -158,3 +158,42 @@ describe.each(routes)("play API /$path", (route) => {
     expect(mockGamingProvider.getSession(session.id).balance).toBe(session.balance - route.body.amount);
   });
 });
+
+describe("traditional stake limits", () => {
+  it.each(["head", "prizes", "invert", "redoblona"])("rejects a stake above 10,000 for %s without debiting", async (gameId) => {
+    const selection = gameId === "redoblona"
+      ? { head: "123", redoblona: "45", position: 2 }
+      : { number: "123", ...(gameId === "head" ? {} : { position: 2 }) };
+    for (const amount of [10_500, 20_000, 50_000]) {
+      await expectApiError(await traditionalPlay(request(routes[0], {
+        rawBody: JSON.stringify({ gameId, drawId: "early", amount, selection }),
+      })), 400, "VALIDATION_ERROR");
+    }
+    expect(mockGamingProvider.getSession(session.id)).toEqual(session);
+    expect(mockGamingProvider.listPlays(session.id)).toEqual([]);
+    expect(mockGamingProvider.listMovements(session.id)).toEqual([]);
+  });
+
+  it("accepts chip sums, caps each play instead of the draw's lifetime total, and keeps retries idempotent", async () => {
+    const summedRequest = { ...routes[0].body, amount: 1_500 };
+    const submit = (body: Omit<typeof summedRequest, "drawId"> & { drawId: string }, key: string) => traditionalPlay(request(routes[0], { rawBody: JSON.stringify(body), key }));
+    const first = await submit(summedRequest, "summed-stake");
+    expect(first.status).toBe(200);
+    const receipt = backofficeResponseParsers.placeTraditionalPlay(await first.json());
+    expect(receipt.play.amount).toBe(1_500);
+    const replay = await submit(summedRequest, "summed-stake");
+    expect(backofficeResponseParsers.placeTraditionalPlay(await replay.json())).toEqual({ ...receipt, replayed: true });
+
+    for (const drawId of ["early", "morning", "evening", "night", "early"]) {
+      const index = mockGamingProvider.listPlays(session.id).length;
+      const response = await submit({ ...summedRequest, amount: 10_000, drawId }, "separate-play-" + index);
+      expect(response.status).toBe(200);
+      expect(backofficeResponseParsers.placeTraditionalPlay(await response.json()).replayed).toBe(false);
+    }
+    const plays = mockGamingProvider.listPlays(session.id);
+    expect(plays).toHaveLength(6);
+    expect(new Set(plays.map((play) => play.id)).size).toBe(6);
+    expect(mockGamingProvider.listMovements(session.id)).toHaveLength(6);
+    expect(mockGamingProvider.getSession(session.id).balance).toBe(session.balance - 51_500);
+  });
+});

@@ -11,6 +11,7 @@ import {
 } from "@/features/product/traditional-game-form";
 import { TRADITIONAL_GAMES } from "@/lib/gaming/catalog";
 import { traditionalPlayRequestSchema } from "@/lib/gaming/schemas";
+import { getTraditionalStakeTotals } from "@/lib/gaming/traditional-stake";
 import type { TraditionalGameDefinition } from "@/lib/gaming/types";
 import type { TraditionalGameId } from "@/lib/product/catalog";
 
@@ -32,6 +33,13 @@ function mockRandom(...values: number[]) {
 }
 
 describe("borrador de apuestas tradicionales", () => {
+  it("suma únicamente las denominaciones habilitadas sin superar 10.000 por sorteo", () => {
+    expect(getTraditionalStakeTotals([500, 1_000, 2_000, 5_000, 10_000])).toEqual(Array.from({ length: 20 }, (_, index) => (index + 1) * 500));
+    expect(getTraditionalStakeTotals([2_000, 7_000])).toEqual([2_000, 4_000, 6_000, 7_000, 8_000, 9_000, 10_000]);
+    expect(getTraditionalStakeTotals([5_000, 7_000])).toEqual([5_000, 7_000, 10_000]);
+    expect(getTraditionalStakeTotals([0, -500, 499, 750, 20_000, 50_000, NaN])).toEqual([]);
+  });
+
   it("empieza sin números preseleccionados y permite Invertida desde la primera posición", () => {
     for (const gameId of ["head", "prizes", "invert", "redoblona"] as const) {
       expect(createTraditionalDraft(gameId)).toEqual({
