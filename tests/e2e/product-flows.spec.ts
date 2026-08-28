@@ -458,18 +458,36 @@ test("completes Home with scheduled draws, tabbed results and the official Mega 
   await expect(resultCards).toHaveCount(13);
   await expect(resultsSection.getByTestId("home-redoblona-head")).toHaveCount(1);
   await expect(resultsSection.getByTestId("home-redoblona-head")).toContainText("497");
+  const compactResults = page.viewportSize()!.width < 768;
   for (const [index, value] of nightValues.slice(1).entries()) {
-    await expect(resultCards.nth(index)).toHaveAttribute("data-position", String(index + 2));
-    await expect(resultCards.nth(index).getByTestId("home-result-value")).toHaveText(value.slice(-2));
-    await expect(resultCards.nth(index).getByText(`Del número ${value}`, { exact: true })).toBeVisible();
+    const card = resultCards.nth(index);
+    const source = card.getByText(`Del número ${value}`, { exact: true });
+    await expect(card).toHaveAttribute("data-position", String(index + 2));
+    await expect(card.getByTestId("home-result-value")).toHaveText(value.slice(-2));
+    await expect(card).toHaveAccessibleName(`Posición ${index + 2}: terminación ${value.slice(-2)}, del número ${value}`);
+    if (compactResults) {
+      await expect(source).toBeHidden();
+      await expect(card).toHaveText(value.slice(-2), { useInnerText: true });
+    } else {
+      await expect(source).toBeVisible();
+    }
   }
   await expect(resultMetadata).toContainText("20:30");
 
   await tabs.nth(3).click();
   await expect(resultCards).toHaveCount(14);
   for (const [index, value] of nightValues.entries()) {
-    await expect(resultCards.nth(index)).toHaveAttribute("data-position", String(index + 1));
-    await expect(resultCards.nth(index).getByTestId("home-result-value")).toHaveText(value);
+    const card = resultCards.nth(index);
+    const combinations = card.getByTestId("home-result-combinations");
+    await expect(card).toHaveAttribute("data-position", String(index + 1));
+    await expect(card.getByTestId("home-result-value")).toHaveText(value);
+    await expect(card).toHaveAccessibleName(new RegExp(`^Posición ${index + 1}: número ${value}; combinaciones `));
+    if (compactResults) {
+      await expect(combinations).toBeHidden();
+      await expect(card).toHaveText(value, { useInnerText: true });
+    } else {
+      await expect(combinations).toBeVisible();
+    }
   }
   const headCombinations = (await resultCards.first().getByTestId("home-result-combinations").textContent())
     ?.match(/\d{3}/g) ?? [];
@@ -994,6 +1012,19 @@ test("traditional checkout accepts 40,000 across four draws and a separate ident
 });
 
 test("traditional checkout fits a single phone screen and keeps payment above navigation", async ({ page }, testInfo) => {
+  async function mobileNavigationTop() {
+    const navigation = page.getByRole("navigation", { name: "Navegación móvil", exact: true });
+    await expect(navigation).toBeVisible();
+    // The central Jugar action extends above the container. Include every
+    // rendered descendant so the checkout stays clear of its actual bounds.
+    return navigation.evaluate((element) => Math.min(
+      ...[element, ...element.querySelectorAll("*")]
+        .map((node) => node.getBoundingClientRect())
+        .filter((bounds) => bounds.width > 0 && bounds.height > 0)
+        .map((bounds) => bounds.top),
+    ));
+  }
+
   await prepareTraditionalCheckout(page, (await bootstrap(page)).catalog);
   const bootstrapResponse = page.waitForResponse((response) =>
     new URL(response.url()).pathname === "/api/mock/bootstrap" && response.request().method() === "GET",
@@ -1040,17 +1071,16 @@ test("traditional checkout fits a single phone screen and keeps payment above na
     expect(Math.abs(randomBounds!.x - numberBounds[0].x)).toBeLessThanOrEqual(1);
     if (width <= 430) {
       const payBounds = await pay.boundingBox();
-      const navBounds = await page.getByRole("navigation", { name: "Navegación móvil", exact: true }).boundingBox();
+      const navigationTop = await mobileNavigationTop();
       expect(payBounds).not.toBeNull();
-      expect(navBounds).not.toBeNull();
-      expect(payBounds!.y + payBounds!.height).toBeLessThanOrEqual(navBounds!.y - 24);
+      expect(payBounds!.y + payBounds!.height).toBeLessThanOrEqual(navigationTop);
       expect(await page.evaluate(() => window.scrollY)).toBe(0);
       const controls = page.getByRole("form", { name: "Preparar jugada", exact: true }).locator("input, select, button");
       for (const control of await controls.all()) {
         const bounds = await control.boundingBox();
         expect(bounds).not.toBeNull();
         expect(bounds!.y).toBeGreaterThanOrEqual(0);
-        expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(navBounds!.y - 24);
+        expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(navigationTop);
       }
     }
   }
@@ -1100,8 +1130,7 @@ test("traditional checkout fits a single phone screen and keeps payment above na
         await expect(page.getByTestId("traditional-total")).toHaveText("Gs. 0");
         await expect(page.getByRole("button", { name: "Revisar y pagar", exact: true })).toBeDisabled();
         expect(await page.evaluate(() => window.scrollY)).toBe(0);
-        const navBounds = await page.getByRole("navigation", { name: "Navegación móvil", exact: true }).boundingBox();
-        expect(navBounds).not.toBeNull();
+        const navigationTop = await mobileNavigationTop();
         const controls = page.getByRole("form", { name: "Preparar jugada", exact: true }).locator("input, select, button");
         for (const control of await controls.all()) {
           const bounds = await control.boundingBox();
@@ -1109,7 +1138,7 @@ test("traditional checkout fits a single phone screen and keeps payment above na
           expect(bounds!.x).toBeGreaterThanOrEqual(0);
           expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width + 1);
           expect(bounds!.y).toBeGreaterThanOrEqual(0);
-          expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(navBounds!.y - 24);
+          expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(navigationTop);
         }
       });
     }

@@ -299,7 +299,8 @@ test("keeps six detailed rules expandable and their game links accessible", asyn
     .toBeGreaterThan(0);
 
   const redoblona = page.getByTestId("rule-card-redoblona");
-  const toggle = redoblona.getByRole("button", { name: "Ver reglas de Redoblona" });
+  const toggle = redoblona.getByRole("button");
+  await expect(toggle).toHaveAccessibleName("Ver reglas de Redoblona");
   const detail = redoblona.locator("#" + await toggle.getAttribute("aria-controls"));
   const collapsedHeight = (await redoblona.boundingBox())!.height;
   await expect(toggle).toHaveText("Ver reglas");
@@ -308,6 +309,7 @@ test("keeps six detailed rules expandable and their game links accessible", asyn
   await toggle.focus();
   await toggle.press("Enter");
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(toggle).toHaveAccessibleName("Contraer reglas de Redoblona");
   await expect(toggle).toHaveText("Ver menos");
   await expect(detail).toBeVisible();
   for (const name of ["Paso a paso", "Condiciones del acierto", "Ejemplo"]) {
@@ -324,6 +326,7 @@ test("keeps six detailed rules expandable and their game links accessible", asyn
   await page.screenshot({ path: testInfo.outputPath("rules-expanded.png"), fullPage: true });
   await toggle.press("Space");
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(toggle).toHaveAccessibleName("Ver reglas de Redoblona");
   await expect(toggle).toHaveText("Ver reglas");
   await expect(detail).toBeHidden();
   await expect(toggle).toBeFocused();
