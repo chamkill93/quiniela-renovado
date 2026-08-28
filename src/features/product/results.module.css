@@ -52,7 +52,6 @@
 .other { display: grid; gap: 10px; }
 .other article { padding: 14px; border: 1px solid var(--q-line); border-radius: 12px; background: var(--q-panel); }
 .other h3 { margin: 0; color: var(--q-text); font-size: .9rem; }
-.historyEmpty { margin: 0; padding: 18px; border: 1px dashed var(--q-line); border-radius: 12px; color: var(--q-muted); font-size: .8rem; line-height: 1.5; }
 @media (max-width: 1279px) { .drawGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 520px) {
   .drawGrid { gap: 8px; }

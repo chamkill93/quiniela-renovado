@@ -1069,9 +1069,15 @@ test("keeps the reel active and opens the receipt only from Mis Jugadas", async 
   await expect(
     page.getByRole("heading", { level: 1, name: "Resultados" }),
   ).toBeVisible();
+  await expect(page.getByTestId("results-day").first()).toBeVisible();
+  await expect(page.getByRole("region", { name: "Resultados instantáneos de la cuenta" })).toHaveCount(0);
   await expect(
     page.getByRole("heading", { level: 3, name: "Sapy’aite", exact: true }),
-  ).toBeVisible();
+  ).toHaveCount(0);
+
+  await page.goto("/mis-jugadas", { waitUntil: "domcontentloaded" });
+  await expect(playItem).toBeVisible();
+  await expect(playItem.getByRole("button", { name: "Ver mi comprobante" })).toBeVisible();
 });
 
 test("renders an authoritative fixture result without invoking local game logic", async ({

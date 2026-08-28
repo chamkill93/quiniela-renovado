@@ -58,7 +58,7 @@ describe("MockGamingProvider", () => {
     }
   });
 
-  it("shares one complete positioned draw across modalities without changing their legacy numbers", () => {
+  it("shares one complete positioned draw across modalities with consistent legacy numbers and dated IDs", () => {
     const provider = providerWithResults([]);
     const history = provider.listResults(provider.createSession().id);
     const positions = Array.from({ length: DRAW_POSTURE_COUNT }, (_, index) => index + 1);
@@ -72,19 +72,15 @@ describe("MockGamingProvider", () => {
       expect(head.drawNumbers?.every((number) => /^\d{3}$/.test(number.value))).toBe(true);
       for (const publication of publications) {
         expect(publication.drawNumbers).toEqual(head.drawNumbers);
+        expect(publication.result).toBe(head.result);
         expect(publication.resultNumbers).toEqual([publication.result]);
       }
     }
 
-    for (const [gameId, first, ninth] of [
-      ["head", "497", "635"],
-      ["prizes", "325", "463"],
-      ["invert", "749", "887"],
-      ["redoblona", "044", "182"],
-    ]) {
+    for (const gameId of ["head", "prizes", "invert", "redoblona"]) {
       const publications = history.filter((result) => result.gameId === gameId);
-      expect(publications[0]).toMatchObject({ id: `draw-result-${gameId}-1`, result: first });
-      expect(publications[8]).toMatchObject({ id: `draw-result-${gameId}-9`, result: ninth });
+      expect(publications[0]).toMatchObject({ id: `draw-result-2026-08-24-night-${gameId}` });
+      expect(publications[8]).toMatchObject({ id: `draw-result-2026-08-22-night-${gameId}` });
     }
   });
 

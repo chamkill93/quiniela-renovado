@@ -1,7 +1,6 @@
 "use client";
 
 import { RuleCard } from "@/features/product/rule-card";
-import { RulePrizeCalculator } from "@/features/product/rule-prize-calculator";
 import { selectEnabledGameRules } from "@/features/product/rules-page-data";
 import {
   RemoteEmptyState,
@@ -37,7 +36,6 @@ export default function RulesPage() {
       {catalog && error ? <RemoteErrorState message={error} onRetry={() => void refresh()} /> : null}
       {rules ? (
         <>
-          <RulePrizeCalculator rules={[...rules.traditional, ...rules.instant]} />
           <div className={ruleStyles.grid} data-testid="rules-grid">
             {[...rules.traditional, ...rules.instant].map((rule) => <RuleCard key={rule.id} rule={rule} />)}
           </div>

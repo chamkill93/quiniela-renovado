@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test";
+import { DAILY_DRAW_SLOTS } from "@/lib/gaming/daily-draw-schedule";
+import { drawDateKey, drawWallTime } from "@/lib/gaming/draw-calendar";
 import {
   activeNavigation,
   E2E_SELECTORS,
@@ -12,6 +14,13 @@ test.beforeEach(async ({ page }, testInfo) => {
   const theme = themeFromProjectName(testInfo.project.name);
   await installThemePreference(page, theme);
 });
+
+function latestGenericResultDate(now: number) {
+  const today = drawDateKey(now)!;
+  const firstDraw = DAILY_DRAW_SLOTS[0];
+  return now >= drawWallTime(today, firstDraw.hour, firstDraw.minute)
+    ? today : drawDateKey(now - 86_400_000)!;
+}
 
 test("renders the accessible product shell without horizontal overflow", async ({
   page,
@@ -272,42 +281,30 @@ test("keeps current rules brief and expands their details accessibly", async ({ 
   await expect(page).toHaveURL(/\/quinielas\/redoblona$/);
 });
 
-test("calculates reference prizes without creating plays", async ({ page }, testInfo) => {
+test("shows game multipliers without a quick calculator or creating plays", async ({ page }, testInfo) => {
   const posts: string[] = [];
   page.on("request", (request) => {
     if (request.method() === "POST") posts.push(request.url());
   });
   await page.goto("/reglas", { waitUntil: "domcontentloaded" });
-  const calculator = page.getByTestId("prize-calculator");
-  const game = calculator.getByRole("combobox", { name: "Juego", exact: true });
-  const amount = calculator.getByLabel("Importe (Gs.)", { exact: true });
-  const total = calculator.getByTestId("estimate-total");
-  const net = calculator.getByTestId("estimate-net");
-  await expect(total).toHaveText("Gs. 350.000");
-  await amount.fill("1000");
-  await expect(total).toHaveText("Gs. 700.000");
-  await expect(net).toHaveText("Gs. 699.000");
-  await game.selectOption("prizes");
-  await calculator.getByRole("combobox", { name: "Postura", exact: true }).selectOption("10");
-  await expect(total).toHaveText("Gs. 70.000");
-  await game.selectOption("invert");
-  await expect(total).toHaveText("Gs. 116.666");
-  await calculator.getByLabel("Tus tres cifras").fill("111");
-  await expect(total).toHaveText("Gs. 700.000");
-  await game.selectOption("redoblona");
-  await calculator.getByRole("combobox", { name: "Postura", exact: true }).selectOption("10");
-  await expect(total).toHaveText("Gs. 5.600.000");
-  await game.selectOption("sapyaite");
-  await expect(calculator.getByLabel("Postura")).toHaveCount(0);
-  await expect(total).toHaveText("Gs. 700.000");
-  await amount.fill("-500");
-  await expect(calculator.getByRole("status")).toBeVisible();
-  await expect(total).toHaveCount(0);
-  await amount.fill("500");
-  await expect(total).toHaveText("Gs. 350.000");
+  const grid = page.getByTestId("rules-grid");
+  await expect(grid.getByRole("article")).toHaveCount(5);
+  await expect(page.getByTestId("prize-calculator")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Calculadora rápida" })).toHaveCount(0);
+  await expect(page.getByRole("combobox")).toHaveCount(0);
+  await expect(grid.getByRole("link")).toHaveCount(5);
+  for (const [gameId, multiplier] of [
+    ["head", "700× el importe"],
+    ["prizes", "700× ÷ postura"],
+    ["invert", "700× ÷ combinaciones ÷ postura"],
+    ["redoblona", "700× · 80× ÷ postura"],
+    ["sapyaite", "700× el importe"],
+  ]) {
+    await expect(grid.getByTestId(`rule-card-${gameId}`).getByText(multiplier, { exact: true })).toBeVisible();
+  }
   await expectNoHorizontalOverflow(page);
   expect(posts.filter((url) => /\/(instant|traditional|plays|wallet)\b/.test(url))).toEqual([]);
-  await page.screenshot({ path: testInfo.outputPath("rules-calculator.png"), fullPage: true });
+  await page.screenshot({ path: testInfo.outputPath("rules-without-calculator.png"), fullPage: true });
 });
 
 test("keeps all positions of the latest draw responsive in each modality", async ({ page }, testInfo) => {
@@ -348,18 +345,26 @@ test("keeps all positions of the latest draw responsive in each modality", async
 });
 
 test("groups results by date into four responsive colored draws", async ({ page }, testInfo) => {
+  const openedAt = Date.now();
   await page.goto("/resultados", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Resultados", level: 1 })).toBeVisible();
   const days = page.getByTestId("results-day");
   await expect(days).toHaveCount(5);
+  await expect(page.getByRole("region", { name: "Resultados instantáneos de la cuenta" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Resultados instantáneos" })).toHaveCount(0);
   const dates = await days.evaluateAll((elements) => elements.map((element) => element.getAttribute("data-date")!));
   expect(dates).toEqual([...dates].sort().reverse());
-  for (const day of await days.all()) {
+  expect([latestGenericResultDate(openedAt), latestGenericResultDate(Date.now())]).toContain(dates[0]);
+  for (const [dayIndex, day] of (await days.all()).entries()) {
     const cards = day.getByTestId("daily-draw-card");
     await expect(cards).toHaveCount(4);
     expect(await cards.evaluateAll((elements) => elements.map((element) => element.getAttribute("data-draw-id"))))
       .toEqual(["early", "morning", "evening", "night"]);
-    await expect(day.getByText("4 de 4 sorteos publicados")).toBeVisible();
+    const publishedCount = await day.locator('[data-testid="daily-draw-card"][data-state="published"]').count();
+    expect(publishedCount).toBeGreaterThanOrEqual(1);
+    expect(publishedCount).toBeLessThanOrEqual(4);
+    if (dayIndex > 0) expect(publishedCount).toBe(4);
+    await expect(day.getByText(`${publishedCount} de 4 sorteos publicados`)).toBeVisible();
     const colors = await cards.evaluateAll((elements) => elements.map((element) => getComputedStyle(element).borderTopColor));
     expect(new Set(colors).size).toBe(4);
     for (const card of await cards.all()) {

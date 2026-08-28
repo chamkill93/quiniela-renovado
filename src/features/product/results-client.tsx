@@ -2,13 +2,11 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useProduct } from "@/providers/product-provider";
-import { mapPublishedResults } from "./product-view-mappers";
 import { DrawIcon } from "./draw-icon";
 import { paginateDrawDays, selectDailyDrawResults, selectDrawPostures, type DailyDraw } from "./results-page-data";
 import {
   RemoteEmptyState, RemoteErrorState, RemoteLoadingState, RemoteUnauthorizedState,
 } from "./remote-view-state";
-import { SectionHeader } from "./section-header";
 import styles from "./product.module.css";
 import resultStyles from "./results.module.css";
 
@@ -100,12 +98,11 @@ function DatePagination({ pagination, onChange }: {
 }
 
 export function ResultsClient() {
-  const { catalog, results, session, loading, error, unauthorized, refresh } = useProduct();
+  const { catalog, results, loading, error, unauthorized, refresh } = useProduct();
   const [page, setPage] = useState(0);
   const historyRef = useRef<HTMLElement>(null);
   const unavailable = !catalog && !loading;
   const grouped = useMemo(() => catalog ? selectDailyDrawResults(catalog, results) : null, [catalog, results]);
-  const instantResults = catalog ? mapPublishedResults(catalog, results, "INSTANT") : [];
   const pagination = paginateDrawDays(grouped?.days ?? [], page);
 
   function changePage(value: number) {
@@ -157,24 +154,6 @@ export function ResultsClient() {
               ))}
             </section>
           ) : null}
-
-          <section aria-label="Resultados instantáneos de la cuenta">
-            <SectionHeader eyebrow="Mi historial" headingLevel={2} title="Resultados instantáneos" />
-            {unauthorized || !session ? (
-              <RemoteUnauthorizedState message="Iniciá sesión para ver tus resultados instantáneos." />
-            ) : instantResults.length === 0 ? (
-              <p className={resultStyles.historyEmpty} role="status">Tus próximas jugadas instantáneas confirmadas aparecerán acá.</p>
-            ) : (
-              <div className={styles.list}>
-                {instantResults.map((result) => (
-                  <article className={styles.listItem} key={result.id}>
-                    <div><h3>{result.label}</h3><p>{formatOccurredAt(result.occurredAt)}</p></div>
-                    <div className={styles.listAmount}>{result.result}</div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
         </>
       ) : null}
     </main>

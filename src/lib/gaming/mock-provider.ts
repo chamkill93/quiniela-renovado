@@ -130,7 +130,7 @@ export class MockGamingProvider {
   private readonly now: () => Date;
   private readonly idFactory: () => string;
   private readonly catalog: GamingCatalog;
-  private readonly drawResults: readonly GamingResult[];
+  private drawResultsCache: { key: string; results: readonly GamingResult[] } | null = null;
   private readonly sessionTtlMs: number;
   private readonly maxSessions: number;
 
@@ -156,7 +156,6 @@ export class MockGamingProvider {
       initialNow,
       options.enabledInstantGameIds,
     );
-    this.drawResults = this.buildDrawResults(initialNow);
   }
 
   createSession(input: CreateSessionInput = {}): MockSessionView {
@@ -455,7 +454,7 @@ export class MockGamingProvider {
 
   listResults(sessionId: string): readonly GamingResult[] {
     const session = this.requireSession(sessionId);
-    return clone([...session.results, ...this.drawResults]);
+    return clone([...session.results, ...this.buildDrawResults(this.now())]);
   }
 
   topUp(
@@ -678,51 +677,61 @@ export class MockGamingProvider {
   }
 
   private buildDrawResults(now: Date): readonly GamingResult[] {
-    // Preview-only history: ten complete past days, four draws per day.
-    // Home still limits the visible history to its latest six publications.
-    const examples = [
-      { gameId: "head", gameName: "A la Cabeza", numbers: ["497", "208", "731", "044", "912", "083", "006", "325"] },
-      { gameId: "prizes", gameName: "A los Premios", numbers: ["325", "006", "718", "462", "150", "294", "519", "602"] },
-      { gameId: "invert", gameName: "Invertida", numbers: ["749", "820", "137", "404", "291", "830", "600", "253"] },
-      { gameId: "redoblona", gameName: "Redoblona", numbers: ["044", "012", "083", "025", "067", "091", "015", "026"] },
-    ] as const;
+    // Generic preview data only: never official results or a source for settling plays.
+    // Keep ten published dates: today's elapsed slots plus nine complete past days,
+    // or ten past days before today's first slot. No future draw is published.
+    const nowMs = now.getTime();
+    const today = drawDateKey(nowMs);
+    if (!today) return [];
     const slots = [...DAILY_DRAW_SLOTS].reverse();
-    const today = drawDateKey(now.getTime())!;
-    const schedule = Array.from({ length: 10 }, (_, index) => index + 1).flatMap((daysAgo) => {
+    const elapsedToday = slots.filter((slot) => drawWallTime(today, slot.hour, slot.minute) <= nowMs);
+    const cacheKey = `${today}:${elapsedToday.length}`;
+    if (this.drawResultsCache?.key === cacheKey) return this.drawResultsCache.results;
+
+    const modalities = [
+      { gameId: "head", gameName: "A la Cabeza" },
+      { gameId: "prizes", gameName: "A los Premios" },
+      { gameId: "invert", gameName: "Invertida" },
+      { gameId: "redoblona", gameName: "Redoblona" },
+    ] as const;
+    const firstDayOffset = elapsedToday.length > 0 ? 0 : 1;
+    const schedule = Array.from({ length: 10 }, (_, index) => index + firstDayOffset).flatMap((daysAgo) => {
       const day = new Date(Date.parse(`${today}T12:00:00Z`) - daysAgo * 86_400_000).toISOString().slice(0, 10);
-      return slots.map((slot) => ({ id: slot.id, at: new Date(drawWallTime(day, slot.hour, slot.minute)).toISOString() }));
+      return slots.flatMap((slot) => {
+        const atMs = drawWallTime(day, slot.hour, slot.minute);
+        return atMs <= nowMs ? [{ id: slot.id, day, at: new Date(atMs).toISOString() }] : [];
+      });
     });
-    const sampleNumber = (numbers: readonly string[], index: number) => {
-      const cycle = Math.floor(index / numbers.length);
-      return cycle === 0 ? numbers[index]
-        : String((Number(numbers[index % numbers.length]) + cycle * 137) % 999 + 1).padStart(3, "0");
-    };
-    // One canonical preview draw per date and slot; no real result is generated here.
-    const drawNumbersByDraw = schedule.map((slot, index) => {
-      const seed = Array.from(`${slot.at}:${slot.id}`).reduce(
+    // Stable date/slot seeds preserve every historical draw when the window advances
+    // or the server restarts, without consuming the instant game's random source.
+    const drawNumbersByDraw = schedule.map((slot) => {
+      const seed = Array.from(`${slot.day}:${slot.id}`).reduce(
         (value, character) => (value * 31 + character.charCodeAt(0)) % 1000,
         0,
       );
       return Array.from({ length: DRAW_POSTURE_COUNT }, (_, postureIndex) => ({
         position: postureIndex + 1,
-        value: postureIndex === 0 ? sampleNumber(examples[0].numbers, index)
-          : String((seed + postureIndex * 137) % 1000).padStart(3, "0"),
+        value: String((seed + postureIndex * 137) % 1000).padStart(3, "0"),
       }));
     });
-    return examples.flatMap(({ gameId, gameName, numbers }) => schedule.map((slot, index) => {
-      // Preserve legacy modality fields used by Home and other existing views.
-      const result = sampleNumber(numbers, index);
+    const results = modalities.flatMap(({ gameId, gameName }) => schedule.map((slot, index) => {
+      const drawNumbers = drawNumbersByDraw[index];
+      // Preserve the legacy scalar/array contract, aligned with the canonical head.
+      // All four modalities use the same drawNumbers for their complete postures.
+      const result = drawNumbers[0].value;
       return {
-      id: `draw-result-${gameId}-${index + 1}`,
-      source: "DRAW" as const,
-      gameId,
-      gameName,
-      drawId: slot.id,
-      result,
-      resultNumbers: [result],
-      drawNumbers: drawNumbersByDraw[index],
-      occurredAt: slot.at,
+        id: `draw-result-${slot.day}-${slot.id}-${gameId}`,
+        source: "DRAW" as const,
+        gameId,
+        gameName,
+        drawId: slot.id,
+        result,
+        resultNumbers: [result],
+        drawNumbers,
+        occurredAt: slot.at,
       };
     }));
+    this.drawResultsCache = { key: cacheKey, results };
+    return results;
   }
 }

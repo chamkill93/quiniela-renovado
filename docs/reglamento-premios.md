@@ -5,7 +5,7 @@ los pagos que trae el catálogo. No importa esta transcripción ni muestra artí
 páginas o diferencias con el documento. Sapy’aite muestra su multiplicador
 configurado (700× en el catálogo local). Las modalidades tradicionales no tienen
 tabla de pagos en su contrato actual. A pedido del usuario, la presentación ofrece
-referencias y una calculadora, sin cambiar ese contrato: Cabeza = base de tres
+referencias de multiplicadores, sin cambiar ese contrato: Cabeza = base de tres
 cifras (700); Premios = base / postura; Invertida = base / órdenes distintos /
 postura; Redoblona = base de tres cifras × base de dos cifras (80) / postura.
 Las bases parten de las tasas actuales de Sapy’aite y Mokõi; si esos juegos no

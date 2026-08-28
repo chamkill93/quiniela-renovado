@@ -46,7 +46,7 @@ describe("ResultsClient daily grid", () => {
       expect(within(card).queryByTestId("daily-draw-number")).toBeNull();
     }
     expect(within(day).queryByText("999")).toBeNull();
-    expect(screen.getByRole("heading", { name: "Sapy’aite" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Sapy’aite" })).toBeNull();
   });
   it("expands one table of 14 ordered postures, highlighting the head and retaining zeroes and repeated numbers", () => {
     const values = ["007", "000", "007", "014", "090", "123", "456", "789", "005", "032", "678", "900", "019", "042"];
@@ -147,7 +147,7 @@ describe("ResultsClient daily grid", () => {
     expect(within(table).getAllByLabelText("Postura sin informar")).toHaveLength(14);
     expect(within(card).queryByRole("list", { name: "Números sin postura informada" })).toBeNull();
   });
-  it("keeps a single day and the instant history without date controls or pagination counters", () => {
+  it("keeps a single day without instant history, date controls or pagination counters", () => {
     render(<ResultsClient />);
     expect(screen.queryByLabelText("Buscar por fecha")).toBeNull();
     expect(document.querySelector('input[type="date"]')).toBeNull();
@@ -155,7 +155,7 @@ describe("ResultsClient daily grid", () => {
     expect(screen.queryByRole("navigation", { name: "Paginación de fechas" })).toBeNull();
     expect(screen.queryByText(/Página \d+ de \d+|Días \d+[–-]\d+ de \d+/)).toBeNull();
     expect(screen.getByTestId("results-day").getAttribute("data-date")).toBe("2026-08-26");
-    expect(screen.getByRole("heading", { name: "Sapy’aite" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Sapy’aite" })).toBeNull();
   });
   it("retains loading and unavailable states without fake draws", () => {
     useProductMock.mockReturnValue({ ...base, catalog: null, results: [], loading: true });
@@ -170,7 +170,35 @@ describe("ResultsClient daily grid", () => {
     useProductMock.mockReturnValue({ ...base, gatewayMode: "backoffice", session: null });
     render(<ResultsClient />);
     expect(screen.queryByText(/Resultados de muestra/)).toBeNull();
-    expect(screen.getByText("Iniciá sesión para ver tus resultados instantáneos.")).toBeTruthy();
+    expect(screen.queryByText("Iniciá sesión para ver tus resultados instantáneos.")).toBeNull();
+    expect(screen.getAllByTestId("daily-draw-card")).toHaveLength(4);
+  });
+
+  it.each([
+    { state: "signed in", session: base.session, unauthorized: false },
+    { state: "signed out", session: null, unauthorized: false },
+    { state: "expired session", session: null, unauthorized: true },
+  ])("excludes instant results for $state without changing the daily draws", ({ session, unauthorized }) => {
+    const originalResults = structuredClone(base.results);
+    useProductMock.mockReturnValue({ ...base, session, unauthorized });
+    render(<ResultsClient />);
+    expect(screen.queryByRole("region", { name: "Resultados instantáneos de la cuenta" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Resultados instantáneos" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Sapy’aite" })).toBeNull();
+    expect(screen.queryByText("999")).toBeNull();
+    expect(screen.queryByText(/tus resultados instantáneos|jugadas instantáneas confirmadas/i)).toBeNull();
+    expect(screen.getAllByTestId("daily-draw-card")).toHaveLength(4);
+    expect(base.results).toEqual(originalResults);
+  });
+
+  it("does not turn instant-only results into a daily draw or other published result", () => {
+    useProductMock.mockReturnValue({ ...base, results: [base.results[2]] });
+    render(<ResultsClient />);
+    expect(screen.getByText("No hay sorteos publicados por fecha.")).toBeTruthy();
+    expect(screen.queryByTestId("results-day")).toBeNull();
+    expect(screen.queryByRole("region", { name: "Otros resultados publicados" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Resultados instantáneos" })).toBeNull();
+    expect(screen.queryByText("999")).toBeNull();
   });
 
   it("paginates whole days with only two header buttons, preserves older records and returns to the first page", () => {
@@ -204,7 +232,7 @@ describe("ResultsClient daily grid", () => {
     expect(dates()).toEqual(["2026-08-16"]);
     expect(screen.getAllByTestId("daily-draw-card")).toHaveLength(4);
     expect((navigation().getByRole("button", { name: /Días anteriores/ }) as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByRole("heading", { name: "Sapy’aite" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Sapy’aite" })).toBeNull();
     fireEvent.click(navigation().getByRole("button", { name: /Más recientes/ }));
     expect(dates()[0]).toBe("2026-08-21");
     fireEvent.click(navigation().getByRole("button", { name: /Más recientes/ }));
