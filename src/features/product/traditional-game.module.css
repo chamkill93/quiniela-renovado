@@ -9,6 +9,11 @@
 .titleGroup > div { min-width: 0; }
 .titleGroup .heroIcon { width: 45px; height: 45px; flex: 0 0 auto; border-radius: 12px; }
 .titleGroup h1 { margin: 0; color: var(--q-text-strong); font-family: var(--q-font-display); font-size: clamp(1.3rem, 2vw, 1.8rem); font-weight: 850; letter-spacing: -.04em; line-height: 1.15; overflow-wrap: anywhere; }
+.titleCopy { display: grid; gap: 2px; }
+.titleCopy p { color: var(--q-muted); font-size: .67rem; line-height: 1.4; }
+.howItWorks { border: 1px solid var(--q-line); border-radius: 10px; padding: 7px 10px; background: var(--q-panel-2); color: var(--q-muted-strong); font-size: .67rem; line-height: 1.5; }
+.howItWorks summary { min-height: 24px; color: var(--q-text); font-weight: 750; cursor: pointer; }
+.howItWorks p { margin-top: 5px; }
 
 .layout { min-width: 0; border: 1px solid var(--q-line); border-radius: 18px; background: var(--q-panel); box-shadow: var(--q-inset-highlight), var(--q-shadow-sm); scroll-margin-top: calc(var(--q-topbar-height) + 12px); }
 .steps { display: grid; min-width: 0; }
@@ -55,6 +60,7 @@
 
 .randomAction { margin-top: 9px; }
 .randomAction .randomButton { grid-column: 1; justify-self: start; }
+.page[data-game="redoblona"] .randomAction .randomButton { margin-left: 11px; }
 .randomButton { display: inline-flex; min-width: 44px; min-height: 44px; flex: 0 0 auto; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--q-line); border-radius: 9px; padding: 8px 12px; background: var(--q-panel-2); color: var(--q-text); font-size: .72rem; font-weight: 750; transition: background 160ms ease, border-color 160ms ease; }
 .randomButton:hover:not(:disabled) { border-color: var(--q-line-strong); background: var(--q-surface-hover); }
 .numberPanel, .randomAction { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr) minmax(100px, .65fr); align-items: start; gap: 10px; }
@@ -81,6 +87,29 @@
 .positionNote strong, .invertHint strong { color: var(--q-muted-strong); font-weight: 700; }
 .fieldError { color: var(--q-danger); font-size: .63rem; line-height: 1.4; overflow-wrap: anywhere; }
 
+.redoblonaBuilder { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr); align-items: stretch; gap: 8px; }
+.redoblonaPart { display: grid; min-width: 0; align-content: start; gap: 10px; border: 1px solid var(--q-line); border-radius: 12px; padding: 11px; background: var(--q-bg-raised); }
+.redoblonaPart > header { display: flex; min-width: 0; align-items: center; gap: 8px; }
+.redoblonaPart > header > span { display: grid; width: 22px; height: 22px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: var(--q-panel-3); color: var(--q-red); font-size: .61rem; font-weight: 850; }
+.redoblonaPart > header > div { min-width: 0; }
+.redoblonaPart h3 { color: var(--q-text-strong); font-size: .69rem; font-weight: 800; letter-spacing: .03em; line-height: 1.25; text-transform: uppercase; }
+.redoblonaPart header p { margin-top: 1px; color: var(--q-muted); font-size: .55rem; line-height: 1.3; }
+.redoblonaControls { display: grid; min-width: 0; grid-template-columns: minmax(96px, .75fr) minmax(112px, 1fr); align-items: start; gap: 8px; }
+.redoblonaNumberField, .redoblonaUntilField { display: grid; min-width: 0; align-content: start; gap: 5px; }
+.redoblonaNumberField > label, .redoblonaUntilField > label { color: var(--q-muted-strong); font-size: .61rem; font-weight: 650; line-height: 1.3; }
+.digitCells { position: relative; display: grid; width: 100%; min-width: 0; height: 52px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+.digitCells > input { position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; border: 0; padding: 0; background: transparent; color: transparent; font-size: 16px; caret-color: transparent; opacity: .01; cursor: text; }
+.digitCells > span { display: grid; min-width: 0; place-items: center; border: 1px solid var(--q-line-strong); border-radius: 9px; background: var(--q-panel); color: var(--q-text-strong); font-family: var(--q-font-display); font-size: 1.52rem; font-weight: 850; line-height: 1; font-variant-numeric: tabular-nums; }
+.digitCells:focus-within > span { border-color: var(--q-red); outline: 2px solid var(--q-focus); outline-offset: 1px; box-shadow: 0 0 0 3px var(--q-focus-outer); }
+.digitCells[data-invalid="true"] > span { border-color: var(--q-danger); }
+.digitCells:has(input:disabled), .redoblonaUntilField select:disabled { opacity: .5; cursor: not-allowed; }
+.redoblonaUntilField select { width: 100%; min-width: 0; height: 52px; border: 1px solid var(--q-line-strong); border-radius: 9px; padding: 7px 8px; background: var(--q-panel); color: var(--q-text); font-size: .77rem; font-weight: 700; }
+.redoblonaUntilField select:focus-visible { border-color: var(--q-red); outline: 2px solid var(--q-focus); outline-offset: 2px; box-shadow: 0 0 0 4px var(--q-focus-outer); }
+.redoblonaUntilField select[aria-invalid="true"] { border-color: var(--q-danger); }
+.redoblonaConnector { display: grid; min-width: 0; place-items: center; color: var(--q-muted-strong); }
+.redoblonaConnector::before, .redoblonaConnector::after { width: 1px; height: 100%; background: var(--q-line); content: ""; }
+.redoblonaConnector span { display: grid; width: 25px; height: 25px; flex: 0 0 auto; place-items: center; border: 1px solid var(--q-line-strong); border-radius: 50%; background: var(--q-panel); color: var(--q-red); font-size: .92rem; font-weight: 800; }
+
 .amountHeading { display: flex; min-width: 0; align-items: center; gap: 12px; margin-bottom: 11px; }
 .amountHeading > .stepHeading { margin-bottom: 0; }
 .amountValue { display: grid; min-width: 0; gap: 2px; margin-left: auto; text-align: right; font-variant-numeric: tabular-nums; }
@@ -95,6 +124,7 @@
 .amountOption > button { width: 54px; height: 54px; }
 .amountOption > button > span { width: 50px; height: 50px; }
 .amountLabel { color: var(--q-muted); font-size: .64rem; font-weight: 650; line-height: 1.25; text-align: center; font-variant-numeric: tabular-nums; }
+.redoblonaSummary { display: block; min-width: 0; overflow: hidden; color: var(--q-muted); font-size: .6rem; font-weight: 700; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
 .checkoutAction { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr); align-items: center; gap: 10px 20px; border-top: 1px solid var(--q-line); border-radius: 0 0 17px 17px; padding: 17px 20px; background: color-mix(in srgb, var(--q-panel-2) 55%, var(--q-panel)); }
 .total { display: grid; min-width: 0; gap: 3px; }
 .total > span { color: var(--q-muted-strong); font-size: .67rem; line-height: 1.3; }
@@ -113,11 +143,13 @@
 .ticketGame, .confirmGame { display: flex; min-width: 0; align-items: center; gap: 10px; color: var(--q-text); }
 .ticketGame strong, .confirmGame strong { min-width: 0; font-size: .81rem; font-weight: 750; overflow-wrap: anywhere; }
 .ticketGame .ticketGameIcon, .confirmGame .ticketGameIcon { width: 37px; height: 37px; flex: 0 0 auto; border-radius: 10px; }
-.selectionPreview { display: flex; min-width: 0; align-items: center; justify-content: center; gap: 14px; margin-top: 16px; border: 1px solid var(--q-line); border-radius: 13px; padding: 18px 12px; background: var(--q-bg-raised); }
+.selectionPreview { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; justify-content: center; gap: 14px; margin-top: 16px; border: 1px solid var(--q-line); border-radius: 13px; padding: 18px 12px; background: var(--q-bg-raised); }
 .selectionPreview > div { display: grid; min-width: 0; gap: 6px; text-align: center; }
 .selectionPreview > div > span { color: var(--q-muted); font-size: .61rem; font-weight: 650; }
 .selectionPreview strong { color: var(--q-text-strong); font-family: var(--q-font-display); font-size: 1.95rem; font-weight: 800; letter-spacing: .09em; line-height: 1.15; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.selectionPreview small { color: var(--q-muted-strong); font-size: .62rem; font-weight: 700; }
 .previewPlus { flex: 0 0 auto; margin-top: 20px; color: var(--q-muted); font-size: 1rem; }
+.selectionSentence { width: 100%; margin: 0; color: var(--q-text); font-size: .68rem; font-weight: 700; line-height: 1.4; text-align: center; }
 .summaryDetails { display: grid; min-width: 0; gap: 13px; margin: 20px 0; }
 .summaryDetails > div { display: flex; min-width: 0; align-items: baseline; justify-content: space-between; gap: 12px; font-size: .7rem; line-height: 1.5; }
 .summaryDetails dt { flex: 0 0 auto; color: var(--q-muted); }
@@ -182,6 +214,8 @@
   .titleGroup { flex: 1; gap: 8px; }
   .titleGroup .heroIcon { width: 31px; height: 31px; border-radius: 8px; }
   .titleGroup h1 { font-size: clamp(1.05rem, 4.5vw, 1.35rem); }
+  .titleCopy p { font-size: .6rem; }
+  .howItWorks { padding-block: 5px; font-size: .62rem; }
   .layout { border-radius: 14px; }
   .stepCard { padding: 13px; }
   .stepHeading { gap: 6px; margin-bottom: 8px; }
@@ -201,12 +235,29 @@
   .randomButton svg { width: 16px; height: 16px; }
   .numberPanel, .randomAction { grid-template-columns: minmax(0, 1fr) minmax(80px, .7fr); gap: 8px; }
   .page[data-game="redoblona"] .numberPanel, .page[data-game="redoblona"] .randomAction { grid-template-columns: minmax(0, 2fr) minmax(73px, 1fr); }
+  .page[data-game="redoblona"] .stepCard { padding-block: 8px; }
+  .page[data-game="redoblona"] .drawOption { min-height: 78px; padding-block: 5px; }
+  .page[data-game="redoblona"] .drawOption .drawLogo[data-size] { width: 28px; height: 28px; }
   .doubleNumbers { gap: 8px; }
   .numberField, .positionField { gap: 4px; }
   .numberField > label, .positionField > label, .positionLabel label { font-size: .63rem; }
   .numberInput { height: 48px; padding-inline: 9px 5px; border-radius: 9px; font-size: 1.5rem; letter-spacing: .14em; }
   .positionField select { height: 48px; border-radius: 9px; padding: 7px; font-size: 1rem; }
   .positionNote { min-height: 48px; }
+  .redoblonaBuilder { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .redoblonaPart { min-height: 48px; grid-template-columns: 60px 72px minmax(100px, 1fr); align-items: center; gap: 4px; padding: 2px 4px; }
+  .redoblonaPart > header { display: block; align-self: center; }
+  .redoblonaPart > header > span { display: none; }
+  .redoblonaPart h3 { font-size: .54rem; line-height: 1.1; }
+  .redoblonaPart header p { display: none; }
+  .redoblonaControls { display: contents; }
+  .redoblonaNumberField > label, .redoblonaUntilField > label { position: absolute; width: 1px; height: 1px; overflow: hidden; margin: -1px; border: 0; padding: 0; clip-path: inset(50%); white-space: nowrap; }
+  .digitCells, .redoblonaUntilField select { height: 44px; }
+  .redoblonaConnector { height: 8px; grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1fr); }
+  .redoblonaConnector::before, .redoblonaConnector::after { width: 100%; height: 1px; }
+  .redoblonaConnector span { width: 18px; height: 18px; font-size: .7rem; }
+  .page[data-game="redoblona"] .randomAction { margin-top: 3px; }
+  .page[data-game="redoblona"] .randomAction .randomButton { min-height: 30px; height: 30px; margin-left: 68px; }
   .amountHeading { gap: 10px; margin-bottom: 8px; }
   .amountGrid { gap: 6px; }
   .amountOption { gap: 5px; }
@@ -214,6 +265,10 @@
   .amountOption > button > span { width: 48px; height: 48px; }
   .amountLabel { font-size: .6rem; }
   .checkoutAction { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 8px 10px; border-radius: 0 0 13px 13px; padding: 13px; }
+  .page[data-game="redoblona"] .amountOption > button { width: 48px; height: 48px; }
+  .page[data-game="redoblona"] .amountOption > button > span { width: 44px; height: 44px; }
+  .page[data-game="redoblona"] .amountLabel { display: none; }
+  .page[data-game="redoblona"] .checkoutAction { padding-block: 9px; }
   .total { gap: 3px; }
   .total > span { font-size: .61rem; }
   .total > strong { font-size: 1.19rem; }
@@ -237,6 +292,10 @@
   .numberPanel, .randomAction, .doubleNumbers { gap: 6px; }
   .numberField > label, .positionField > label, .positionLabel label { font-size: .6rem; }
   .numberInput { font-size: 1.34rem; letter-spacing: .11em; }
+  .page[data-game="redoblona"] .redoblonaPart { padding-inline: 4px; }
+  .page[data-game="redoblona"] .randomAction .randomButton { margin-left: 68px; }
+  .digitCells { gap: 4px; }
+  .redoblonaUntilField select { padding-inline: 6px; font-size: .7rem; }
   .amountGrid { gap: 4px; }
   .amountOption > button { width: 48px; height: 48px; }
   .amountOption > button > span { width: 44px; height: 44px; }
@@ -258,6 +317,7 @@
 /* Short screens keep all fields and the payment action in normal document flow. */
 @media (max-width: 767px) and (max-height: 650px) {
   .page { gap: 7px; margin-top: -7px; padding-bottom: 7px; }
+  .page[data-game="redoblona"] { gap: 4px; margin-top: -11px; }
   .pageHeader { min-height: 24px; }
   .pageHeader .heroIcon { display: block; width: 24px; height: 24px; border-radius: 6px; }
   .pageHeader h1 { font-size: 1.06rem; }
@@ -272,18 +332,46 @@
   .drawDate { grid-area: date; font-size: .49rem; }
   .radioMark { bottom: 5px; }
   .page[data-game="redoblona"] .stepCard:has(.randomAction) > .stepHeading { position: absolute; width: 1px; height: 1px; overflow: hidden; margin: -1px; border: 0; padding: 0; clip-path: inset(50%); white-space: nowrap; }
+  .page[data-game="redoblona"] .steps > .stepCard:first-child > .stepHeading { position: absolute; width: 1px; height: 1px; overflow: hidden; margin: -1px; border: 0; padding: 0; clip-path: inset(50%); white-space: nowrap; }
+  .page[data-game="redoblona"] .stepCard { padding-block: 3px; }
+  .page[data-game="redoblona"] .howItWorks { display: none; }
+  .page[data-game="redoblona"] .titleCopy p { display: none; }
+  .page[data-game="redoblona"] .drawGrid { gap: 3px; }
+  .page[data-game="redoblona"] .drawOption { min-height: 48px; grid-template-columns: 22px minmax(0, 1fr); grid-template-areas: "logo time" "name name"; gap: 1px 2px; padding: 2px 3px; }
+  .page[data-game="redoblona"] .drawOption .drawLogo[data-size] { width: 22px; height: 22px; }
+  .page[data-game="redoblona"] .drawName { font-size: .47rem; white-space: nowrap; }
+  .page[data-game="redoblona"] .drawTime { font-size: .57rem; }
+  .page[data-game="redoblona"] .drawDate { display: none; }
+  .page[data-game="redoblona"] .radioMark { top: 2px; right: 2px; bottom: auto; width: 10px; height: 10px; }
   .randomAction { margin-top: 5px; }
   .randomAction .randomButton { min-height: 32px; height: 32px; padding-block: 6px; }
   .numberInput, .positionField select { height: 44px; }
+  .page[data-game="redoblona"] .redoblonaBuilder { gap: 4px; }
+  .page[data-game="redoblona"] .redoblonaPart { min-height: 48px; grid-template-columns: 60px 72px minmax(100px, 1fr); align-items: center; gap: 4px; padding: 2px 4px; }
+  .page[data-game="redoblona"] .redoblonaPart > header { display: block; align-self: center; }
+  .page[data-game="redoblona"] .redoblonaPart > header > span { display: none; }
+  .page[data-game="redoblona"] .redoblonaPart h3 { font-size: .54rem; line-height: 1.1; }
+  .page[data-game="redoblona"] .redoblonaControls { display: contents; }
+  .page[data-game="redoblona"] .redoblonaNumberField > label,
+  .page[data-game="redoblona"] .redoblonaUntilField > label { position: absolute; width: 1px; height: 1px; overflow: hidden; margin: -1px; border: 0; padding: 0; clip-path: inset(50%); white-space: nowrap; }
+  .digitCells, .redoblonaUntilField select { height: 44px; }
+  .page[data-game="redoblona"] .redoblonaConnector { height: 8px; }
+  .page[data-game="redoblona"] .redoblonaConnector span { width: 18px; height: 18px; font-size: .7rem; }
+  .page[data-game="redoblona"] .randomAction { margin-top: 3px; }
+  .page[data-game="redoblona"] .randomAction .randomButton { min-height: 30px; height: 30px; margin-left: 68px; }
+  .page[data-game="redoblona"] .redoblonaSummary { font-size: .54rem; line-height: 1.15; }
   .page:not([data-game="redoblona"]) .positionField { position: relative; }
   .page:not([data-game="redoblona"]) .positionLabel { position: absolute; left: 0; bottom: calc(100% + 5px); }
   .positionNote { min-height: 44px; }
   .amountHeading { margin-bottom: 3px; }
   .amountOption { gap: 3px; }
-  .amountOption > button { width: 48px; height: 48px; }
-  .amountOption > button > span { width: 44px; height: 44px; }
+  .amountOption > button { width: 44px; height: 44px; }
+  .amountOption > button > span { width: 40px; height: 40px; }
+  .page[data-game="redoblona"] .amountOption > button { width: 44px; height: 44px; }
+  .page[data-game="redoblona"] .amountOption > button > span { width: 40px; height: 40px; }
   .amountLabel { display: none; }
   .checkoutAction { padding-block: 4px; }
+  .page[data-game="redoblona"] .checkoutAction { padding-block: 4px; }
   .checkoutAction .payButton { min-height: 44px; }
   .total { gap: 2px; }
 }

@@ -22,6 +22,19 @@ function latestGenericResultDate(now: number) {
     ? today : drawDateKey(now - 86_400_000)!;
 }
 
+const HOME_HERO_GUARDIAN_PROJECT = "qa-320x568-dark";
+
+const HOME_HERO_VIEWPORTS = [
+  { name: "fold-portrait", width: 280, height: 653, maxHeroHeight: 240 },
+  { name: "small-portrait", width: 320, height: 568, maxHeroHeight: 260 },
+  { name: "samsung-360", width: 360, height: 800, maxHeroHeight: 280 },
+  { name: "samsung-384", width: 384, height: 854, maxHeroHeight: 295 },
+  { name: "samsung-412", width: 412, height: 915, maxHeroHeight: 310 },
+  { name: "samsung-430", width: 430, height: 932, maxHeroHeight: 320 },
+  { name: "short-landscape", width: 568, height: 280, maxHeroHeight: 225 },
+  { name: "wide-landscape", width: 844, height: 390, maxHeroHeight: 225 },
+] as const;
+
 test("renders the accessible product shell without horizontal overflow", async ({
   page,
 }, testInfo) => {
@@ -53,13 +66,26 @@ test("renders the accessible product shell without horizontal overflow", async (
   await expect(soundToggle).toHaveAccessibleName(/sonido|audio/i);
   await expect(soundToggle).toHaveAttribute("aria-pressed", /^(true|false)$/);
 
+  const liveIndicator = page.getByTestId("draw-live-indicator");
+  await expect(liveIndicator).toBeVisible();
+  await expect(liveIndicator).toHaveRole("status");
+  await expect(liveIndicator).toHaveAccessibleName("Estado LIVE del sorteo");
+  await expectInsideHorizontalViewport(liveIndicator, page);
+  if (page.viewportSize()!.width >= 980) {
+    const context = await page.locator(".q-topbar__context").boundingBox();
+    const indicator = await liveIndicator.boundingBox();
+    expect(indicator!.x).toBeGreaterThanOrEqual(context!.x + context!.width);
+  }
+
   const hero = page.getByTestId("home-hero");
   const reel = hero.locator("[data-reel-source]");
   const artwork = reel.locator('img[src*="rodillo-fuego"]');
+  const heroHeading = hero.getByRole("heading", { level: 1, name: "Tu jugada empieza acá." });
+  const heroCta = hero.getByRole("link", { name: "Jugar Quiniela" });
   await expect(hero).toBeVisible();
-  await expect(hero.getByRole("heading", { level: 1, name: "Tu jugada empieza acá." })).toBeVisible();
+  await expect(heroHeading).toBeVisible();
   await expect(hero.getByRole("link", { name: /^Jugar/ })).toHaveCount(1);
-  await expect(hero.getByRole("link", { name: "Jugar Quiniela" })).toHaveAttribute("href", "/quinielas");
+  await expect(heroCta).toHaveAttribute("href", "/quinielas");
   await expect(hero.getByRole("link", { name: "Jugar Sapy’aite" })).toHaveCount(0);
   await expect(hero.getByText(/^Próximo sorteo$/i)).toHaveCount(0);
   await expect(artwork).toBeVisible();
@@ -78,15 +104,30 @@ test("renders the accessible product shell without horizontal overflow", async (
 
   const heroMetrics = await hero.evaluate((element) => {
     const [, reelColumn, actions] = Array.from(element.children);
+    const heroBox = element.getBoundingClientRect();
     const reelBox = reelColumn.getBoundingClientRect();
     const actionsBox = actions.getBoundingClientRect();
     const visual = element.querySelector<HTMLElement>("[data-reel-source]")!;
     const visualStyle = getComputedStyle(visual);
     const visualBox = visual.getBoundingClientRect();
+    const heading = element.querySelector<HTMLElement>("h1")!;
+    const headingBox = heading.getBoundingClientRect();
+    const cta = element.querySelector<HTMLElement>('a[href="/quinielas"]')!;
+    const ctaBox = cta.getBoundingClientRect();
+    const insideHero = (box: DOMRect) => box.left >= heroBox.left - 1
+      && box.right <= heroBox.right + 1
+      && box.top >= heroBox.top - 1
+      && box.bottom <= heroBox.bottom + 1;
     return {
       actionsY: actionsBox.y,
+      ctaFits: cta.scrollWidth <= cta.clientWidth + 1 && cta.scrollHeight <= cta.clientHeight + 1,
+      ctaInside: insideHero(ctaBox),
       fireAlpha: Number.parseFloat(visualStyle.getPropertyValue("--hero-fire-alpha")),
+      headingFits: heading.scrollWidth <= heading.clientWidth + 1,
+      headingInside: insideHero(headingBox),
+      heroHeight: heroBox.height,
       reelBottom: reelBox.bottom,
+      reelInside: insideHero(visualBox),
       visualRight: visualBox.right,
       visualWidth: visualBox.width,
     };
@@ -95,7 +136,15 @@ test("renders the accessible product shell without horizontal overflow", async (
   expect(heroMetrics.fireAlpha).toBeLessThanOrEqual(1);
   expect(heroMetrics.visualWidth).toBeLessThanOrEqual(761);
   expect(heroMetrics.visualRight).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
-  if (page.viewportSize()!.width <= 1180) {
+  expect(heroMetrics.headingInside).toBe(true);
+  expect(heroMetrics.headingFits).toBe(true);
+  expect(heroMetrics.ctaInside).toBe(true);
+  expect(heroMetrics.ctaFits).toBe(true);
+  if (page.viewportSize()!.width <= 979) {
+    expect(heroMetrics.reelInside).toBe(true);
+    expect(heroMetrics.heroHeight).toBeLessThanOrEqual(400);
+  }
+  if (page.viewportSize()!.width <= 1180 && page.viewportSize()!.height > 600) {
     expect(heroMetrics.actionsY).toBeGreaterThanOrEqual(heroMetrics.reelBottom - 1);
   }
 
@@ -180,6 +229,88 @@ test("renders the accessible product shell without horizontal overflow", async (
   expect(footerGap).toBeGreaterThanOrEqual(0);
   expect(footerGap).toBeLessThanOrEqual(20);
   await page.screenshot({ path: testInfo.outputPath("home-responsive.png"), fullPage: true });
+});
+
+test("keeps the Home hero compact and unclipped across narrow Samsung and landscape viewports", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name !== HOME_HERO_GUARDIAN_PROJECT,
+    `Viewport matrix runs only in ${HOME_HERO_GUARDIAN_PROJECT}`,
+  );
+  test.slow();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+
+  const hero = page.getByTestId("home-hero");
+  for (const viewport of HOME_HERO_VIEWPORTS) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await expect(hero, viewport.name).toBeVisible();
+
+    for (const topbarItem of [
+      page.locator(".q-topbar__mobile-brand"),
+      page.locator(".q-balance"),
+      page.getByTestId(E2E_SELECTORS.themeToggle),
+      page.getByTestId(E2E_SELECTORS.soundToggle),
+      page.getByTestId("draw-live-indicator"),
+    ]) {
+      await expectInsideHorizontalViewport(topbarItem, page);
+    }
+
+    const metrics = await hero.evaluate((element) => {
+      const heroBox = element.getBoundingClientRect();
+      const heading = element.querySelector<HTMLElement>("h1")!;
+      const reel = element.querySelector<HTMLElement>("[data-reel-source]")!;
+      const cta = element.querySelector<HTMLElement>('a[href="/quinielas"]')!;
+      const headingBox = heading.getBoundingClientRect();
+      const reelBox = reel.getBoundingClientRect();
+      const ctaBox = cta.getBoundingClientRect();
+      const insideHero = (box: DOMRect) => box.left >= heroBox.left - 1
+        && box.right <= heroBox.right + 1
+        && box.top >= heroBox.top - 1
+        && box.bottom <= heroBox.bottom + 1;
+      return {
+        ctaInside: insideHero(ctaBox),
+        ctaFits: cta.scrollWidth <= cta.clientWidth + 1 && cta.scrollHeight <= cta.clientHeight + 1,
+        headingBottom: headingBox.bottom,
+        headingFits: heading.scrollWidth <= heading.clientWidth + 1,
+        headingInside: insideHero(headingBox),
+        height: heroBox.height,
+        reelBottom: reelBox.bottom,
+        reelInside: insideHero(reelBox),
+        reelTop: reelBox.top,
+        ctaTop: ctaBox.top,
+      };
+    });
+
+    expect(metrics.height, `${viewport.name}: hero height`).toBeLessThanOrEqual(viewport.maxHeroHeight);
+    expect(metrics.headingInside, `${viewport.name}: title inside hero`).toBe(true);
+    expect(metrics.headingFits, `${viewport.name}: title text fits`).toBe(true);
+    expect(metrics.reelInside, `${viewport.name}: reel inside hero`).toBe(true);
+    expect(metrics.ctaInside, `${viewport.name}: CTA inside hero`).toBe(true);
+    expect(metrics.ctaFits, `${viewport.name}: CTA text fits`).toBe(true);
+    if (viewport.height >= viewport.width) {
+      expect(metrics.headingBottom, `${viewport.name}: title before reel`).toBeLessThanOrEqual(metrics.reelTop + 1);
+      expect(metrics.reelBottom, `${viewport.name}: reel before CTA`).toBeLessThanOrEqual(metrics.ctaTop + 1);
+    }
+
+    const drawCards = page.getByTestId("home-draw-card");
+    const resultCards = page.getByTestId("home-result-card");
+    const megaBanner = page.getByTestId("home-megaloto-banner");
+    await expect(drawCards).toHaveCount(4);
+    await expect(resultCards).toHaveCount(14);
+    for (const item of [
+      ...await drawCards.all(),
+      ...await resultCards.all(),
+      megaBanner,
+      megaBanner.getByRole("img", { name: "Logo oficial de Mega Loto" }),
+      megaBanner.getByRole("heading", { name: "Sorteo exclusivo con 6 números." }),
+      megaBanner.getByRole("link", { name: /sitio oficial de Mega Loto/i }),
+    ]) {
+      await expectInsideHorizontalViewport(item, page);
+    }
+    await expectNoHorizontalOverflow(page);
+  }
 });
 
 test("shows six compact Quinielas cards with Sapy’aite and green Mega Loto", async ({
@@ -412,120 +543,163 @@ test("keeps six rules responsive in both themes without multipliers, calculators
   expect(posts.filter((url) => /\/(instant|traditional|plays|wallet)\b/.test(url))).toEqual([]);
 });
 
-test("keeps all positions of the latest draw responsive in each modality", async ({ page }, testInfo) => {
+test("renders the latest draw as fourteen responsive balls in position order", async ({ page }, testInfo) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  const compact = page.viewportSize()!.width < 768;
+  const viewportWidth = page.viewportSize()!.width;
+  const expectedColumns = viewportWidth >= 1_280 ? 14 : viewportWidth >= 768 ? 7 : viewportWidth > 420 ? 5 : 4;
+  const expectedRows = Math.ceil(14 / expectedColumns);
   const section = page.getByTestId("home-results-section");
+  const balls = section.getByRole("list", {
+    name: "Las 14 posturas del último sorteo publicado",
+    exact: true,
+  });
+  const cards = balls.getByRole("listitem");
+  const positions = Array.from({ length: 14 }, (_, index) => String(index + 1));
+  const reverseEntryOrder = Array.from({ length: 14 }, (_, index) => String(14 - index));
+
+  await expect(section.getByRole("heading", { level: 2, name: "Último sorteo publicado", exact: true })).toBeVisible();
   await expect(section.getByText("Resultados de muestra", { exact: true })).toHaveCount(0);
   await expect(section.getByTestId("home-results-draw")).toBeVisible();
-  const latestDraw = await section.getByTestId("home-results-draw").innerText();
-  const cases = [
-    { name: "A LA CABEZA", modality: "head", count: 1, firstPosition: 1 },
-    { name: "A LOS PREMIOS", modality: "prizes", count: 13, firstPosition: 2 },
-    { name: "REDOBLONA", modality: "redoblona", count: 13, firstPosition: 2 },
-    { name: "INVERTIDA", modality: "invert", count: 14, firstPosition: 1 },
-  ];
-  for (const expected of cases) {
-    const tab = section.getByRole("tab", { name: expected.name, exact: true });
-    await tab.click();
-    await expect(tab).toHaveAttribute("aria-selected", "true");
-    const cards = section.getByTestId("home-result-card");
-    await expect(cards).toHaveCount(expected.count);
-    expect(await cards.evaluateAll((elements) => elements.map((element) => element.getAttribute("data-position"))))
-      .toEqual(Array.from({ length: expected.count }, (_, index) => String(index + expected.firstPosition)));
-    if (compact) {
-      const numericCards = await cards.evaluateAll((elements) => elements.map((element) => ({
-        text: (element as HTMLElement).innerText.trim(),
-        label: element.getAttribute("aria-label"),
-        height: element.getBoundingClientRect().height,
-      })));
-      for (const [index, card] of numericCards.entries()) {
-        expect(card.text).toMatch(expected.modality === "redoblona" ? /^\d{2}$/ : /^\d{3}$/);
-        expect(card.label).toContain(`Posición ${index + expected.firstPosition}:`);
-        expect(card.height).toBeLessThanOrEqual(64);
-      }
-    }
-    await expect(section.getByTestId("home-results-draw")).toHaveText(latestDraw, { useInnerText: true });
-    const content = section.getByRole("tabpanel").locator(`[data-modality="${expected.modality}"]`);
-    await expectInsideHorizontalViewport(content, page);
-    if (expected.modality === "head") {
-      await expect(section.getByTestId("home-results-carousel")).toHaveCount(0);
-      await expect(section.getByTestId("home-results-carousel-track")).toHaveCount(0);
-      await expect(section.getByTestId("home-results-previous")).toHaveCount(0);
-      await expect(section.getByTestId("home-results-next")).toHaveCount(0);
-      const metrics = await content.evaluate((element) => ({
-        clientWidth: element.clientWidth,
-        scrollWidth: element.scrollWidth,
-      }));
-      expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
-    } else {
-      const carousel = section.getByTestId("home-results-carousel");
-      const track = carousel.getByTestId("home-results-carousel-track");
-      const previous = carousel.getByTestId("home-results-previous");
-      const next = carousel.getByTestId("home-results-next");
-      await expect(track).toHaveAttribute("data-modality", expected.modality);
-      await expect(previous).toBeDisabled();
-      await expect(next).toBeEnabled();
-      if (compact) {
-        await expect(previous).toBeHidden();
-        await expect(next).toBeHidden();
-        const gestures = await track.evaluate((element) => getComputedStyle(element).touchAction);
-        const allowsNativeGestures = ["auto", "manipulation"].includes(gestures)
-          || ["pan-x", "pan-y", "pinch-zoom"].every((gesture) => gestures.split(" ").includes(gesture));
-        expect(allowsNativeGestures).toBe(true);
-      } else {
-        await expect(previous).toBeVisible();
-        await expect(next).toBeVisible();
-      }
-      const metrics = await track.evaluate((element) => ({
-        clientWidth: element.clientWidth,
-        scrollWidth: element.scrollWidth,
-        scrollLeft: element.scrollLeft,
-        overflowX: getComputedStyle(element).overflowX,
-        rows: new Set(Array.from(element.children, (child) => Math.round(child.getBoundingClientRect().top))).size,
-      }));
-      expect(metrics.rows).toBe(1);
-      expect(metrics.overflowX).toBe("auto");
-      expect(metrics.scrollWidth).toBeGreaterThan(metrics.clientWidth + 1);
-      expect(metrics.scrollLeft).toBeLessThanOrEqual(1);
-      await expectInsideHorizontalViewport(carousel, page);
-      await expectNoHorizontalOverflow(page);
+  await expect(balls).toHaveAttribute("data-testid", "home-results-balls");
+  await expect(balls).not.toHaveAttribute("tabindex");
+  await expect(cards).toHaveCount(14);
+  await expect(cards.getByTestId("home-result-value")).toHaveCount(14);
+  await expect(cards.getByTestId("home-result-posture")).toHaveCount(14);
 
-      for (let step = 0; step < expected.count; step += 1) {
-        const remaining = await track.evaluate((element) => element.scrollWidth - element.clientWidth - element.scrollLeft);
-        if (remaining <= 1) break;
-        const before = await track.evaluate((element) => element.scrollLeft);
-        // The compact layout uses native touch scrolling; keep keyboard access
-        // covered here without simulating a swipe through script-based scrolling.
-        if (compact) await track.press("ArrowRight");
-        else await next.click();
-        await expect.poll(() => track.evaluate((element) => element.scrollLeft)).toBeGreaterThan(before);
-      }
-      await expect(next).toBeDisabled();
-      await expect(previous).toBeEnabled();
-      const lastPosition = track.locator('[data-position="14"]');
-      const end = await lastPosition.evaluate((element) => {
-        const card = element.getBoundingClientRect();
-        const track = element.parentElement!.getBoundingClientRect();
-        return { cardLeft: card.left, cardRight: card.right, trackLeft: track.left, trackRight: track.right };
-      });
-      expect(end.cardLeft).toBeGreaterThanOrEqual(end.trackLeft - 1);
-      expect(end.cardRight).toBeLessThanOrEqual(end.trackRight + 1);
-      await expect(cards).toHaveCount(expected.count);
-      await expect(section.getByTestId("home-results-draw")).toHaveText(latestDraw, { useInnerText: true });
-      if (compact) {
-        await track.press("Home");
-        await expect.poll(() => track.evaluate((element) => element.scrollLeft)).toBeLessThanOrEqual(1);
-        await expect(previous).toBeDisabled();
-        await expect(tab).toHaveAttribute("aria-selected", "true");
-      }
-    }
-    await expectNoHorizontalOverflow(page);
+  expect(await cards.evaluateAll((elements) => elements.map((element) => element.getAttribute("data-position"))))
+    .toEqual(positions);
+  expect(await cards.evaluateAll((elements) => elements.map((element) => element.getAttribute("data-entry-order"))))
+    .toEqual(reverseEntryOrder);
+  expect(await cards.getByTestId("home-result-value").allTextContents())
+    .toEqual(Array.from({ length: 14 }, () => expect.stringMatching(/^\d{3}$/)));
+  expect(await cards.getByTestId("home-result-posture").allTextContents())
+    .toEqual(positions.map((position) => `${position}.ª postura`));
+
+  await expect(section.getByRole("tab")).toHaveCount(0);
+  await expect(section.getByRole("tablist")).toHaveCount(0);
+  await expect(section.getByRole("tabpanel")).toHaveCount(0);
+  await expect(section.getByTestId("home-results-carousel")).toHaveCount(0);
+  await expect(section.getByTestId("home-results-carousel-track")).toHaveCount(0);
+  await expect(section.getByTestId("home-results-previous")).toHaveCount(0);
+  await expect(section.getByTestId("home-results-next")).toHaveCount(0);
+  for (const formerModality of ["A LA CABEZA", "A LOS PREMIOS", "REDOBLONA", "INVERTIDA"]) {
+    await expect(section.getByText(formerModality, { exact: true })).toHaveCount(0);
   }
+
+  const cardDetails = await cards.evaluateAll((elements) => elements.map((element) => {
+    const value = element.querySelector<HTMLElement>('[data-testid="home-result-value"]')!;
+    const posture = element.querySelector<HTMLElement>('[data-testid="home-result-posture"]')!;
+    const icon = element.querySelector<SVGElement>('[data-testid="home-result-rank"]');
+    const cardBox = element.getBoundingClientRect();
+    const valueBox = value.getBoundingClientRect();
+    const postureBox = posture.getBoundingClientRect();
+    const iconBox = icon?.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    return {
+      animationName: style.animationName,
+      borderRadius: style.borderRadius,
+      customEntryIndex: style.getPropertyValue("--result-entry-index").trim(),
+      height: cardBox.height,
+      label: element.getAttribute("aria-label"),
+      left: cardBox.left,
+      opacity: style.opacity,
+      position: Number(element.getAttribute("data-position")),
+      posture: posture.textContent,
+      rank: icon?.getAttribute("data-rank") ?? null,
+      rankFocusable: icon?.getAttribute("focusable") ?? null,
+      rankHidden: icon?.getAttribute("aria-hidden") ?? null,
+      rankInside: !iconBox || (iconBox.left >= cardBox.left - 1 && iconBox.right <= cardBox.right + 1
+        && iconBox.top >= cardBox.top - 1 && iconBox.bottom <= cardBox.bottom + 1),
+      top: cardBox.top,
+      transform: style.transform,
+      value: value.textContent?.trim(),
+      valueInside: valueBox.left >= cardBox.left - 1 && valueBox.right <= cardBox.right + 1
+        && valueBox.top >= cardBox.top - 1 && valueBox.bottom <= cardBox.bottom + 1,
+      postureInside: postureBox.left >= cardBox.left - 1 && postureBox.right <= cardBox.right + 1
+        && postureBox.top >= cardBox.top - 1 && postureBox.bottom <= cardBox.bottom + 1,
+      width: cardBox.width,
+    };
+  }));
+
+  for (const [index, card] of cardDetails.entries()) {
+    const position = index + 1;
+    expect(card.position).toBe(position);
+    expect(card.value).toMatch(/^\d{3}$/);
+    expect(card.posture).toBe(`${position}.ª postura`);
+    expect(card.label).toBe(`${position}.ª postura: número ${card.value}`);
+    expect(card.customEntryIndex).toBe(String(14 - position));
+    expect(card.rank).toBe(position <= 3 ? ["gold", "silver", "bronze"][position - 1] : null);
+    if (position <= 3) {
+      expect(card.rankHidden).toBe("true");
+      expect(card.rankFocusable).toBe("false");
+      expect(card.rankInside).toBe(true);
+    }
+    expect(card.animationName).toBe("none");
+    expect(card.opacity).toBe("1");
+    expect(card.transform).toBe("none");
+    expect(card.borderRadius).toBe("50%");
+    expect(Math.abs(card.width - card.height)).toBeLessThanOrEqual(1);
+    expect(card.valueInside).toBe(true);
+    expect(card.postureInside).toBe(true);
+  }
+
+  expect(new Set(cardDetails.map((card) => Math.round(card.top))).size).toBe(expectedRows);
+  for (const [index, card] of cardDetails.entries()) {
+    const column = index % expectedColumns;
+    if (column === 0) {
+      expect(card.left).toBeCloseTo(cardDetails[0].left, 0);
+      if (index > 0) expect(card.top).toBeGreaterThan(cardDetails[index - expectedColumns].top);
+    } else {
+      expect(card.left).toBeGreaterThan(cardDetails[index - 1].left);
+      expect(card.top).toBeCloseTo(cardDetails[index - 1].top, 0);
+    }
+  }
+
+  const trackMetrics = await balls.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      clientWidth: element.clientWidth,
+      direction: style.direction,
+      columns: style.gridTemplateColumns.split(" ").filter(Boolean).length,
+      display: style.display,
+      overflowX: style.overflowX,
+      rows: new Set(Array.from(element.children, (child) => Math.round(child.getBoundingClientRect().top))).size,
+      scrollLeft: element.scrollLeft,
+      scrollWidth: element.scrollWidth,
+    };
+  });
+  expect(trackMetrics.columns).toBe(expectedColumns);
+  expect(trackMetrics.direction).toBe("ltr");
+  expect(trackMetrics.display).toBe("grid");
+  expect(trackMetrics.overflowX).toBe("hidden");
+  expect(trackMetrics.rows).toBe(expectedRows);
+  expect(trackMetrics.scrollLeft).toBeLessThanOrEqual(1);
+  expect(trackMetrics.scrollWidth).toBeLessThanOrEqual(trackMetrics.clientWidth + 1);
+  await expectInsideHorizontalViewport(balls, page);
+  for (const card of await cards.all()) await expectInsideHorizontalViewport(card, page);
+  await expectNoHorizontalOverflow(page);
+
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  const motion = await cards.evaluateAll((elements) => elements.map((element) => {
+    const style = getComputedStyle(element);
+    return {
+      delayMs: Number.parseFloat(style.animationDelay) * 1_000,
+      name: style.animationName,
+    };
+  }));
+  expect(motion.every(({ name }) => name.includes("resultBallGather"))).toBe(true);
+  expect(motion.map(({ delayMs }) => Math.round(delayMs)))
+    .toEqual(Array.from({ length: 14 }, (_, index) => (13 - index) * 45));
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  expect(await cards.evaluateAll((elements) => elements.every((element) => {
+    const style = getComputedStyle(element);
+    return style.animationName === "none" && style.opacity === "1" && style.transform === "none";
+  }))).toBe(true);
+  await expectNoHorizontalOverflow(page);
   await page.screenshot({ path: testInfo.outputPath("home-latest-draw-results.png"), fullPage: true });
 });
-
 test("groups results by date into four responsive colored draws", async ({ page }, testInfo) => {
   const openedAt = Date.now();
   await page.goto("/resultados", { waitUntil: "domcontentloaded" });

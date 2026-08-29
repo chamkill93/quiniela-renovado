@@ -4,17 +4,21 @@ import type { TraditionalGameId } from "@/lib/product/catalog";
 
 export type TraditionalDraft = {
   number: string;
-  head: string;
-  redoblona: string;
   position: number;
+  initialNumber: string;
+  initialUntil: number;
+  redoblonaNumber: string;
+  redoblonaUntil: number;
 };
 
 export function createTraditionalDraft(gameId: TraditionalGameId): TraditionalDraft {
   return {
     number: "",
-    head: "",
-    redoblona: "",
     position: gameId === "invert" ? 1 : 2,
+    initialNumber: "",
+    initialUntil: 1,
+    redoblonaNumber: "",
+    redoblonaUntil: 7,
   };
 }
 
@@ -27,8 +31,17 @@ export function getTraditionalPositionRange(
   definition: TraditionalGameDefinition,
 ): { min: number; max: number } | null {
   const selection = definition.selection;
-  if (selection.kind === "MEGALOTO" || !selection.position) return null;
+  if (selection.kind !== "THREE_DIGIT" || !selection.position) return null;
   return { min: selection.position.min, max: selection.position.max };
+}
+
+export function getRedoblonaRanges(definition: TraditionalGameDefinition) {
+  const selection = definition.selection;
+  if (selection.kind !== "REDOBLONA") return null;
+  return {
+    initialUntil: { ...selection.initialUntil },
+    redoblonaUntil: { ...selection.redoblonaUntil },
+  };
 }
 
 function isNumberInRange(value: string, digits: number, min: number, max: number) {
@@ -46,18 +59,36 @@ export function validateTraditionalDraft(
   const errors: Partial<Record<keyof TraditionalDraft, string>> = {};
 
   if (gameId === "redoblona") {
-    if (!isNumberInRange(draft.head, 3, 1, 999)) {
-      errors.head = "Ingresá un número de cabeza entre 001 y 999.";
+    if (!/^\d{2}$/.test(draft.initialNumber)) {
+      errors.initialNumber = "Ingresá un número de 2 cifras.";
     }
-    if (!isNumberInRange(draft.redoblona, 2, 0, 99)) {
-      errors.redoblona = "Ingresá una terminación entre 00 y 99.";
+    if (!/^\d{2}$/.test(draft.redoblonaNumber)) {
+      errors.redoblonaNumber = "Ingresá un número de 2 cifras.";
+    }
+    const ranges = getRedoblonaRanges(definition);
+    if (!ranges) {
+      errors.initialUntil = "Los alcances de Redoblona no están disponibles.";
+      errors.redoblonaUntil = "Los alcances de Redoblona no están disponibles.";
+    } else {
+      if (!Number.isInteger(draft.initialUntil)
+        || draft.initialUntil < ranges.initialUntil.min
+        || draft.initialUntil > ranges.initialUntil.max) {
+        errors.initialUntil = `Elegí un alcance inicial entre ${ranges.initialUntil.min} y ${ranges.initialUntil.max}.`;
+      }
+      if (!Number.isInteger(draft.redoblonaUntil)
+        || draft.redoblonaUntil < ranges.redoblonaUntil.min
+        || draft.redoblonaUntil > ranges.redoblonaUntil.max) {
+        errors.redoblonaUntil = `La Redoblona comienza desde la postura ${ranges.redoblonaUntil.min}.`;
+      } else if (draft.redoblonaUntil < draft.initialUntil) {
+        errors.redoblonaUntil = "El alcance de Redoblona debe ser igual o mayor al alcance inicial.";
+      }
     }
   } else if (!isNumberInRange(draft.number, 3, 1, 999)) {
     errors.number = "Ingresá un número entre 001 y 999.";
   }
 
   // A la Cabeza has a fixed server-side position, absent from its request.
-  if (gameId !== "head") {
+  if (gameId !== "head" && gameId !== "redoblona") {
     const range = getTraditionalPositionRange(definition);
     if (!range) {
       errors.position = "Las posiciones no están disponibles.";
@@ -85,9 +116,10 @@ export function buildTraditionalPlayInput(
       amount,
       drawId,
       selection: {
-        head: normalizeTraditionalNumber(draft.head, 3),
-        redoblona: normalizeTraditionalNumber(draft.redoblona, 2),
-        position: draft.position,
+        initialNumber: normalizeTraditionalNumber(draft.initialNumber, 2),
+        initialUntil: draft.initialUntil,
+        redoblonaNumber: normalizeTraditionalNumber(draft.redoblonaNumber, 2),
+        redoblonaUntil: draft.redoblonaUntil,
       },
     };
   }
@@ -139,8 +171,8 @@ export function randomizeTraditionalDraft(
   if (gameId === "redoblona") {
     return {
       ...draft,
-      head: randomNumber(1, 999, 3, draft.head),
-      redoblona: randomNumber(0, 99, 2, draft.redoblona),
+      initialNumber: randomNumber(0, 99, 2, draft.initialNumber),
+      redoblonaNumber: randomNumber(0, 99, 2, draft.redoblonaNumber),
     };
   }
   return { ...draft, number: randomNumber(1, 999, 3, draft.number) };
@@ -151,6 +183,5 @@ export function getTraditionalPositionLabel(
   position: number,
 ): string {
   if (gameId === "head") return "1.ª posición";
-  if (gameId === "redoblona") return `Cabeza + hasta la posición ${position}`;
   return `Hasta la posición ${position}`;
 }

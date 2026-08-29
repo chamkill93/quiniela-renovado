@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   buildTraditionalPlayInput,
   createTraditionalDraft,
+  getRedoblonaRanges,
   getTraditionalPositionLabel,
   getTraditionalPositionRange,
   normalizeTraditionalNumber,
@@ -44,9 +45,11 @@ describe("borrador de apuestas tradicionales", () => {
     for (const gameId of ["head", "prizes", "invert", "redoblona"] as const) {
       expect(createTraditionalDraft(gameId)).toEqual({
         number: "",
-        head: "",
-        redoblona: "",
         position: gameId === "invert" ? 1 : 2,
+        initialNumber: "",
+        initialUntil: 1,
+        redoblonaNumber: "",
+        redoblonaUntil: 7,
       });
     }
   });
@@ -77,25 +80,28 @@ describe("borrador de apuestas tradicionales", () => {
     },
   );
 
-  it("valida ambos campos de Redoblona y admite la terminación 00", () => {
+  it("valida dos números de dos cifras y los alcances de Redoblona", () => {
     const draft = createTraditionalDraft("redoblona");
     expect(validateTraditionalDraft("redoblona", draft, definition("redoblona"))).toEqual({
-      head: expect.any(String),
-      redoblona: expect.any(String),
+      initialNumber: expect.any(String),
+      redoblonaNumber: expect.any(String),
     });
-    for (const redoblona of ["0", "00", "7", "07", "99"]) {
+    for (const initialNumber of ["00", "05", "35", "99"]) {
       expect(validateTraditionalDraft("redoblona", {
-        ...draft, head: "7", redoblona,
+        ...draft, initialNumber, redoblonaNumber: "00",
       }, definition("redoblona"))).toEqual({});
     }
-    for (const redoblona of ["", "000", "100", "-1", "7a"]) {
+    for (const redoblonaNumber of ["", "0", "000", "100", "-1", "7a"]) {
       expect(validateTraditionalDraft("redoblona", {
-        ...draft, head: "007", redoblona,
-      }, definition("redoblona")).redoblona).toBeTruthy();
+        ...draft, initialNumber: "35", redoblonaNumber,
+      }, definition("redoblona")).redoblonaNumber).toBeTruthy();
     }
     expect(validateTraditionalDraft("redoblona", {
-      ...draft, head: "000", redoblona: "00",
-    }, definition("redoblona")).head).toBeTruthy();
+      ...draft, initialNumber: "7", redoblonaNumber: "00",
+    }, definition("redoblona")).initialNumber).toBeTruthy();
+    expect(validateTraditionalDraft("redoblona", {
+      ...draft, initialNumber: "35", redoblonaNumber: "72", initialUntil: 8, redoblonaUntil: 7,
+    }, definition("redoblona")).redoblonaUntil).toMatch(/igual o mayor/i);
   });
 
   it("usa el rango recibido y rechaza posiciones no enteras o fuera de rango", () => {
@@ -125,14 +131,18 @@ describe("borrador de apuestas tradicionales", () => {
     expect(validateTraditionalDraft("head", {
       ...createTraditionalDraft("head"), number: "123", position: Number.NaN,
     }, definition("head"))).toEqual({});
-    expect(getTraditionalPositionRange(definition("redoblona"))).toEqual({ min: 2, max: 14 });
+    expect(getTraditionalPositionRange(definition("redoblona"))).toBeNull();
+    expect(getRedoblonaRanges(definition("redoblona"))).toEqual({
+      initialUntil: { min: 1, max: 14 },
+      redoblonaUntil: { min: 7, max: 14 },
+    });
   });
 
   it.each(["head", "prizes", "invert", "redoblona"] as const)(
     "construye el contrato de %s con ceros, sin campos ajenos ni mutar el borrador",
     (gameId) => {
       const draft = Object.freeze({
-        ...createTraditionalDraft(gameId), number: "7", head: "1", redoblona: "0",
+        ...createTraditionalDraft(gameId), number: "7", initialNumber: "5", redoblonaNumber: "0",
       });
       const request = buildTraditionalPlayInput(gameId, 5_000, "early", draft);
       expect(request).toEqual({
@@ -140,7 +150,7 @@ describe("borrador de apuestas tradicionales", () => {
         amount: 5_000,
         drawId: "early",
         selection: gameId === "redoblona"
-          ? { head: "001", redoblona: "00", position: 2 }
+          ? { initialNumber: "05", initialUntil: 1, redoblonaNumber: "00", redoblonaUntil: 7 }
           : gameId === "head"
             ? { number: "007" }
             : { number: "007", position: gameId === "invert" ? 1 : 2 },
@@ -154,14 +164,13 @@ describe("borrador de apuestas tradicionales", () => {
     expect(buildTraditionalPlayInput("head", 500, "early", createTraditionalDraft("head")).selection)
       .toEqual({ number: "" });
     expect(buildTraditionalPlayInput("redoblona", 500, "early", createTraditionalDraft("redoblona")).selection)
-      .toEqual({ head: "", redoblona: "", position: 2 });
+      .toEqual({ initialNumber: "", initialUntil: 1, redoblonaNumber: "", redoblonaUntil: 7 });
   });
 
   it("explica la postura sin agregar reglas de pagos o rangos de aciertos", () => {
     expect(getTraditionalPositionLabel("head", 2)).toBe("1.ª posición");
     expect(getTraditionalPositionLabel("prizes", 8)).toBe("Hasta la posición 8");
     expect(getTraditionalPositionLabel("invert", 1)).toBe("Hasta la posición 1");
-    expect(getTraditionalPositionLabel("redoblona", 14)).toBe("Cabeza + hasta la posición 14");
   });
 });
 
@@ -174,23 +183,23 @@ describe("selección tradicional al azar", () => {
     expect(random).toHaveBeenCalledTimes(2);
   });
 
-  it("incluye 00 y 99 en la terminación y conserva la postura de Redoblona", () => {
-    mockRandom(0, 0, 998, 99);
+  it("incluye 00 y 99 en ambos números y conserva los dos alcances de Redoblona", () => {
+    mockRandom(0, 0, 99, 99);
     const draft = Object.freeze({
-      ...createTraditionalDraft("redoblona"), number: "123", position: 12,
+      ...createTraditionalDraft("redoblona"), number: "123", initialUntil: 6, redoblonaUntil: 12,
     });
     expect(randomizeTraditionalDraft("redoblona", draft)).toEqual({
-      number: "123", head: "001", redoblona: "00", position: 12,
+      ...draft, initialNumber: "00", redoblonaNumber: "00",
     });
     expect(randomizeTraditionalDraft("redoblona", draft)).toEqual({
-      number: "123", head: "999", redoblona: "99", position: 12,
+      ...draft, initialNumber: "99", redoblonaNumber: "99",
     });
   });
 
   it("excluye el número previo incluso si todavía no tiene los ceros a la izquierda", () => {
     mockRandom(0, 6, 997);
     const draft = Object.freeze({
-      number: "001", head: "007", redoblona: "42", position: 9,
+      ...createTraditionalDraft("prizes"), number: "001", initialNumber: "07", redoblonaNumber: "42", position: 9,
     });
     expect(randomizeTraditionalDraft("prizes", draft)).toEqual({
       ...draft, number: "002",
@@ -200,19 +209,19 @@ describe("selección tradicional al azar", () => {
   });
 
   it("renueva ambos números de Redoblona sin repetir los anteriores", () => {
-    mockRandom(0, 0, 997, 98);
+    mockRandom(0, 0, 98, 98);
     const draft = createTraditionalDraft("redoblona");
-    expect(randomizeTraditionalDraft("redoblona", { ...draft, head: "1", redoblona: "0" }))
-      .toMatchObject({ head: "002", redoblona: "01" });
-    expect(randomizeTraditionalDraft("redoblona", { ...draft, head: "999", redoblona: "99" }))
-      .toMatchObject({ head: "998", redoblona: "98" });
+    expect(randomizeTraditionalDraft("redoblona", { ...draft, initialNumber: "1", redoblonaNumber: "0" }))
+      .toMatchObject({ initialNumber: "00", redoblonaNumber: "01" });
+    expect(randomizeTraditionalDraft("redoblona", { ...draft, initialNumber: "99", redoblonaNumber: "99" }))
+      .toMatchObject({ initialNumber: "98", redoblonaNumber: "98" });
   });
 
   it("descarta la cola incompleta de 32 bits para no introducir sesgo al aplicar módulo", () => {
     const random = mockRandom(2 ** 32 - 1, 0, 0, 2 ** 32 - 1, 99);
     expect(randomizeTraditionalDraft("head", createTraditionalDraft("head")).number).toBe("001");
     expect(randomizeTraditionalDraft("redoblona", createTraditionalDraft("redoblona")))
-      .toMatchObject({ head: "001", redoblona: "99" });
+      .toMatchObject({ initialNumber: "00", redoblonaNumber: "99" });
     expect(random).toHaveBeenCalledTimes(5);
   });
 });

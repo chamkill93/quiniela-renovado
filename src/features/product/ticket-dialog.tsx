@@ -3,17 +3,32 @@
 import { useEffect } from "react";
 import { Logo, Modal } from "@/components/ui";
 import type { MockPlay, MockTicket } from "@/lib/product/api-types";
+import { summarizeRedoblonaSelection, validateRedoblonaSelection, type RedoblonaSelection } from "@/lib/gaming/redoblona";
 import { formatGs } from "@/lib/product/catalog";
 import { ResultStateBadge, resultStateLabel } from "./result-state";
 import { useSoundEffects } from "./use-sound-effects";
 import productStyles from "./product.module.css";
 import styles from "./ticket-receipt.module.css";
 
-function describeSelection(selection: unknown) {
+function describeSelection(selection: unknown, gameId?: string) {
   if (typeof selection === "string" || typeof selection === "number") return String(selection);
   if (Array.isArray(selection)) return selection.join(" · ");
   if (selection && typeof selection === "object") {
     const record = selection as Record<string, unknown>;
+    if (gameId === "redoblona") {
+      const candidate: RedoblonaSelection = {
+        initialNumber: String(record.initialNumber ?? ""),
+        initialUntil: Number(record.initialUntil),
+        redoblonaNumber: String(record.redoblonaNumber ?? ""),
+        redoblonaUntil: Number(record.redoblonaUntil),
+      };
+      if (Object.keys(validateRedoblonaSelection(candidate)).length === 0) {
+        return summarizeRedoblonaSelection(candidate);
+      }
+      if (typeof record.head === "string" && typeof record.redoblona === "string" && typeof record.position === "number" && Number.isInteger(record.position)) {
+        return `${record.head} Cabeza + ${record.redoblona} hasta ${record.position}`;
+      }
+    }
     if (Array.isArray(record.numbers)) return record.numbers.join(" · ");
     return Object.values(record).map(String).join(" · ");
   }
@@ -102,7 +117,7 @@ export function TicketDialog({
           <div className={styles.receiptGrid}>
             <dl className={styles.receiptFacts}>
               <div className={styles.receiptFact}><dt>Juego</dt><dd>{ticket.gameName ?? play.gameName ?? play.gameId}</dd></div>
-              <div className={styles.receiptFact}><dt>Selección</dt><dd>{describeSelection(ticket.selection ?? play.selection)}</dd></div>
+              <div className={styles.receiptFact}><dt>Selección</dt><dd>{describeSelection(ticket.selection ?? play.selection, ticket.gameId ?? play.gameId)}</dd></div>
               {resultNumbers.length ? (
                 <div className={styles.receiptFact}><dt>Resultado</dt><dd>{resultNumbers.join(" · ")}</dd></div>
               ) : null}

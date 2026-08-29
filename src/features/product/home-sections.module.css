@@ -98,7 +98,7 @@
   box-shadow: inset 0 1px rgb(255 255 255 / 82%), 0 10px 23px rgb(74 48 37 / 7%);
 }
 
-.drawCard:hover,
+.drawCard:not(:disabled):hover,
 .drawCard:focus-visible {
   z-index: 2;
   transform: translateY(-2px);
@@ -106,6 +106,8 @@
 }
 
 .drawCard:focus-visible,
+.drawsPanel:focus-visible,
+.inlineStreamClose:focus-visible,
 .resultsLink:focus-visible,
 .resultTab:focus-visible,
 .resultsContent:focus-visible,
@@ -117,7 +119,7 @@
 }
 
 .drawCard:disabled {
-  cursor: wait;
+  cursor: default;
 }
 
 .drawCard[aria-expanded="true"] {
@@ -298,13 +300,44 @@
   display: none;
 }
 
+.inlineStreamHeader {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 8px;
+}
+
 .inlineStreamTitle {
+  grid-column: 2;
   margin: 0;
   color: var(--q-text-strong);
   font-size: clamp(1.15rem, 2.4vw, 1.5rem);
   font-weight: 900;
   line-height: 1.2;
   text-align: center;
+}
+
+.inlineStreamClose {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid var(--q-line);
+  border-radius: 50%;
+  background: var(--q-panel-2);
+  color: var(--q-muted-strong);
+  cursor: pointer;
+}
+
+.inlineStreamClose:hover {
+  border-color: var(--q-red);
+  color: var(--q-red);
+}
+
+.inlineStreamClose svg {
+  width: 20px;
+  height: 20px;
 }
 
 .drawTimeline {
@@ -485,6 +518,159 @@
 .resultsContent {
   min-width: 0;
   border-radius: 12px;
+}
+
+.resultBalls {
+  min-width: 0;
+  max-width: 1120px;
+  display: grid;
+  grid-template-columns: repeat(14, minmax(0, 1fr));
+  align-items: center;
+  gap: clamp(3px, 0.55vw, 7px);
+  direction: ltr;
+  overflow: hidden;
+  padding: 22px 2px 8px;
+  margin: 0 auto;
+  border-radius: 14px;
+  list-style: none;
+}
+
+.resultBall,
+.resultBallSkeleton {
+  width: 100%;
+  max-width: 78px;
+  aspect-ratio: 1;
+  justify-self: center;
+  border-radius: 50%;
+}
+
+.resultBall {
+  --result-accent: #db1521;
+  --result-rank-ink: #fff;
+  --result-rank-highlight: #fff;
+  position: relative;
+  z-index: calc(15 - var(--result-entry-index));
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 8px 5px;
+  border: 2px solid color-mix(in srgb, var(--result-accent) 70%, #ffd1d4);
+  background:
+    radial-gradient(circle at 30% 22%, rgb(255 255 255 / 92%) 0 3%, transparent 4%),
+    radial-gradient(
+      circle at 34% 28%,
+      color-mix(in srgb, var(--result-accent) 54%, #fff) 0,
+      color-mix(in srgb, var(--result-accent) 78%, #5a0710) 35%,
+      color-mix(in srgb, var(--result-accent) 38%, #090b10) 72%,
+      #05070a 100%
+    );
+  box-shadow:
+    inset -7px -9px 13px rgb(0 0 0 / 34%),
+    inset 5px 6px 10px rgb(255 255 255 / 11%),
+    0 8px 15px rgb(0 0 0 / 24%);
+  color: #fff;
+  text-align: center;
+  opacity: 0;
+  transform-origin: 50% 78%;
+}
+
+.resultBalls[data-animate="true"] .resultBall {
+  animation: resultBallGather 440ms cubic-bezier(0.2, 0.9, 0.28, 1.18) both;
+  animation-delay: calc(var(--result-entry-index) * 45ms);
+}
+
+.resultBall::after {
+  position: absolute;
+  z-index: -1;
+  inset: 5px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: inherit;
+  content: "";
+  pointer-events: none;
+}
+
+.resultBall[data-position="1"] {
+  --result-accent: #e8b742;
+  --result-rank-ink: #fff1b5;
+  --result-rank-highlight: #fff9e3;
+}
+
+.resultBall[data-position="2"] {
+  --result-accent: #aebdce;
+  --result-rank-ink: #f3f8ff;
+  --result-rank-highlight: #fff;
+}
+
+.resultBall[data-position="3"] {
+  --result-accent: #cc814c;
+  --result-rank-ink: #ffd7bb;
+  --result-rank-highlight: #fff3e8;
+}
+
+:global([data-theme="light"]) .resultBall[data-position="1"] {
+  --result-accent: #b98410;
+}
+
+:global([data-theme="light"]) .resultBall[data-position="2"] {
+  --result-accent: #71839b;
+}
+
+:global([data-theme="light"]) .resultBall[data-position="3"] {
+  --result-accent: #a15e36;
+}
+
+.resultBall[data-pending="true"] {
+  --result-accent: #59616e;
+  border-style: dashed;
+}
+
+.resultBall .resultRankIcon {
+  position: absolute;
+  top: 7%;
+  left: 50%;
+  width: clamp(14px, 1.35vw, 17px);
+  height: clamp(14px, 1.35vw, 17px);
+  color: var(--result-rank-ink);
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 60%));
+  transform: translateX(-50%);
+}
+
+.resultBallValue {
+  position: relative;
+  z-index: 1;
+  display: block;
+  color: inherit;
+  font-size: clamp(1.05rem, 2vw, 1.5rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 950;
+  letter-spacing: 0.035em;
+  line-height: 1;
+  text-shadow: 0 2px 4px rgb(0 0 0 / 62%);
+  transform: translateY(-1px);
+}
+
+.resultBallPosture {
+  position: absolute;
+  right: 5px;
+  bottom: 9%;
+  left: 5px;
+  z-index: 1;
+  overflow: hidden;
+  color: rgb(255 255 255 / 88%);
+  font-size: clamp(0.46rem, 0.64vw, 0.56rem);
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 72%);
+  white-space: nowrap;
+}
+
+.resultBallSkeleton {
+  background: linear-gradient(105deg, var(--q-panel-2) 30%, var(--q-line-strong) 48%, var(--q-panel-2) 66%);
+  background-size: 220% 100%;
+  animation: resultLoading 1.35s linear infinite;
 }
 
 .resultsGrid {
@@ -677,6 +863,10 @@
   font-weight: 900;
   letter-spacing: 0.025em;
   white-space: nowrap;
+}
+
+.resultPosture {
+  display: none;
 }
 
 .resultCard:is([data-position="1"], [data-position="2"], [data-position="3"]) .resultPosition {
@@ -961,6 +1151,30 @@
   to { background-position: -80% 0; }
 }
 
+@keyframes resultBallGather {
+  0% {
+    opacity: 0;
+    filter: blur(2px);
+    transform: translate3d(16px, -20px, 0) scale(0.64) rotate(10deg);
+  }
+
+  68% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(-3px, 3px, 0) scale(1.06) rotate(-3deg);
+  }
+
+  84% {
+    transform: translate3d(2px, -1px, 0) scale(0.98) rotate(1deg);
+  }
+
+  100% {
+    opacity: 1;
+    filter: none;
+    transform: none;
+  }
+}
+
 @media (min-width: 1280px) {
   .drawsPanel {
     padding-bottom: 13px;
@@ -978,6 +1192,12 @@
 
   .resultsGrid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .resultBalls {
+    max-width: 700px;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 7px;
   }
 
   .megaBanner {
@@ -1123,6 +1343,13 @@
     margin-bottom: 10px;
   }
 
+  .resultBalls {
+    max-width: 480px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+    padding-top: 21px;
+  }
+
   .resultTabs {
     width: 100%;
     gap: 2px;
@@ -1152,7 +1379,7 @@
 
   .resultsCarouselTrack,
   .resultsCarouselTrack[data-modality="invert"] {
-    grid-auto-columns: clamp(64px, 22%, 88px);
+    grid-auto-columns: clamp(5.5rem, 26%, 6.5rem);
     gap: 6px;
     padding-block: 4px;
     scrollbar-width: none;
@@ -1167,7 +1394,7 @@
   }
 
   .resultCarouselArrow,
-  .resultTopline,
+  .resultPositionLabel,
   .resultSource,
   .resultSourceLabel,
   .resultPending,
@@ -1180,22 +1407,49 @@
     margin-bottom: 6px;
   }
 
+  .resultTopline {
+    min-height: 20px;
+    display: flex;
+    flex-wrap: nowrap;
+  }
+
+  .resultPosition {
+    min-width: 0;
+    min-height: 20px;
+    max-width: 100%;
+    flex: 0 1 auto;
+    justify-content: center;
+    gap: 3px;
+    padding: 1px 2px;
+    font-size: 0.6rem;
+    letter-spacing: 0;
+    line-height: 1;
+  }
+
+  .resultPosture {
+    display: inline;
+  }
+
+  .resultRankIcon {
+    flex-basis: 16px;
+    width: 16px;
+    height: 16px;
+  }
+
   .resultCard,
-  .resultSkeleton {
-    min-height: 56px;
+  .resultSkeleton,
+  .resultsGrid[data-modality="head"] .resultCard {
+    min-height: 70px;
   }
 
   .resultCard {
-    padding: 8px 5px;
+    gap: 4px;
+    padding: 5px;
     border-radius: 10px;
   }
 
   .resultsCarouselTrack[data-modality="invert"] .resultCard {
     justify-content: center;
-  }
-
-  .resultsGrid[data-modality="head"] .resultCard {
-    min-height: 64px;
   }
 
   .resultValue,
@@ -1252,9 +1506,160 @@
   }
 }
 
-@media (max-width: 360px) {
+@media (max-width: 430px) {
+  .panel {
+    padding: 11px 10px 12px;
+    border-radius: 16px;
+  }
+
+  .drawGrid {
+    gap: 7px;
+  }
+
+  .drawCard {
+    min-height: 90px;
+    gap: 3px 5px;
+    padding: 7px;
+  }
+
+  .drawIcon[data-size="lg"] {
+    width: 30px;
+    height: 30px;
+  }
+
+  .drawLabel {
+    font-size: 0.7rem;
+  }
+
+  .drawTime {
+    font-size: 1.15rem;
+  }
+
+  .resultBalls {
+    gap: 5px;
+    padding-top: 18px;
+  }
+
+  .megaBanner {
+    min-height: 230px;
+    grid-template-rows: auto minmax(32px, 1fr) auto;
+    gap: 8px;
+    padding: 11px;
+    border-radius: 17px;
+  }
+
+  .megaBrand {
+    gap: 9px;
+  }
+
+  .megaLogo {
+    width: 84px;
+    height: 84px;
+  }
+
+  .megaCopy {
+    max-width: 138px;
+    font-size: 0.72rem;
+  }
+
+  .megaCta {
+    min-height: 44px;
+    font-size: 0.66rem;
+  }
+}
+
+@media (max-width: 359px) {
+  .resultBalls {
+    max-width: 320px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .drawGrid {
+    gap: 6px;
+  }
+
+  .drawCard {
+    min-height: 86px;
+    padding: 6px;
+  }
+
+  .drawIcon[data-size="lg"] {
+    width: 28px;
+    height: 28px;
+  }
+
+  .drawLabel {
+    font-size: 0.64rem;
+  }
+
+  .drawTime {
+    font-size: 1.06rem;
+  }
+
   .resultTab {
     font-size: 0.56rem;
+  }
+
+  .megaBanner {
+    min-height: 212px;
+    padding: 10px;
+  }
+
+  .megaLogo {
+    width: 72px;
+    height: 72px;
+  }
+
+  .megaCopy {
+    max-width: 128px;
+    font-size: 0.68rem;
+  }
+
+  .megaCta {
+    min-height: 42px;
+  }
+}
+
+@media (min-width: 560px) and (max-width: 979px) and (max-height: 600px) and (orientation: landscape) {
+  .sections {
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .panel {
+    padding: 11px 12px 12px;
+  }
+
+  .megaBanner {
+    min-height: 168px;
+    grid-template-columns: minmax(230px, 1fr) auto;
+    grid-template-rows: 1fr;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+
+  .megaBrand {
+    align-self: center;
+    gap: 10px;
+  }
+
+  .megaLogo {
+    width: 92px;
+    height: 92px;
+  }
+
+  .megaCopy {
+    max-width: 160px;
+    font-size: 0.75rem;
+  }
+
+  .megaCta {
+    width: auto;
+    min-height: 44px;
+    align-self: center;
+    justify-self: end;
+    padding-inline: 14px;
   }
 }
 
@@ -1269,6 +1674,13 @@
 
   .resultSkeleton {
     animation: none;
+  }
+
+  .resultBall,
+  .resultBallSkeleton {
+    animation: none;
+    opacity: 1;
+    transform: none;
   }
 
   .resultsCarouselTrack {

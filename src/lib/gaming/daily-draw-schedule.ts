@@ -49,3 +49,43 @@ export function buildPreviewDailyDraws(nowMs: number): readonly DrawDefinition[]
     return next ? [next] : [];
   });
 }
+
+const LIVE_BEFORE_DRAW_MS = 10 * 60 * 1_000;
+const LIVE_AFTER_DRAW_MS = 30 * 60 * 1_000;
+
+/** LIVE follows a dated draw occurrence, independently of its sales cutoff. */
+export function selectLiveDraw(nowMs: number, draws?: readonly DrawDefinition[]): DrawDefinition | null {
+  if (!Number.isFinite(nowMs) || !Number.isFinite(new Date(nowMs).getTime())) return null;
+
+  let source = draws;
+  if (source === undefined) {
+    const todayKey = drawDateKey(nowMs);
+    if (!todayKey || !isDrawDateKey(todayKey)) return null;
+    const todayNoonMs = Date.parse(`${todayKey}T12:00:00Z`);
+    // The next-draw schedule has already advanced when a live draw starts.
+    source = [-1, 0, 1].flatMap((offset) => {
+      const dateKey = new Date(todayNoonMs + offset * 86_400_000).toISOString().slice(0, 10);
+      return buildPreviewDrawsForDate(dateKey);
+    });
+  }
+
+  const candidates = source.flatMap((draw) => {
+    const slotIndex = DAILY_DRAW_SLOTS.findIndex((slot) => slot.id === draw.id);
+    if (slotIndex < 0 || draw.family !== "QUINIELA") return [];
+    const scheduled = draw.drawsAt.trim();
+    const drawsAtMs = Date.parse(scheduled);
+    if (!Number.isFinite(drawsAtMs) || !isDrawDateKey(scheduled.slice(0, 10))) return [];
+    if (nowMs < drawsAtMs - LIVE_BEFORE_DRAW_MS || nowMs >= drawsAtMs + LIVE_AFTER_DRAW_MS) return [];
+    return [{ draw, drawsAtMs, slotIndex }];
+  });
+
+  candidates.sort((left, right) => {
+    const leftStarted = left.drawsAtMs <= nowMs;
+    const rightStarted = right.drawsAtMs <= nowMs;
+    if (leftStarted !== rightStarted) return leftStarted ? -1 : 1;
+    const byTime = leftStarted ? right.drawsAtMs - left.drawsAtMs : left.drawsAtMs - right.drawsAtMs;
+    return byTime || left.slotIndex - right.slotIndex;
+  });
+
+  return candidates[0]?.draw ?? null;
+}

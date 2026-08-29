@@ -357,39 +357,86 @@
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 979px) {
   .hero {
-    border-radius: 24px;
+    border-radius: 21px;
   }
 
   .copy {
-    padding: 22px 20px 8px;
+    padding: 16px 16px 3px;
+  }
+
+  .eyebrow {
+    font-size: 0.6rem;
+    letter-spacing: 0.11em;
   }
 
   .title {
-    font-size: clamp(2.75rem, 11.5vw, 4rem);
+    margin: 4px 0 5px;
+    font-size: clamp(2.1rem, 8.8vw, 3rem);
+    letter-spacing: -0.052em;
+    line-height: 0.93;
   }
 
   .reelColumn {
-    padding-inline: 7px;
+    padding: 0 6px 4px;
   }
 
   .actions {
-    padding: 4px 20px 22px;
+    padding: 2px 16px 16px;
+  }
+}
+
+@media (min-width: 560px) and (max-width: 1180px) and (max-height: 600px) and (orientation: landscape) {
+  .hero {
+    min-height: 188px;
+    grid-template-columns: minmax(280px, 0.82fr) minmax(0, 1.4fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "copy reel"
+      "actions reel";
+  }
+
+  .hero::before {
+    background: linear-gradient(90deg, var(--hero-panel) 0 25%, transparent 67%);
+  }
+
+  .copy {
+    width: auto;
+    padding: 16px 0 4px 22px;
+  }
+
+  .title {
+    margin: 4px 0 6px;
+    font-size: clamp(2.15rem, 4.8vw, 3.15rem);
+  }
+
+  .reelColumn {
+    padding: 4px 12px 4px 0;
+  }
+
+  .actions {
+    width: auto;
+    padding: 3px 0 16px 22px;
   }
 }
 
 @media (max-width: 430px) {
+  .hero {
+    border-radius: 18px;
+  }
+
   .copy {
-    padding-inline: 15px;
+    padding: 14px 14px 2px;
   }
 
   .eyebrow {
-    font-size: 0.62rem;
+    font-size: 0.54rem;
+    letter-spacing: 0.09em;
   }
 
   .title {
-    font-size: clamp(2.65rem, 12.2vw, 3.3rem);
+    font-size: clamp(2rem, 9vw, 2.45rem);
   }
 
   .nextDraw,
@@ -401,17 +448,30 @@
     width: 100%;
     display: grid;
     grid-template-columns: 1fr;
-    padding-inline: 15px;
+    padding: 2px 14px 14px;
   }
 
   .primaryAction {
     width: 100%;
+    min-height: 42px;
     padding-inline: 9px;
     font-size: 0.67rem;
   }
 }
 
 @media (max-width: 360px) {
+  .copy {
+    padding: 13px 12px 2px;
+  }
+
+  .title {
+    font-size: clamp(1.85rem, 9.3vw, 2.05rem);
+  }
+
+  .actions {
+    padding: 2px 12px 12px;
+  }
+
   .countdown {
     gap: 4px;
   }
@@ -422,6 +482,30 @@
 
   .timeUnit {
     min-width: 41px;
+  }
+}
+
+@media (max-width: 300px) {
+  .copy {
+    padding-inline: 10px;
+  }
+
+  .eyebrow {
+    font-size: 0.5rem;
+    letter-spacing: 0.07em;
+  }
+
+  .title {
+    font-size: 1.75rem;
+  }
+
+  .actions {
+    padding-inline: 10px;
+  }
+
+  .primaryAction {
+    min-height: 40px;
+    font-size: 0.64rem;
   }
 }
 

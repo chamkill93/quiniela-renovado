@@ -215,16 +215,16 @@ describe("TraditionalGameClient selection", () => {
         fireEvent.click(screen.getByRole("button", { name: "Números aleatorios" }));
       });
 
-      const head = numberInput(gameId === "redoblona" ? "Número de cabeza" : undefined);
+      const head = numberInput(gameId === "redoblona" ? "Número de apuesta inicial" : undefined);
       if (gameId !== "redoblona") {
         expect(head.labels?.[0]?.textContent).toBe("Número de tres cifras");
         expect(head.labels?.[0]?.classList.contains("q-sr-only")).toBe(true);
       }
-      expect(head.value).toMatch(/^\d{3}$/);
-      expect(Number(head.value)).toBeGreaterThanOrEqual(1);
-      expect(Number(head.value)).toBeLessThanOrEqual(999);
+      expect(head.value).toMatch(gameId === "redoblona" ? /^\d{2}$/ : /^\d{3}$/);
+      expect(Number(head.value)).toBeGreaterThanOrEqual(gameId === "redoblona" ? 0 : 1);
+      expect(Number(head.value)).toBeLessThanOrEqual(gameId === "redoblona" ? 99 : 999);
       if (gameId === "redoblona") {
-        const second = numberInput("Número redoblona");
+        const second = numberInput("Número de Redoblona");
         expect(second.value).toMatch(/^\d{2}$/);
         expect(Number(second.value)).toBeGreaterThanOrEqual(0);
         expect(Number(second.value)).toBeLessThanOrEqual(99);
@@ -331,22 +331,23 @@ describe("TraditionalGameClient selection", () => {
     expectUnchangedAccount();
   });
 
-  it("requires both redoblona numbers and allows the two-digit ending 00", async () => {
+  it("requires two canonical Redoblona numbers and accepts 00 twice", async () => {
     renderGame("redoblona");
     await waitUntilReady();
     fireEvent.click(chipButton(500));
 
-    expect(enterNumber("8", "Número de cabeza").value).toBe("008");
+    expect(enterNumber("8", "Número de apuesta inicial").value).toBe("08");
     expect(reviewButton().disabled).toBe(true);
-    expect(enterNumber("0", "Número redoblona").value).toBe("00");
+    expect(enterNumber("0", "Número de Redoblona").value).toBe("00");
     expect(reviewButton().disabled).toBe(false);
 
-    enterNumber("0", "Número de cabeza");
-    expect(reviewButton().disabled).toBe(true);
+    enterNumber("0", "Número de apuesta inicial");
+    expect(reviewButton().disabled).toBe(false);
+    expect(screen.getByRole("status", { name: "Resumen de Redoblona" }).textContent).toContain("00 Cabeza + 00 hasta 7");
     expectUnchangedAccount();
   });
 
-  it.each<TraditionalGameId>(["prizes", "invert", "redoblona"])(
+  it.each<TraditionalGameId>(["prizes", "invert"])(
     "includes the selected %s position only in the review popup",
     async (gameId) => {
       renderGame(gameId);
@@ -364,6 +365,30 @@ describe("TraditionalGameClient selection", () => {
       expectUnchangedAccount();
     },
   );
+
+  it("keeps both Redoblona scopes valid, raises the second scope and reviews a natural summary", async () => {
+    renderGame("redoblona");
+    await waitUntilReady();
+    const initialScope = screen.getByRole("combobox", { name: "Alcance de apuesta inicial" }) as HTMLSelectElement;
+    const redoblonaScope = screen.getByRole("combobox", { name: "Alcance de Redoblona" }) as HTMLSelectElement;
+    expect(initialScope.value).toBe("1");
+    expect(redoblonaScope.value).toBe("7");
+    enterNumber("35", "Número de apuesta inicial");
+    enterNumber("72", "Número de Redoblona");
+    fireEvent.change(initialScope, { target: { value: "8" } });
+    expect(initialScope.value).toBe("8");
+    expect(redoblonaScope.value).toBe("8");
+    expect(within(redoblonaScope).queryByRole("option", { name: "Hasta 7" })).toBeNull();
+    fireEvent.change(redoblonaScope, { target: { value: "10" } });
+    fireEvent.click(chipButton(500));
+
+    const liveSummary = screen.getByRole("status", { name: "Resumen de Redoblona" });
+    expect(liveSummary.textContent).toContain("35 hasta 8 + 72 hasta 10");
+    fireEvent.click(reviewButton());
+    expect(within(reviewDialog()).getByLabelText("35 hasta 8 + 72 hasta 10")).toBeTruthy();
+    expect(within(reviewDialog()).getByText("Alcances").parentElement?.textContent).toContain("Inicial hasta 8 · Redoblona hasta 10");
+    expectUnchangedAccount();
+  });
 
   it("selects and submits tonight's draw when tomorrow's draws appear first in the catalog", async () => {
     const tonight = catalog.draws.find((draw) => draw.id === "night")!;

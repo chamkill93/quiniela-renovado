@@ -37,6 +37,7 @@ const response: PlayResponse = {
     playId: "play-1",
     gameId: "sapyaite",
     family: "INSTANT",
+    selection: "007",
     drawId: null,
     amount: 500,
     resultNumbers: ["497"],
@@ -99,6 +100,15 @@ describe("product mutation response contract", () => {
         command,
       ),
     ).toThrow(ProductGatewayProtocolError);
+  });
+
+  it.each([
+    { ticket: { ...response.ticket, selection: "999" } },
+    { ticket: { ...response.ticket, playId: "another-play" } },
+    { play: { ...response.play, ticketId: "another-ticket" } },
+  ])("rejects an uncorrelated play or ticket response", (change) => {
+    expect(() => assertPlayResponseMatchesCommand({ ...response, ...change }, command))
+      .toThrow(ProductGatewayProtocolError);
   });
 
   it("correlates a TOPUP movement with its submitted amount and method", () => {

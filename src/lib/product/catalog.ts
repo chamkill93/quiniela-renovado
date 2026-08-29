@@ -61,7 +61,7 @@ export const TRADITIONAL_GAMES: ProductGame<TraditionalGameId>[] = [
     id: "redoblona",
     name: "Redoblona",
     eyebrow: "Doble selección",
-    description: "Combiná un número de cabeza con una terminación de dos cifras.",
+    description: "Combiná dos números de dos cifras con un único importe.",
     icon: "/assets/icons/game/redoblona.svg",
     art: "/assets/game-art/redoblona.webp",
     tone: "teal",

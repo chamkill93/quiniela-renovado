@@ -54,6 +54,13 @@ describe("gaming catalog", () => {
       "poa10",
       "racha5",
     ]);
+    expect(catalog.traditional.find((game) => game.id === "redoblona")?.selection).toEqual({
+      kind: "REDOBLONA",
+      initialDigits: 2,
+      redoblonaDigits: 2,
+      initialUntil: { min: 1, max: 14 },
+      redoblonaUntil: { min: 7, max: 14 },
+    });
   });
 
   it("marks every payout as prototype configuration", () => {

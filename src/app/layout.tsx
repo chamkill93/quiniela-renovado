@@ -1,7 +1,10 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import { cookies } from "next/headers";
+import { DevAccessGate } from "@/features/access/dev-access-gate";
 import { ProductFrame } from "@/features/product/product-frame";
+import { DEV_ACCESS_COOKIE_NAME, hasValidDevAccessCookie } from "@/lib/dev-access";
 import { ProductProvider } from "@/providers/product-provider";
 
 export const metadata: Metadata = {
@@ -21,7 +24,12 @@ export const viewport: Viewport = {
 
 const themeBootstrap = `(()=>{try{const stored=localStorage.getItem("quinie_theme");document.documentElement.dataset.theme=stored==="light"?"light":"dark"}catch{document.documentElement.dataset.theme="dark"}})();`;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies();
+  const hasDevAccess = hasValidDevAccessCookie(
+    cookieStore.get(DEV_ACCESS_COOKIE_NAME)?.value,
+  );
+
   return (
     <html data-scroll-behavior="smooth" data-theme="dark" lang="es" suppressHydrationWarning>
       <head>
@@ -30,7 +38,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </Script>
       </head>
       <body>
-        <ProductProvider><ProductFrame>{children}</ProductFrame></ProductProvider>
+        {hasDevAccess ? (
+          <ProductProvider><ProductFrame>{children}</ProductFrame></ProductProvider>
+        ) : (
+          <DevAccessGate />
+        )}
       </body>
     </html>
   );

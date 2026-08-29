@@ -62,7 +62,10 @@ export function assertPlayResponseMatchesCommand(
     response.ticket.gameId === command.input.gameId &&
     response.ticket.family === expectedFamily &&
     response.ticket.amount === command.input.amount &&
-    (response.ticket.drawId ?? null) === expectedDrawId;
+    (response.ticket.drawId ?? null) === expectedDrawId &&
+    structurallyEqual(response.ticket.selection, command.input.selection) &&
+    response.play.ticketId === response.ticket.id &&
+    response.ticket.playId === response.play.id;
 
   if (!coherent) {
     throw new ProductGatewayProtocolError(

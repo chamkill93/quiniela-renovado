@@ -79,9 +79,10 @@ const traditionalSelectionSchema = z.discriminatedUnion("kind", [
   }),
   z.object({
     kind: z.literal("REDOBLONA"),
-    headDigits: z.literal(3),
+    initialDigits: z.literal(2),
     redoblonaDigits: z.literal(2),
-    position: z.object({ min: z.literal(2), max: z.literal(14) }),
+    initialUntil: z.object({ min: z.literal(1), max: z.literal(14) }),
+    redoblonaUntil: z.object({ min: z.literal(7), max: z.literal(14) }),
   }),
   z.object({
     kind: z.literal("MEGALOTO"),

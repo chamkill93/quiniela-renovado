@@ -196,6 +196,52 @@ describe("comprobantes en Mis Jugadas", () => {
     expect(receipt.queryByText("En proceso")).toBeNull();
   });
 
+  it("muestra la Redoblona compuesta en lenguaje natural y conserva tickets históricos", async () => {
+    const redoblonaPlay: MockPlay = {
+      ...plays[1],
+      id: "play-redoblona",
+      ticketId: "ticket-redoblona",
+      gameId: "redoblona",
+      gameName: "Redoblona",
+      selection: { initialNumber: "35", initialUntil: 1, redoblonaNumber: "72", redoblonaUntil: 7 },
+    };
+    const redoblonaTicket: MockTicket = {
+      ...tickets[1],
+      id: "ticket-redoblona",
+      code: "QL-REDOBLONA",
+      playId: redoblonaPlay.id,
+      gameId: "redoblona",
+      gameName: "Redoblona",
+      selection: redoblonaPlay.selection,
+    };
+    const user = renderPlays({ visiblePlays: [redoblonaPlay], visibleTickets: [redoblonaTicket] });
+    await user.click(await screen.findByRole("button", { name: "Ver mi comprobante" }));
+    expect(within(screen.getByRole("dialog", { name: "Jugada registrada" })).getByText("35 Cabeza + 72 hasta 7")).toBeTruthy();
+  });
+
+  it("formatea sin ambigüedad una selección histórica de Redoblona", async () => {
+    const legacyPlay: MockPlay = {
+      ...plays[1],
+      id: "play-redoblona-legacy",
+      ticketId: "ticket-redoblona-legacy",
+      gameId: "redoblona",
+      gameName: "Redoblona",
+      selection: { head: "035", redoblona: "72", position: 7 },
+    };
+    const legacyTicket: MockTicket = {
+      ...tickets[1],
+      id: "ticket-redoblona-legacy",
+      code: "QL-REDOBLONA-LEGACY",
+      playId: legacyPlay.id,
+      gameId: "redoblona",
+      gameName: "Redoblona",
+      selection: legacyPlay.selection,
+    };
+    const user = renderPlays({ visiblePlays: [legacyPlay], visibleTickets: [legacyTicket] });
+    await user.click(await screen.findByRole("button", { name: "Ver mi comprobante" }));
+    expect(within(screen.getByRole("dialog", { name: "Jugada registrada" })).getByText("035 Cabeza + 72 hasta 7")).toBeTruthy();
+  });
+
   it("conserva valores largos y datos de una jugada pendiente sin inventar resultados", async () => {
     const longCode = "QL-COMPROBANTE-20260825-PLAYER-RECEIPTS-TRADITIONAL-000000000042";
     const longDrawId = "sorteo-quiniela-tradicional-vespertina-2026-08-25-confirmacion-000042";

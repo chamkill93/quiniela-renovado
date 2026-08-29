@@ -1,0 +1,33 @@
+.indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  color: var(--q-muted-strong);
+  font-size: .7rem;
+  font-weight: 850;
+  letter-spacing: .1em;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.dot {
+  width: .625rem;
+  height: .625rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.indicator[data-active="true"] {
+  color: var(--q-red-soft);
+}
+
+:global([data-theme="light"]) .indicator[data-active="true"] {
+  color: var(--q-red-dark);
+}
+
+.indicator[data-active="true"] .dot {
+  background: var(--q-red);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--q-red) 12%, transparent),
+    0 0 12px color-mix(in srgb, var(--q-red) 45%, transparent);
+}

@@ -1,5 +1,9 @@
 import { defineConfig } from "@playwright/test";
 
+const E2E_ACCESS_STATE = "work/e2e-dev-access.json";
+const E2E_BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000";
+const E2E_SERVER_PORT = new URL(E2E_BASE_URL).port || "3000";
+
 const QA_VIEWPORTS = [
   { name: "320x568", width: 320, height: 568 },
   { name: "360x800", width: 360, height: 800 },
@@ -67,9 +71,28 @@ const functionalProjects = [
   },
 }));
 
+const accessGateProject = {
+  name: "access-gate-390x844-dark",
+  testMatch: "**/access-gate.spec.ts",
+  use: {
+    browserName: "chromium" as const,
+    channel: process.env.PLAYWRIGHT_CHANNEL === "chrome" ? "chrome" : undefined,
+    viewport: { width: 390, height: 844 },
+    screen: { width: 390, height: 844 },
+    colorScheme: "dark" as const,
+    deviceScaleFactor: 1,
+    hasTouch: true,
+    isMobile: true,
+    locale: "es-PY",
+    timezoneId: "America/Asuncion",
+    storageState: { cookies: [], origins: [] },
+  },
+};
+
 export default defineConfig({
   testDir: "./tests/e2e",
   testMatch: "**/*.spec.ts",
+  globalSetup: "./tests/e2e/global-setup.ts",
   timeout: 60_000,
   outputDir: "test-results",
   fullyParallel: true,
@@ -83,20 +106,21 @@ export default defineConfig({
     timeout: 20_000,
   },
   use: {
-    baseURL: "http://127.0.0.1:3000",
+    baseURL: E2E_BASE_URL,
     actionTimeout: 20_000,
     navigationTimeout: 30_000,
+    storageState: E2E_ACCESS_STATE,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
   },
   webServer: {
     command: process.env.CI
-      ? "npm run start"
-      : "npm run dev -- --hostname 127.0.0.1",
-    url: "http://127.0.0.1:3000/api/health",
+      ? `npm run start -- --port ${E2E_SERVER_PORT}`
+      : `npm run dev -- --hostname 127.0.0.1 --port ${E2E_SERVER_PORT}`,
+    url: `${E2E_BASE_URL}/api/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
-  projects: [...visualProjects, ...functionalProjects],
+  projects: [accessGateProject, ...visualProjects, ...functionalProjects],
 });

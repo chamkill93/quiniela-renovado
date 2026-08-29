@@ -162,7 +162,7 @@ describe.each(routes)("play API /$path", (route) => {
 describe("traditional stake limits", () => {
   it.each(["head", "prizes", "invert", "redoblona"])("rejects a stake above 10,000 for %s without debiting", async (gameId) => {
     const selection = gameId === "redoblona"
-      ? { head: "123", redoblona: "45", position: 2 }
+      ? { initialNumber: "35", initialUntil: 1, redoblonaNumber: "45", redoblonaUntil: 7 }
       : { number: "123", ...(gameId === "head" ? {} : { position: 2 }) };
     for (const amount of [10_500, 20_000, 50_000]) {
       await expectApiError(await traditionalPlay(request(routes[0], {

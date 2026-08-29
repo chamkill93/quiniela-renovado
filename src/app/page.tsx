@@ -4,7 +4,7 @@ import styles from "@/features/product/product.module.css";
 
 export default function HomePage() {
   return (
-    <main className={styles.page}>
+    <main className={`${styles.page} ${styles.homePage}`}>
       <HomeHero />
       <HomeSections />
     </main>

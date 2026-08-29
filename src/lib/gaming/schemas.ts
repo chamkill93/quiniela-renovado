@@ -131,9 +131,18 @@ export const traditionalPlayRequestSchema = z.discriminatedUnion("gameId", [
     amount: traditionalStakeSchema,
     drawId: drawIdSchema,
     selection: z.object({
-      head: threeDigitSchema,
-      redoblona: twoDigitSchema,
-      position: z.number().int().min(2).max(14),
+      initialNumber: twoDigitSchema,
+      initialUntil: z.number().int().min(1).max(14),
+      redoblonaNumber: twoDigitSchema,
+      redoblonaUntil: z.number().int().min(7).max(14),
+    }).strict().superRefine(({ initialUntil, redoblonaUntil }, context) => {
+      if (redoblonaUntil < initialUntil) {
+        context.addIssue({
+          code: "custom",
+          message: "El alcance de Redoblona debe ser igual o mayor al alcance inicial.",
+          path: ["redoblonaUntil"],
+        });
+      }
     }),
   }),
   z.object({

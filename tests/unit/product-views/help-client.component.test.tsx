@@ -66,8 +66,8 @@ describe("quiniela help data", () => {
   });
 
   it.each([
-    { query: "  INVERTÍDA  ", category: "Todas", ids: ["invertida"] },
-    { query: "COMBINAS TERMINACIÓN", category: "Cómo jugar", ids: ["redoblona"] },
+    { query: "  INVERTÍDA  ", category: "Todas", ids: ["invertida", "numeros"] },
+    { query: "COMBINAS DOS NÚMEROS", category: "Cómo jugar", ids: ["redoblona"] },
     { query: "ceros   izquierda", category: "Todas", ids: ["numeros"] },
     { query: "saldo cuenta", category: "Todas", ids: ["saldo", "autolimites"] },
     { query: "COMPROBANTE código", category: "Mis jugadas", ids: ["comprobante", "pendiente"] },

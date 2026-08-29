@@ -47,9 +47,10 @@ export type TraditionalSelectionDefinition =
   | { kind: "THREE_DIGIT"; position: { min: number; max: number } | null }
   | {
       kind: "REDOBLONA";
-      headDigits: 3;
+      initialDigits: 2;
       redoblonaDigits: 2;
-      position: { min: 2; max: 14 };
+      initialUntil: { min: 1; max: 14 };
+      redoblonaUntil: { min: 7; max: 14 };
     }
   | {
       kind: "MEGALOTO";

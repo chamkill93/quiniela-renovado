@@ -65,13 +65,11 @@ describe("rules page data", () => {
   });
 
   it("retains the local number ranges and each traditional game's posture limits", () => {
-    for (const rule of TRADITIONAL_RULES) {
+    for (const rule of TRADITIONAL_RULES.filter((item) => item.id !== "redoblona")) {
       expect(publicText(rule)).toMatch(/\b001\s*(?:a|al|y|hasta|–|-)\s*999\b/);
     }
-    for (const id of ["prizes", "redoblona"]) {
-      expect(publicText(TRADITIONAL_RULES.find((rule) => rule.id === id)!))
-        .toMatch(/\b2\s*(?:a|al|y|hasta|–|-)\s*14\b/);
-    }
+    expect(publicText(TRADITIONAL_RULES.find((rule) => rule.id === "prizes")!))
+      .toMatch(/\b2\s*(?:a|al|y|hasta|–|-)\s*14\b/);
     expect(publicText(TRADITIONAL_RULES.find((rule) => rule.id === "invert")!))
       .toMatch(/\b1\s*(?:a|al|y|hasta|–|-)\s*14\b/);
   });
@@ -87,9 +85,11 @@ describe("rules page data", () => {
 
   it("describes both Redoblona selections and requires both conditions for a successful result", () => {
     const text = publicText(TRADITIONAL_RULES.find((rule) => rule.id === "redoblona")!);
-    expect(text).toMatch(/tres cifras|3 cifras/i);
-    expect(text).toMatch(/dos cifras|2 cifras/i);
-    expect(text).toMatch(/ambas|las dos|dos condiciones|dos coincidencias/i);
+    expect(text).toMatch(/dos números de dos cifras|2 cifras \+ 2 cifras/i);
+    expect(text).toMatch(/inicial 1.?14/i);
+    expect(text).toMatch(/redoblona 7.?14/i);
+    expect(text).toMatch(/ambos|las dos|dos aciertos|dos coincidencias/i);
+    expect(text).toMatch(/posición 2 a la 8/i);
   });
 
   it("describes the external six-number Mega Loto rules instead of the legacy local 1–45 game", () => {

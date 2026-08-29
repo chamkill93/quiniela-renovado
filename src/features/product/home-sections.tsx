@@ -3,9 +3,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
+  useEffect,
   useMemo,
+  useRef,
   useState,
-  type KeyboardEvent as ReactKeyboardEvent,
+  type CSSProperties,
 } from "react";
 
 import { drawDateKey } from "@/lib/gaming/draw-calendar";
@@ -18,15 +20,12 @@ import {
   selectDrawPageSchedule,
 } from "./draw-page-data";
 import { DrawStreamContent } from "./draw-stream-content";
-import { HomeResultsCarousel } from "./home-results-carousel";
 import {
-  HOME_RESULT_TABS,
   selectHomeDrawCards,
   selectHomeLatestDrawResults,
   type HomeDrawCardView,
   type HomeLatestDrawResults,
   type HomeResultPositionView,
-  type HomeResultTabId,
 } from "./home-sections-data";
 import styles from "./home-sections.module.css";
 import { useDrawClock } from "./use-draw-clock";
@@ -129,6 +128,8 @@ function DrawTimeline({ draws }: { draws: readonly HomeDrawCardView[] }) {
 function NextDrawsPanel() {
   const { catalog, gatewayMode, loading, unauthorized, refresh } = useProduct();
   const { now } = useDrawClock();
+  const sectionRef = useRef<HTMLElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
   const [expandedDraw, setExpandedDraw] = useState<
     (HomeDrawCardView & { openedAt: number }) | null
   >(null);
@@ -160,12 +161,20 @@ function NextDrawsPanel() {
       : null;
   }, [catalog, expandedDate, expandedDraw, gatewayMode]);
 
+  function closeStream() {
+    setExpandedDraw(null);
+    const nextCard = gridRef.current?.querySelector<HTMLButtonElement>("button:enabled");
+    (nextCard ?? sectionRef.current)?.focus();
+  }
+
   return (
     <section
       aria-busy={now === null || (loading && !catalog && gatewayMode !== "preview")}
       aria-labelledby="home-draws-title"
       className={`${styles.panel} ${styles.drawsPanel}`}
       data-testid="home-draws-section"
+      ref={sectionRef}
+      tabIndex={-1}
     >
       <header className={styles.sectionHeader}>
         <h2 id="home-draws-title">
@@ -177,15 +186,15 @@ function NextDrawsPanel() {
         </h2>
       </header>
 
-      <div className={styles.drawGrid} data-testid="home-draw-grid">
+      <div className={styles.drawGrid} data-testid="home-draw-grid" ref={gridRef}>
         {draws.map((draw) => (
           <DrawCard
-            disabled={now === null || (!draw.targetAt && expandedDraw?.id !== draw.id)}
+            disabled={now === null || !draw.isNext || !draw.targetAt}
             draw={draw}
             expanded={expandedDraw?.id === draw.id}
             key={draw.id}
             onToggle={() => {
-              if (now === null) return;
+              if (now === null || !draw.isNext || !draw.targetAt) return;
               setExpandedDraw((current) => current?.id === draw.id
                 ? null
                 : { ...draw, openedAt: now });
@@ -205,13 +214,25 @@ function NextDrawsPanel() {
       >
         {expandedDraw ? (
           <>
-            <h3
-              className={styles.inlineStreamTitle}
-              data-testid="home-draw-stream-title"
-              id="home-draw-stream-title"
-            >
-              {expandedDraw.label}
-            </h3>
+            <header className={styles.inlineStreamHeader}>
+              <h3
+                className={styles.inlineStreamTitle}
+                data-testid="home-draw-stream-title"
+                id="home-draw-stream-title"
+              >
+                {expandedDraw.label}
+              </h3>
+              <button
+                aria-label={`Cerrar sorteo de ${expandedDraw.label}`}
+                className={styles.inlineStreamClose}
+                onClick={closeStream}
+                type="button"
+              >
+                <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+                  <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+                </svg>
+              </button>
+            </header>
             <DrawStreamContent
               drawName={expandedDraw.label}
               drawsAt={expandedDrawsAt}
@@ -234,9 +255,9 @@ function NextDrawsPanel() {
 
 function ResultsSkeleton() {
   return (
-    <div aria-hidden="true" className={styles.resultsGrid}>
-      {[0, 1, 2, 3, 4, 5].map((slot) => (
-        <span className={styles.resultSkeleton} key={slot} />
+    <div aria-hidden="true" className={styles.resultBalls}>
+      {Array.from({ length: 14 }, (_, slot) => (
+        <span className={styles.resultBallSkeleton} key={slot} />
       ))}
     </div>
   );
@@ -271,46 +292,28 @@ function ResultRankIcon({ position }: { position: number }) {
   );
 }
 
-function ResultCard({ result, tabId }: { result: HomeResultPositionView; tabId: HomeResultTabId }) {
-  const displayedValue = tabId === "redoblona" ? result.ending : result.value;
-  const resultLabel = result.value === null
-    ? "pendiente"
-    : tabId === "redoblona"
-      ? `terminación ${displayedValue}, del número ${result.value}`
-      : `número ${displayedValue}${tabId === "invert" ? `; combinaciones ${result.combinations.join(", ")}` : ""}`;
+function ResultBall({ result }: { result: HomeResultPositionView }) {
+  const entryIndex = 14 - result.position;
+  const resultLabel = result.value === null ? "pendiente" : `número ${result.value}`;
 
   return (
-    <article
-      aria-label={`Posición ${result.position}: ${resultLabel}`}
-      className={styles.resultCard}
+    <li
+      aria-label={`${result.position}.ª postura: ${resultLabel}`}
+      className={styles.resultBall}
+      data-entry-order={entryIndex + 1}
       data-position={result.position}
       data-pending={result.value === null ? "true" : "false"}
       data-testid="home-result-card"
+      style={{ "--result-entry-index": entryIndex } as CSSProperties}
     >
-      <span className={styles.resultTopline}>
-        <span className={styles.resultPosition}>
-          <ResultRankIcon position={result.position} />
-          POSICIÓN {result.position}
-        </span>
-      </span>
-      {tabId === "invert" ? <span className={styles.resultSourceLabel}>Sorteado</span> : null}
-      <strong className={styles.resultValue} data-testid="home-result-value">
-        {displayedValue ?? "—"}
+      <ResultRankIcon position={result.position} />
+      <strong className={styles.resultBallValue} data-testid="home-result-value">
+        {result.value ?? "—"}
       </strong>
-      {result.value === null ? (
-        <span className={styles.resultPending}>Pendiente</span>
-      ) : tabId === "redoblona" ? (
-        <span className={styles.resultSource}>Del número <strong>{result.value}</strong></span>
-      ) : tabId === "invert" ? (
-        <div
-          aria-label={`Órdenes de las cifras de ${result.value}`}
-          className={styles.resultCombinations}
-          data-testid="home-result-combinations"
-        >
-          {result.combinations.map((value) => <span key={value}>{value}</span>)}
-        </div>
-      ) : null}
-    </article>
+      <span className={styles.resultBallPosture} data-testid="home-result-posture">
+        {result.position}.ª postura
+      </span>
+    </li>
   );
 }
 
@@ -323,31 +326,31 @@ function PublishedResultsPanel({
   loading: boolean;
   emptyMessage: string;
 }) {
-  const [selectedTab, setSelectedTab] = useState<HomeResultTabId>("head");
-  const visibleResults = useMemo(
-    () => results?.positions.filter((result) => selectedTab === "head"
-      ? result.position === 1
-      : selectedTab === "invert" || result.position >= 2) ?? [],
-    [results, selectedTab],
+  const resultsListRef = useRef<HTMLOListElement>(null);
+  const orderedResults = useMemo(
+    () => results?.positions.slice().sort((left, right) => left.position - right.position) ?? [],
+    [results],
   );
-  const headNumber = results?.positions.find((result) => result.position === 1)?.value;
 
-  function handleTabKeyDown(
-    event: ReactKeyboardEvent<HTMLButtonElement>,
-    tabIndex: number,
-  ) {
-    let nextIndex: number | null = null;
-    if (event.key === "ArrowRight") nextIndex = (tabIndex + 1) % HOME_RESULT_TABS.length;
-    if (event.key === "ArrowLeft") nextIndex = (tabIndex - 1 + HOME_RESULT_TABS.length) % HOME_RESULT_TABS.length;
-    if (event.key === "Home") nextIndex = 0;
-    if (event.key === "End") nextIndex = HOME_RESULT_TABS.length - 1;
-    if (nextIndex === null) return;
+  useEffect(() => {
+    const list = resultsListRef.current;
+    if (!list || !results || loading) return;
+    const reveal = () => list.setAttribute("data-animate", "true");
+    const reducedMotion = typeof window.matchMedia === "function"
+      && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reducedMotion || typeof IntersectionObserver === "undefined") {
+      reveal();
+      return;
+    }
 
-    event.preventDefault();
-    const nextTab = HOME_RESULT_TABS[nextIndex];
-    setSelectedTab(nextTab.id);
-    document.getElementById(`home-results-tab-${nextTab.id}`)?.focus();
-  }
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      reveal();
+      observer.disconnect();
+    }, { threshold: 0.18 });
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, [loading, results]);
 
   return (
     <section
@@ -357,7 +360,7 @@ function PublishedResultsPanel({
       data-testid="home-results-section"
     >
       <header className={styles.sectionHeader}>
-        <h2 id="home-results-title">Últimos resultados publicados</h2>
+        <h2 id="home-results-title">Último sorteo publicado</h2>
         <Link className={styles.resultsLink} href="/resultados">
           Ver todos
           <svg aria-hidden="true" viewBox="0 0 24 24">
@@ -375,60 +378,20 @@ function PublishedResultsPanel({
           </div>
         ) : null}
       </div>
-      <div aria-label="Modalidad de resultado" className={styles.resultTabs} role="tablist">
-        {HOME_RESULT_TABS.map((tab, tabIndex) => (
-          <button
-            aria-controls="home-results-grid"
-            aria-selected={selectedTab === tab.id}
-            className={styles.resultTab}
-            id={`home-results-tab-${tab.id}`}
-            key={tab.id}
-            onClick={() => setSelectedTab(tab.id)}
-            onKeyDown={(event) => handleTabKeyDown(event, tabIndex)}
-            role="tab"
-            tabIndex={selectedTab === tab.id ? 0 : -1}
-            type="button"
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      <div
-        aria-labelledby={`home-results-tab-${selectedTab}`}
-        className={styles.resultsContent}
-        id="home-results-grid"
-        role="tabpanel"
-        tabIndex={0}
-      >
+      <div className={styles.resultsContent}>
         {loading ? <ResultsSkeleton /> : results ? (
-          <>
-            {selectedTab === "redoblona" ? (
-              <p className={styles.resultExplanation}>
-                <span>Cabeza <strong data-testid="home-redoblona-head">{headNumber ?? "—"}</strong></span>
-                <span className={styles.resultExplanationDetail}>+ terminaciones de las posiciones 2 a 14</span>
-              </p>
-            ) : selectedTab === "invert" ? (
-              <p className={`${styles.resultExplanation} ${styles.resultExplanationDetail}`}>
-                Número sorteado y órdenes posibles de sus cifras, por posición.
-              </p>
-            ) : null}
-            {selectedTab === "head" ? (
-              <div className={styles.resultsGrid} data-modality="head">
-                {visibleResults.map((result) => <ResultCard key={result.position} result={result} tabId="head" />)}
-              </div>
-            ) : (
-              <HomeResultsCarousel
-                key={`${results.id}:${selectedTab}`}
-                label={HOME_RESULT_TABS.find((tab) => tab.id === selectedTab)!.label}
-                modality={selectedTab}
-              >
-                {visibleResults.map((result) => (
-                  <ResultCard key={result.position} result={result} tabId={selectedTab} />
-                ))}
-              </HomeResultsCarousel>
-            )}
-          </>
+          <ol
+            aria-label="Las 14 posturas del último sorteo publicado"
+            className={styles.resultBalls}
+            data-animate="false"
+            data-testid="home-results-balls"
+            key={`${results.id}:${results.occurredAt}`}
+            ref={resultsListRef}
+          >
+            {orderedResults.map((result) => (
+              <ResultBall key={result.position} result={result} />
+            ))}
+          </ol>
         ) : (
           <div className={styles.emptyResults}>
             <p role="status">{emptyMessage}</p>

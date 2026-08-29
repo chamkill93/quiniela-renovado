@@ -37,6 +37,7 @@ export interface AppShellProps {
   eyebrow?: string;
   currentPath?: string;
   navItems?: ShellNavItem[];
+  contextStatus?: ReactNode;
   topbarActions?: ReactNode;
   sidebarFooter?: ReactNode;
   className?: string;
@@ -254,6 +255,7 @@ function AppShellFrame({
   eyebrow = "quinie.LA",
   currentPath,
   navItems = defaultShellNavItems,
+  contextStatus,
   topbarActions,
   sidebarFooter,
   className = "",
@@ -304,14 +306,17 @@ function AppShellFrame({
 
       <div className="q-shell-main">
         <header className="q-topbar">
-          <div className="q-topbar__mobile-brand">
-            <Link href="/" aria-label="Ir al inicio de quinie.LA">
-              <Logo size="sm" />
-            </Link>
-          </div>
-          <div className="q-topbar__context">
-            <p className="q-topbar__eyebrow">{eyebrow}</p>
-            <p className="q-topbar__title">{pageTitle}</p>
+          <div className="q-topbar__heading">
+            <div className="q-topbar__mobile-brand">
+              <Link href="/" aria-label="Ir al inicio de quinie.LA">
+                <Logo size="sm" />
+              </Link>
+            </div>
+            <div className="q-topbar__context">
+              <p className="q-topbar__eyebrow">{eyebrow}</p>
+              <p className="q-topbar__title">{pageTitle}</p>
+            </div>
+            {contextStatus ? <div className="q-topbar__status">{contextStatus}</div> : null}
           </div>
 
           <div className="q-topbar__actions">

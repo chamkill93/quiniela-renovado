@@ -10,7 +10,7 @@ import {
 describe("server-side gaming schemas", () => {
   it.each(["head", "prizes", "invert", "redoblona"])("accepts additive stakes up to 10,000 for %s and rejects higher amounts", (gameId) => {
     const selection = gameId === "redoblona"
-      ? { head: "123", redoblona: "45", position: 2 }
+      ? { initialNumber: "35", initialUntil: 1, redoblonaNumber: "45", redoblonaUntil: 7 }
       : { number: "123", ...(gameId === "head" ? {} : { position: 2 }) };
     for (const amount of [500, 1_500, 3_500, 9_500, 10_000]) {
       expect(traditionalPlayRequestSchema.parse({ gameId, drawId: "early", amount, selection }).amount).toBe(amount);
@@ -49,9 +49,29 @@ describe("server-side gaming schemas", () => {
         gameId: "redoblona",
         amount: 1_000,
         drawId: "early",
-        selection: { head: "007", redoblona: "00", position: 2 },
+        selection: { initialNumber: "05", initialUntil: 1, redoblonaNumber: "00", redoblonaUntil: 7 },
       }),
     ).toMatchObject({ gameId: "redoblona" });
+  });
+
+  it("enforces the complete Redoblona contract while allowing equal numbers", () => {
+    expect(traditionalPlayRequestSchema.parse({
+      gameId: "redoblona",
+      amount: 500,
+      drawId: "early",
+      selection: { initialNumber: "25", initialUntil: 14, redoblonaNumber: "25", redoblonaUntil: 14 },
+    }).selection).toEqual({ initialNumber: "25", initialUntil: 14, redoblonaNumber: "25", redoblonaUntil: 14 });
+
+    for (const selection of [
+      { initialNumber: "5", initialUntil: 1, redoblonaNumber: "72", redoblonaUntil: 7 },
+      { initialNumber: "100", initialUntil: 1, redoblonaNumber: "72", redoblonaUntil: 7 },
+      { initialNumber: "35", initialUntil: 0, redoblonaNumber: "72", redoblonaUntil: 7 },
+      { initialNumber: "35", initialUntil: 15, redoblonaNumber: "72", redoblonaUntil: 15 },
+      { initialNumber: "35", initialUntil: 8, redoblonaNumber: "72", redoblonaUntil: 7 },
+      { head: "035", redoblona: "72", position: 7 },
+    ]) {
+      expect(() => traditionalPlayRequestSchema.parse({ gameId: "redoblona", amount: 500, drawId: "early", selection })).toThrow();
+    }
   });
 
   it("rejects parity and malformed selections for exact Sapy’aite", () => {

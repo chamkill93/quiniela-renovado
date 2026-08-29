@@ -66,14 +66,15 @@ export const TRADITIONAL_GAMES = [
   {
     id: "redoblona",
     name: "Redoblona",
-    description: "Número de cabeza de tres cifras más redoblona de dos cifras.",
+    description: "Dos números de dos cifras con alcances combinados.",
     iconKey: "redoblona",
     drawIds: QUINIELA_DRAW_IDS,
     selection: {
       kind: "REDOBLONA",
-      headDigits: 3,
+      initialDigits: 2,
       redoblonaDigits: 2,
-      position: { min: 2, max: 14 },
+      initialUntil: { min: 1, max: 14 },
+      redoblonaUntil: { min: 7, max: 14 },
     },
   },
   {
