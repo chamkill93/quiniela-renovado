@@ -547,7 +547,7 @@ test("renders the latest draw as fourteen responsive balls in position order", a
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   const viewportWidth = page.viewportSize()!.width;
-  const expectedColumns = viewportWidth >= 1_280 ? 14 : viewportWidth >= 768 ? 7 : viewportWidth > 420 ? 5 : 4;
+  const expectedColumns = viewportWidth >= 1_280 ? 14 : viewportWidth >= 768 ? 7 : viewportWidth >= 360 ? 5 : 4;
   const expectedRows = Math.ceil(14 / expectedColumns);
   const section = page.getByTestId("home-results-section");
   const balls = section.getByRole("list", {

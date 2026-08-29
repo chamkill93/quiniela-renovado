@@ -641,7 +641,7 @@
   z-index: 1;
   display: block;
   color: inherit;
-  font-size: clamp(1.05rem, 2vw, 1.5rem);
+  font-size: clamp(1rem, 1.55vw, 1.5rem);
   font-variant-numeric: tabular-nums;
   font-weight: 950;
   letter-spacing: 0.035em;

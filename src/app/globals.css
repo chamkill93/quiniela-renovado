@@ -302,7 +302,7 @@ ul, ol { margin-block: 0; padding-inline-start: 1.2rem; }
   /* Reserve space for the fixed mobile navigation once, after the footer links. */
   .q-site-footer { width: calc(100% - 1.7rem); padding-bottom: calc(var(--q-bottom-nav-height) + env(safe-area-inset-bottom) + 1rem); }
   .q-site-footer__links { align-items: stretch; gap: .25rem; font-size: clamp(.6875rem, 2.85vw, .75rem); }
-  .q-site-footer__links a { justify-content: center; line-height: 1.25; text-align: center; white-space: normal; }
+  .q-site-footer__links a { min-width: 0; flex: 1 1 0; justify-content: center; line-height: 1.25; text-align: center; overflow-wrap: anywhere; white-space: normal; }
   .q-site-footer__help-prefix { display: none; }
   .q-bottom-nav { position: fixed; right: 0; bottom: 0; left: 0; z-index: var(--q-z-bottom-nav); display: grid; min-height: calc(var(--q-bottom-nav-height) + env(safe-area-inset-bottom)); grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: start; border-top: 1px solid var(--q-line); background: var(--q-panel-glass); padding: .45rem .25rem calc(.35rem + env(safe-area-inset-bottom)); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); }
   .q-bottom-nav__link { position: relative; display: grid; min-width: 0; min-height: 3.75rem; place-items: center; align-content: center; gap: .24rem; border-radius: var(--q-r-sm); color: var(--q-muted); font-size: .58rem; font-weight: 800; line-height: 1.1; }
