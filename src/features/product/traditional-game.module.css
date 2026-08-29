@@ -318,7 +318,7 @@
 /* Short screens keep all fields and the payment action in normal document flow. */
 @media (max-width: 767px) and (max-height: 650px) {
   .page { gap: 7px; margin-top: -7px; padding-bottom: 7px; }
-  .page:is([data-game="head"], [data-game="prizes"]) { margin-top: -19px; }
+  .page:is([data-game="head"], [data-game="prizes"], [data-game="invert"]) { margin-top: -19px; }
   .page[data-game="redoblona"] { gap: 4px; margin-top: -11px; }
   .pageHeader { min-height: 24px; }
   .pageHeader .heroIcon { display: block; width: 24px; height: 24px; border-radius: 6px; }
