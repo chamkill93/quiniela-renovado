@@ -1676,7 +1676,7 @@
     animation: none;
   }
 
-  .resultBall,
+  .resultBalls[data-animate="true"] .resultBall,
   .resultBallSkeleton {
     animation: none;
     opacity: 1;

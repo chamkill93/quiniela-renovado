@@ -138,9 +138,30 @@ describe("Home latest-result balls stylesheet", () => {
 
   it("shows the final state immediately when reduced motion is requested", () => {
     for (const width of [320, 1024, 1440]) {
-      expect(declaration(stylesheet, "resultBall", "animation", width, "reduce")).toBe("none");
-      expect(declaration(stylesheet, "resultBall", "opacity", width, "reduce")).toBe("1");
-      expect(declaration(stylesheet, "resultBall", "transform", width, "reduce")).toBe("none");
+      expect(declaration(
+        stylesheet,
+        "resultBall",
+        "animation",
+        width,
+        "reduce",
+        '.resultBalls[data-animate="true"]',
+      )).toBe("none");
+      expect(declaration(
+        stylesheet,
+        "resultBall",
+        "opacity",
+        width,
+        "reduce",
+        '.resultBalls[data-animate="true"]',
+      )).toBe("1");
+      expect(declaration(
+        stylesheet,
+        "resultBall",
+        "transform",
+        width,
+        "reduce",
+        '.resultBalls[data-animate="true"]',
+      )).toBe("none");
       expect(declaration(stylesheet, "resultBallSkeleton", "animation", width, "reduce")).toBe("none");
     }
   });

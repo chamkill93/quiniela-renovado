@@ -599,7 +599,7 @@ test("completes Home with scheduled draws, fourteen result balls and the officia
   expect(verticalOrder).toEqual([...verticalOrder].sort((a, b) => a - b));
 
   const viewportWidth = page.viewportSize()?.width ?? 0;
-  const resultColumns = viewportWidth >= 1_280 ? 14 : viewportWidth >= 768 ? 7 : viewportWidth > 420 ? 5 : 4;
+  const resultColumns = viewportWidth >= 1_280 ? 14 : viewportWidth >= 768 ? 7 : viewportWidth >= 360 ? 5 : 4;
   const resultRows = Math.ceil(14 / resultColumns);
   const drawColumns = await page.getByTestId("home-draw-grid").evaluate((element) =>
     getComputedStyle(element).gridTemplateColumns.split(" ").filter(Boolean).length,
@@ -1724,7 +1724,9 @@ test("registers through the session service with normal account copy", async ({
 
   await expect(page.getByRole("heading", { level: 1, name: "Cuenta" })).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "Ana Preview" })).toBeVisible();
-  await expect(page.getByRole("status")).toContainText("Registro completado");
+  await expect(
+    page.getByRole("status").filter({ hasText: "Registro completado" }),
+  ).toContainText("Registro completado");
 });
 
 test("renders an unauthorized state when the session expires", async ({

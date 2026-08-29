@@ -209,8 +209,9 @@
 
 @media (max-width: 767px) {
   .page { gap: 10px; padding: 0 0 12px; }
+  .page[data-game="redoblona"] { gap: 8px; }
   .breadcrumb { display: none; }
-  .pageHeader { min-height: 44px; gap: 8px; }
+  .pageHeader { min-height: 32px; gap: 8px; }
   .titleGroup { flex: 1; gap: 8px; }
   .titleGroup .heroIcon { width: 31px; height: 31px; border-radius: 8px; }
   .titleGroup h1 { font-size: clamp(1.05rem, 4.5vw, 1.35rem); }
