@@ -333,6 +333,7 @@
   .page[data-game="redoblona"] .pageHeader .heroIcon { width: 20px; height: 20px; }
   .page[data-game="redoblona"] .pageHeader h1 { font-size: 1rem; }
   .stepCard { padding-block: 3px; }
+  .page[data-game="head"] .stepCard { padding-block: 1px; }
   .stepHeading { margin-bottom: 5px; }
   .stepHeading h2 { font-size: .71rem; }
   .stepNumber { width: 18px; height: 18px; font-size: .49rem; }

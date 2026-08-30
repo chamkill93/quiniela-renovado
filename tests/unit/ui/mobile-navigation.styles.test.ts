@@ -115,9 +115,13 @@ function expectSafeAreaInsets(
     .toBe(`calc(${bottomInset}+env(safe-area-inset-bottom))`);
 }
 
-function expectFiveDestinations(viewport: Viewport, centerMinimum: string) {
+function expectFiveDestinations(
+  viewport: Viewport,
+  centerMinimum: string,
+  expectedColumns = `repeat(2,minmax(0,1fr))minmax(${centerMinimum},1fr)repeat(2,minmax(0,1fr))`,
+) {
   expect(compact(declaration(".mobileNavInner", "grid-template-columns", viewport))).toBe(
-    `repeat(2,minmax(0,1fr))minmax(${centerMinimum},1fr)repeat(2,minmax(0,1fr))`,
+    expectedColumns,
   );
   for (const selector of [".mobileNavLink", ".mobileNavAction"]) {
     expect(Number.parseFloat(declaration(selector, "min-height", viewport)!)).toBeGreaterThanOrEqual(44);
@@ -163,7 +167,13 @@ describe("mobile navigation floating-pill stylesheet", () => {
     expect(declaration(".mobileNavInner", "height", viewport)).toBe(
       under320 ? "4.1rem" : "clamp(4.2rem, 19vw, 4.75rem)",
     );
-    expectFiveDestinations(viewport, under320 ? "3.15rem" : "3.4rem");
+    expectFiveDestinations(
+      viewport,
+      under320 ? "3.15rem" : "3.4rem",
+      under320
+        ? "repeat(2,minmax(0,1fr))minmax(3.15rem,1fr)minmax(0,1.12fr)minmax(44px,.88fr)"
+        : undefined,
+    );
     expectFourDecorativeSeparators(
       viewport,
       under320 ? "1.08rem" : "1.28rem",
