@@ -66,15 +66,15 @@
 @media (max-width: 767px) {
   .button {
     top: -22px;
-    right: calc(18px + env(safe-area-inset-right));
-    left: auto;
+    right: auto;
+    left: 50%;
     width: 42px;
     height: 38px;
-    transform: none;
+    transform: translateX(-50%);
   }
 
   .button:active {
-    transform: scale(.95);
+    transform: translateX(-50%) scale(.95);
   }
 }
 

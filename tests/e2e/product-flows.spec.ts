@@ -798,7 +798,10 @@ test("keeps a compact footer with all legal links together across the menus", as
     const rows = await links.evaluateAll((elements) => elements.map((element) =>
       Math.round(element.getBoundingClientRect().top),
     ));
-    expect(new Set(rows).size, route).toBe(1);
+    const rowCount = new Set(rows).size;
+    expect(rowCount, route).toBe(page.viewportSize()!.width < 360 ? 2 : 1);
+    await expect(footer.getByRole("link", { name: "Juego responsable", exact: true }))
+      .toHaveText("Juego responsable");
     const gap = await page.getByRole("main").evaluate((element) => {
       const footer = document.querySelector(".q-site-footer")!;
       return footer.getBoundingClientRect().top - element.lastElementChild!.getBoundingClientRect().bottom;

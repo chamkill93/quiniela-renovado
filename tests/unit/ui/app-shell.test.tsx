@@ -38,11 +38,14 @@ describe("AppShell navigation", () => {
     const sound = topbar.getByTestId("sound-toggle");
     const support = topbar.getByTestId("support-button");
     const preferenceControls = sound.closest(".q-preference-controls");
+    const utilities = support.closest(".q-topbar__utilities");
     expect(support.tagName).toBe("A");
     expect(support.getAttribute("href")).toBe("/ayuda");
     expect(support.getAttribute("aria-label")).toBe("Abrir soporte");
     expect(support.getAttribute("title")).toBe("Soporte");
     expect(preferenceControls).not.toBeNull();
+    expect(utilities).not.toBeNull();
+    expect(balance.nextElementSibling).toBe(utilities);
     expect(preferenceControls!.lastElementChild).toBe(sound);
     expect(preferenceControls!.nextElementSibling).toBe(support);
   });
@@ -120,6 +123,8 @@ describe("AppShell navigation", () => {
     expect(footer.queryByText("Volver al inicio")).toBeNull();
     expect(footer.queryByText("Quiniela online · Paraguay")).toBeNull();
     expect(footer.getAllByRole("link")).toHaveLength(5);
+    expect(footer.getByRole("link", { name: "Juego responsable" }).getAttribute("href"))
+      .toBe("/legal/juego-responsable");
     expect(within(screen.getByRole("main")).getByText("Quiniela online · Paraguay")).toBeTruthy();
   });
 });

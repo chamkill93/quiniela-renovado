@@ -222,15 +222,26 @@ test("renders the accessible product shell without horizontal overflow", async (
       links.map((link) => ({
         top: Math.round(link.getBoundingClientRect().top),
         height: link.getBoundingClientRect().height,
+        clientHeight: link.clientHeight,
+        scrollHeight: link.scrollHeight,
         clientWidth: link.clientWidth,
         scrollWidth: link.scrollWidth,
       })),
     );
-    expect(new Set(linkLayout.map((link) => link.top)).size).toBe(1);
+    const footerRows = new Set(linkLayout.map((link) => link.top)).size;
+    expect(footerRows).toBe(page.viewportSize()!.width < 360 ? 2 : 1);
+    if (page.viewportSize()!.width < 360) {
+      expect(new Set(linkLayout.slice(0, 3).map((link) => link.top)).size).toBe(1);
+      expect(new Set(linkLayout.slice(3).map((link) => link.top)).size).toBe(1);
+      expect(linkLayout[3].top).toBeGreaterThan(linkLayout[0].top);
+    }
     for (const link of linkLayout) {
       expect(link.height).toBeGreaterThanOrEqual(44);
       expect(link.scrollWidth).toBeLessThanOrEqual(link.clientWidth + 1);
+      expect(link.scrollHeight).toBeLessThanOrEqual(link.clientHeight + 1);
     }
+    await expect(footerNavigation.getByRole("link", { name: "Juego responsable", exact: true }))
+      .toHaveText("Juego responsable");
     for (const link of await footerLinks.all()) {
       await expectInsideHorizontalViewport(link, page);
     }
@@ -335,7 +346,7 @@ test("positions the footer back-to-top button responsively and supports click an
   } else {
     expect(metrics.buttonWidth).toBeCloseTo(42, 0);
     expect(metrics.buttonHeight).toBeCloseTo(38, 0);
-    expect(metrics.footerRight - metrics.buttonRight).toBeCloseTo(18, 0);
+    expect(Math.abs(metrics.buttonCenter - metrics.footerCenter)).toBeLessThanOrEqual(1);
     expect(metrics.footerTop - metrics.buttonTop).toBeGreaterThanOrEqual(20);
     expect(metrics.footerTop - metrics.buttonTop).toBeLessThanOrEqual(24);
   }
@@ -401,16 +412,61 @@ test("keeps the Home hero compact and unclipped across narrow Samsung and landsc
       await expectInsideHorizontalViewport(topbarItem, page);
     }
 
-    if (viewport.width <= 430) {
+    const balanceValue = page.locator(".q-balance__value");
+    expect(await balanceValue.evaluate((element) => (
+      element.scrollWidth <= element.clientWidth + 1
+    ))).toBe(true);
+
+    if (viewport.width < 360) {
       const mobileBrand = await page.locator(".q-topbar__mobile-brand").boundingBox();
       const live = await page.getByTestId("draw-live-indicator").boundingBox();
-      const actions = await page.locator(".q-topbar__actions").boundingBox();
+      const balance = await page.locator(".q-balance").boundingBox();
+      const utilities = await page.locator(".q-topbar__utilities").boundingBox();
       expect(live!.x).toBeGreaterThanOrEqual(mobileBrand!.x + mobileBrand!.width);
       expect(live!.y).toBeLessThan(mobileBrand!.y + mobileBrand!.height);
       expect(live!.y + live!.height).toBeGreaterThan(mobileBrand!.y);
-      expect(actions!.y).toBeGreaterThanOrEqual(
-        Math.max(mobileBrand!.y + mobileBrand!.height, live!.y + live!.height),
-      );
+      expect(balance!.x).toBeGreaterThanOrEqual(live!.x + live!.width);
+      expect(utilities!.y).toBeGreaterThanOrEqual(balance!.y + balance!.height);
+      expect(Math.abs(
+        (utilities!.x + utilities!.width) - (balance!.x + balance!.width),
+      )).toBeLessThanOrEqual(2);
+    } else if (viewport.width <= 639) {
+      const topbar = await page.locator(".q-topbar").boundingBox();
+      const items = await Promise.all([
+        page.locator(".q-topbar__mobile-brand").boundingBox(),
+        page.getByTestId("draw-live-indicator").boundingBox(),
+        page.locator(".q-balance").boundingBox(),
+        page.locator(".q-topbar__utilities").boundingBox(),
+      ]);
+      for (const item of items) {
+        expect(item!.y).toBeLessThan(topbar!.y + topbar!.height);
+        expect(item!.y + item!.height).toBeGreaterThan(topbar!.y);
+      }
+      expect(Math.max(...items.map((item) => item!.y)) - Math.min(...items.map((item) => item!.y)))
+        .toBeLessThanOrEqual(8);
+    }
+
+    if (viewport.width <= 639) {
+      const originalBalance = await balanceValue.textContent();
+      await balanceValue.evaluate((element) => {
+        element.textContent = "₲ 9.007.199.254.740.991";
+      });
+
+      const mobileBrand = page.locator(".q-topbar__mobile-brand");
+      const brandBox = await mobileBrand.boundingBox();
+      expect(brandBox!.width, `${viewport.name}: brand remains readable with a long balance`)
+        .toBeGreaterThanOrEqual(60);
+      for (const topbarItem of [
+        mobileBrand,
+        page.locator(".q-balance"),
+        page.locator(".q-topbar__utilities"),
+      ]) {
+        await expectInsideHorizontalViewport(topbarItem, page);
+      }
+
+      await balanceValue.evaluate((element, value) => {
+        element.textContent = value;
+      }, originalBalance ?? "");
     }
 
     const metrics = await hero.evaluate((element) => {

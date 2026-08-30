@@ -99,11 +99,25 @@
   box-shadow: 0 0 10px color-mix(in srgb, var(--q-red) 45%, transparent);
 }
 
-@media (max-width: 390px) {
+@media (max-width: 639px) {
   .indicator {
     min-height: 2rem;
-    padding-inline: .58rem;
-    font-size: .65rem;
+    gap: .35rem;
+    padding-inline: .5rem;
+    font-size: .64rem;
+  }
+
+  .indicator .dot {
+    width: .5rem;
+    height: .5rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .indicator {
+    gap: .3rem;
+    padding-inline: .42rem;
+    font-size: .62rem;
   }
 
   .liveDialog :global(.q-modal__header) {

@@ -80,15 +80,16 @@ describe("topbar stylesheet contract", () => {
   });
 
   it.each([
-    { width: 280, height: 653, balanceMin: "4.9rem", balanceMax: "5.25rem", toolSize: "2rem" },
-    { width: 320, height: 568, balanceMin: "5.65rem", balanceMax: "6.2rem", toolSize: "2.2rem" },
-    { width: 390, height: 844, balanceMin: "5.65rem", balanceMax: "6.2rem", toolSize: "2.2rem" },
-    { width: 430, height: 932, balanceMin: "6.35rem", balanceMax: "7rem", toolSize: "2.45rem" },
-    { width: 479, height: 932, balanceMin: "6.35rem", balanceMax: "7rem", toolSize: "2.45rem" },
-    { width: 480, height: 932, balanceMin: "6.35rem", balanceMax: "7rem", toolSize: "2.45rem" },
+    { width: 280, height: 653, balanceMin: "5.4rem", balanceMax: "8.5rem", toolSize: "2rem" },
+    { width: 320, height: 568, balanceMin: "5.4rem", balanceMax: "8.5rem", toolSize: "2.15rem" },
+    { width: 390, height: 844, balanceMin: "5.4rem", balanceMax: "8.5rem", toolSize: "2.15rem" },
+    { width: 430, height: 932, balanceMin: "5.4rem", balanceMax: "8.5rem", toolSize: "2.15rem" },
+    { width: 479, height: 932, balanceMin: "5.4rem", balanceMax: "8.5rem", toolSize: "2.15rem" },
+    { width: 480, height: 932, balanceMin: "5.4rem", balanceMax: "8.5rem", toolSize: "2.15rem" },
+    { width: 639, height: 932, balanceMin: "5.4rem", balanceMax: "8.5rem", toolSize: "2.15rem" },
     { width: 768, height: 1024, balanceMin: "6.9rem", balanceMax: undefined, toolSize: "2.75rem" },
     { width: 979, height: 1024, balanceMin: "6.9rem", balanceMax: undefined, toolSize: "2.75rem" },
-  ] as const)("preserves the compact mobile topbar at $width px", ({
+  ] as const)("preserves the compact mobile topbar controls at $width px", ({
     width,
     height,
     balanceMin,
@@ -111,26 +112,58 @@ describe("topbar stylesheet contract", () => {
   it.each([
     { width: 280, height: 653 },
     { width: 320, height: 568 },
-    { width: 360, height: 800 },
-    { width: 390, height: 844 },
-    { width: 430, height: 932 },
-    { width: 479, height: 932 },
-  ] as const)("keeps logo and LIVE together above the tools at $width px", (viewport) => {
+    { width: 359, height: 800 },
+  ] as const)("keeps the balance beside the identity in the narrow two-row header at $width px", (viewport) => {
     expect(declaration(".q-topbar", "display", viewport)).toBe("grid");
-    expect(declaration(".q-topbar", "grid-template-columns", viewport)).toBe("minmax(0, 1fr)");
+    expect(declaration(".q-topbar", "grid-template-columns", viewport))
+      .toBe("minmax(0, 1fr) max-content");
+    expect(declaration(".q-topbar", "grid-template-rows", viewport)).toBe("auto auto");
     expect(declaration(".q-topbar__heading", "width", viewport)).toBe("100%");
-    expect(declaration(".q-topbar__actions", "width", viewport)).toBe("100%");
-    expect(declaration(".q-topbar__actions", "margin-left", viewport)).toBe("0");
-    expect(declaration(".q-balance", "margin-right", viewport)).toBe("auto");
+    expect(declaration(".q-topbar__heading", "grid-column", viewport)).toBe("1");
+    expect(declaration(".q-topbar__heading", "grid-row", viewport)).toBe("1 / 3");
+    expect(declaration(".q-topbar__actions", "display", viewport)).toBe("contents");
+    expect(declaration(".q-balance", "grid-column", viewport)).toBe("2");
+    expect(declaration(".q-balance", "grid-row", viewport)).toBe("1");
+    expect(declaration(".q-balance", "justify-self", viewport)).toBe("end");
+    expect(declaration(".q-balance__value", "overflow", viewport)).toBe("hidden");
+    expect(declaration(".q-balance__value", "text-overflow", viewport)).toBe("ellipsis");
+    expect(declaration(".q-topbar__utilities", "grid-column", viewport)).toBe("2");
+    expect(declaration(".q-topbar__utilities", "grid-row", viewport)).toBe("2");
+    expect(declaration(".q-topbar__utilities", "justify-self", viewport)).toBe("end");
   });
 
   it.each([
+    { width: 280, height: 653 },
+    { width: 320, height: 568 },
+    { width: 360, height: 800 },
+    { width: 390, height: 844 },
+    { width: 430, height: 932 },
     { width: 480, height: 932 },
+    { width: 639, height: 932 },
+  ] as const)("keeps long mobile balances from compressing the brand at $width px", (viewport) => {
+    expect(declaration(".q-topbar__heading", "flex", viewport)).toBe("0 0 auto");
+    expect(declaration(".q-topbar__mobile-brand", "flex", viewport)).toBe("0 0 auto");
+    expect(declaration(".q-topbar__actions", "flex", viewport)).toBe("1 1 auto");
+    expect(declaration(".q-balance", "min-width", viewport)).toBe("5.4rem");
+    expect(declaration(".q-balance", "max-width", viewport)).toBe("8.5rem");
+    expect(declaration(".q-balance__value", "overflow", viewport)).toBe("hidden");
+    expect(declaration(".q-balance__value", "text-overflow", viewport)).toBe("ellipsis");
+  });
+
+  it.each([
+    { width: 360, height: 800 },
+    { width: 390, height: 844 },
+    { width: 430, height: 932 },
+    { width: 480, height: 932 },
+    { width: 639, height: 932 },
+    { width: 640, height: 932 },
+    { width: 768, height: 1024 },
     { width: 979, height: 1024 },
   ] as const)("keeps the single-row mobile header when $width px has enough room", (viewport) => {
     expect(declaration(".q-topbar", "display", viewport)).toBe("flex");
     expect(declaration(".q-topbar__heading", "flex-direction", viewport)).toBe("row");
-    expect(declaration(".q-topbar__actions", "width", viewport)).toBeUndefined();
-    expect(declaration(".q-balance", "margin-right", viewport)).toBeUndefined();
+    expect(declaration(".q-topbar__actions", "display", viewport)).toBe("flex");
+    expect(declaration(".q-topbar__utilities", "display", viewport)).toBe("flex");
+    expect(declaration(".q-balance", "grid-column", viewport)).toBeUndefined();
   });
 });

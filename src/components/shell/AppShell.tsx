@@ -339,17 +339,19 @@ function AppShellFrame({
               </span>
               <span className="q-balance__value">{formatBalance(balance)}</span>
             </Link>
-            {topbarActions}
-            <ThemeSoundControls />
-            <Link
-              aria-label="Abrir soporte"
-              className="q-icon-button q-support-button"
-              data-testid="support-button"
-              href="/ayuda"
-              title="Soporte"
-            >
-              <Icon name="support" size={19} />
-            </Link>
+            <div className="q-topbar__utilities">
+              {topbarActions}
+              <ThemeSoundControls />
+              <Link
+                aria-label="Abrir soporte"
+                className="q-icon-button q-support-button"
+                data-testid="support-button"
+                href="/ayuda"
+                title="Soporte"
+              >
+                <Icon name="support" size={19} />
+              </Link>
+            </div>
             <Link className="q-user-chip" href="/cuenta" aria-label={`Abrir cuenta de ${userName}`}>
               <span className="q-user-chip__avatar" aria-hidden="true">{initialsFor(userName)}</span>
               <span className="q-user-chip__name">{userName}</span>

@@ -26,6 +26,16 @@ const shortLandscapes = [
   { width: 844, height: 390 },
 ] as const satisfies readonly Viewport[];
 
+const footerViewports = [
+  { width: 280, height: 653 },
+  { width: 320, height: 568 },
+  { width: 360, height: 800 },
+  { width: 390, height: 844 },
+  { width: 430, height: 932 },
+  { width: 639, height: 932 },
+  { width: 979, height: 1024 },
+] as const satisfies readonly Viewport[];
+
 function mediaQueryMatches(query: string, viewport: Viewport) {
   for (const match of query.matchAll(/\(\s*(max|min)-(width|height)\s*:\s*(\d+(?:\.\d+)?)px\s*\)/g)) {
     const dimension = match[2] === "width" ? viewport.width : viewport.height;
@@ -241,6 +251,41 @@ describe("mobile navigation floating-pill stylesheet", () => {
     expect(compact(declaration(".q-toast-region", "bottom", viewport))).toBe(
       "calc(var(--q-bottom-nav-height)+env(safe-area-inset-bottom)+.75rem)",
     );
+  });
+
+  it.each(footerViewports)("keeps every footer label complete at $width x $height", (viewport) => {
+    if (viewport.width < 360) {
+      expect(declaration(".q-site-footer__links", "display", viewport)).toBe("grid");
+      expect(compact(declaration(".q-site-footer__links", "grid-template-columns", viewport)))
+        .toBe("repeat(12,minmax(0,1fr))");
+      expect(declaration(".q-site-footer__links a", "width", viewport)).toBe("100%");
+      expect(declaration(".q-site-footer__links a:nth-child(1)", "grid-column", viewport))
+        .toBe("span 3");
+      expect(declaration(".q-site-footer__links a:nth-child(3)", "grid-column", viewport))
+        .toBe("span 6");
+    } else {
+      expect(declaration(".q-site-footer__links", "display", viewport)).toBe("flex");
+      expect(declaration(".q-site-footer__links", "flex-wrap", viewport)).toBe("nowrap");
+      expect(declaration(".q-site-footer__links", "justify-content", viewport)).toBe("center");
+    }
+    expect(declaration(".q-site-footer__links", "gap", viewport)).toBe(
+      viewport.width < 360
+        ? ".1rem .25rem"
+        : viewport.width <= 390
+          ? ".1rem .2rem"
+          : ".1rem clamp(.4rem, 2.2vw, .85rem)",
+    );
+    expect(declaration(".q-site-footer__links a", "flex", viewport)).toBe(
+      viewport.width < 360 ? "0 0 auto" : "1 1 auto",
+    );
+    expect(declaration(".q-site-footer__links a", "min-width", viewport)).toBe(
+      viewport.width < 360 ? "0" : "min-content",
+    );
+    expect(declaration(".q-site-footer__links a", "overflow-wrap", viewport)).toBe("normal");
+    expect(declaration(".q-site-footer__links a", "white-space", viewport)).toBe(
+      viewport.width < 360 ? "nowrap" : "normal",
+    );
+    expect(declaration(".q-site-footer__links a", "min-height", viewport)).toBe("2.75rem");
   });
 
   it.each([
