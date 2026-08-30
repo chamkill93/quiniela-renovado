@@ -79,6 +79,21 @@
 .logoutButton:disabled { cursor: wait; opacity: .6; }
 .logoutError { flex-basis: 100%; }
 
+.accountDialog :global(.q-modal__heading) {
+  display: grid;
+  min-width: 0;
+  flex: 1 1 auto;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+.accountDialog :global(.q-modal__title),
+.accountDialog :global(.q-modal__description) { grid-column: 2; }
+.dialogBackButton { display: grid; width: 44px; height: 44px; grid-row: 1 / span 2; place-items: center; border: 1px solid color-mix(in srgb, var(--q-red) 42%, var(--q-line)); border-radius: 12px; background: color-mix(in srgb, var(--q-red) 12%, var(--q-panel)); color: var(--q-red); transition: background 160ms ease, border-color 160ms ease, transform 160ms ease; }
+.dialogBackButton:hover { border-color: var(--q-red); background: color-mix(in srgb, var(--q-red) 18%, var(--q-panel)); transform: translateX(-1px); }
+.dialogBackButton:focus-visible { outline: 2px solid var(--q-red-soft); outline-offset: 2px; }
+.dialogBackTriangle { width: 0; height: 0; border-top: 7px solid transparent; border-right: 11px solid currentColor; border-bottom: 7px solid transparent; transform: translateX(-1px); }
+
 .dialogStack { display: grid; gap: 20px; min-width: 0; }
 .dialogNote { color: var(--q-muted-strong); font-size: .86rem; line-height: 1.7; }
 .profileDetails { margin: 0; }
@@ -140,5 +155,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .menuItem, .logoutButton { transition: none; }
+  .menuItem, .logoutButton, .dialogBackButton { transition: none; }
 }

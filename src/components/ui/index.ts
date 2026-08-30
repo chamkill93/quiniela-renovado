@@ -1,4 +1,8 @@
 export {
+  BackToTopButton,
+  type BackToTopButtonProps,
+} from "./BackToTopButton";
+export {
   Button,
   ButtonLink,
   type ButtonLinkProps,

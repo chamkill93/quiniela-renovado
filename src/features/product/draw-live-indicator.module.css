@@ -1,13 +1,25 @@
 .indicator {
   display: inline-flex;
+  min-height: 2.25rem;
   align-items: center;
   gap: .5rem;
+  border: 1px solid color-mix(in srgb, var(--q-muted-strong) 32%, var(--q-line));
+  border-radius: var(--q-pill);
+  background: color-mix(in srgb, var(--q-panel-2) 86%, transparent);
+  box-shadow: inset 0 1px rgb(255 255 255 / 5%);
+  padding: 0 .72rem;
   color: var(--q-muted-strong);
+  cursor: pointer;
   font-size: .7rem;
   font-weight: 850;
   letter-spacing: .1em;
   line-height: 1.5;
   white-space: nowrap;
+  transition:
+    border-color var(--q-duration-base) var(--q-ease-standard),
+    background var(--q-duration-base) var(--q-ease-standard),
+    color var(--q-duration-base) var(--q-ease-standard),
+    transform var(--q-duration-fast) var(--q-ease-standard);
 }
 
 .dot {
@@ -19,7 +31,24 @@
 }
 
 .indicator[data-active="true"] {
+  border-color: color-mix(in srgb, var(--q-red) 52%, var(--q-line));
+  background: color-mix(in srgb, var(--q-red) 12%, var(--q-panel-2));
   color: var(--q-red-soft);
+}
+
+.indicator:hover {
+  border-color: color-mix(in srgb, currentColor 58%, var(--q-line));
+  background: var(--q-surface-hover);
+  transform: translateY(-1px);
+}
+
+.indicator:active {
+  transform: scale(.97);
+}
+
+.indicator:focus-visible {
+  outline: 3px solid var(--q-focus);
+  outline-offset: 3px;
 }
 
 :global([data-theme="light"]) .indicator[data-active="true"] {
@@ -30,4 +59,62 @@
   background: var(--q-red);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--q-red) 12%, transparent),
     0 0 12px color-mix(in srgb, var(--q-red) 45%, transparent);
+}
+
+.liveDialog :global(.q-modal__body) {
+  padding-top: .25rem;
+}
+
+.popout {
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: .75rem;
+}
+
+.popoutState {
+  min-height: 1.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  margin: 0;
+  border: 1px solid var(--q-line);
+  border-radius: var(--q-pill);
+  background: var(--q-panel-2);
+  padding: 0 .75rem;
+  color: var(--q-muted-strong);
+  font-size: .62rem;
+  font-weight: 900;
+  letter-spacing: .075em;
+}
+
+.popoutState[data-active="true"] {
+  border-color: color-mix(in srgb, var(--q-red) 48%, var(--q-line));
+  background: color-mix(in srgb, var(--q-red) 10%, var(--q-panel-2));
+  color: var(--q-red-soft);
+}
+
+.popoutState[data-active="true"] .dot {
+  background: var(--q-red);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--q-red) 45%, transparent);
+}
+
+@media (max-width: 390px) {
+  .indicator {
+    min-height: 2rem;
+    padding-inline: .58rem;
+    font-size: .65rem;
+  }
+
+  .liveDialog :global(.q-modal__header) {
+    padding: 1rem 1rem .7rem;
+  }
+
+  .liveDialog :global(.q-modal__body) {
+    padding: .35rem .75rem 1rem;
+  }
+
+  .popout {
+    gap: .6rem;
+  }
 }

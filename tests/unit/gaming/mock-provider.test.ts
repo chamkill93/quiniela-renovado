@@ -38,7 +38,7 @@ function providerWithResults(
 const traditionalSelections = [
   { gameId: "head", selection: { number: "007" } },
   { gameId: "prizes", selection: { number: "007", position: 14 } },
-  { gameId: "invert", selection: { number: "007", position: 1 } },
+  { gameId: "invert", selection: { number: "017", position: 1 } },
   { gameId: "redoblona", selection: { initialNumber: "07", initialUntil: 1, redoblonaNumber: "00", redoblonaUntil: 7 } },
 ] as const;
 

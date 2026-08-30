@@ -9,6 +9,11 @@ const stylesheetPath = fileURLToPath(new URL(
 ));
 const stylesheetText = readFileSync(stylesheetPath, "utf8");
 const stylesheet = postcss.parse(stylesheetText, { from: stylesheetPath });
+const carouselComponentPath = fileURLToPath(new URL(
+  "../../../src/features/product/home-latest-results-carousel.tsx",
+  import.meta.url,
+));
+const carouselComponentText = readFileSync(carouselComponentPath, "utf8");
 type MotionPreference = "no-preference" | "reduce";
 type Theme = "dark" | "light";
 
@@ -55,19 +60,27 @@ function declaration(
   return selected?.value;
 }
 
-function keyframeDeclaration(frame: string, property: string) {
-  let keyframes: AtRule | undefined;
-  stylesheet.walkAtRules("keyframes", (rule) => {
-    if (rule.params === "resultBallGather") keyframes = rule;
-  });
-  let value: string | undefined;
-  keyframes?.walkRules((rule) => {
-    if (rule.selector !== frame) return;
+function exactDeclaration(
+  tree: Root,
+  selector: string,
+  property: string,
+  width: number,
+  motion: MotionPreference = "no-preference",
+  theme: Theme = "dark",
+) {
+  let selected: { value: string; important: boolean } | undefined;
+  tree.walkRules((rule) => {
+    if (!applies(rule, width, motion)) return;
+    const selectorTheme = rule.selector.match(/data-theme\s*=\s*["'](dark|light)["']/)?.[1];
+    if (selectorTheme && selectorTheme !== theme) return;
+    if (!rule.selector.split(",").some((candidate) => candidate.trim() === selector)) return;
     for (const node of rule.nodes ?? []) {
-      if (node.type === "decl" && node.prop === property) value = node.value;
+      if (node.type !== "decl" || node.prop !== property) continue;
+      if (selected?.important && !node.important) continue;
+      selected = { value: node.value, important: Boolean(node.important) };
     }
   });
-  return value;
+  return selected?.value;
 }
 
 function compact(value: string | undefined) {
@@ -80,125 +93,220 @@ function overflowX(width: number) {
 }
 
 describe("Home latest-result balls stylesheet", () => {
-  it("keeps result items and loading placeholders circular", () => {
-    for (const className of ["resultBall", "resultBallSkeleton"]) {
-      expect(declaration(stylesheet, className, "width", 1440)).toBe("100%");
-      expect(declaration(stylesheet, className, "aspect-ratio", 1440)).toBe("1");
-      expect(declaration(stylesheet, className, "border-radius", 1440)).toBe("50%");
-      expect(declaration(stylesheet, className, "max-width", 1440)).toBe("78px");
-    }
-    expect(declaration(stylesheet, "resultBall", "display", 1440)).toBe("grid");
-    expect(declaration(stylesheet, "resultBall", "place-items", 1440)).toBe("center");
-  });
-
-  it("lays out all 14 balls in one left-to-right row on wide screens", () => {
-    expect(compact(declaration(stylesheet, "resultBalls", "grid-template-columns", 1440)))
-      .toBe("repeat(14,minmax(0,1fr))");
-    expect(declaration(stylesheet, "resultBalls", "direction", 1440)).toBe("ltr");
-    expect(overflowX(1440)).toBe("hidden");
-  });
-
   it.each([
-    [1279, 7],
-    [768, 7],
-    [767, 5],
-    [430, 5],
-    [412, 5],
-    [384, 5],
-    [360, 5],
-    [359, 4],
-    [320, 4],
-    [280, 4],
-  ] as const)("uses the responsive cluster at %ipx with %i columns and no horizontal scroller", (width, columns) => {
-    expect(compact(declaration(stylesheet, "resultBalls", "grid-template-columns", width)))
-      .toBe("repeat(" + columns + ",minmax(0,1fr))");
-    expect(declaration(stylesheet, "resultBalls", "direction", width)).toBe("ltr");
-    expect(overflowX(width)).toBe("hidden");
-    expect(declaration(stylesheet, "resultBalls", "grid-auto-flow", width)).not.toBe("column");
-    if (width <= 767) {
-      expect(declaration(stylesheet, "resultBallPosture", "white-space", width)).toBe("nowrap");
-      expect(declaration(stylesheet, "resultBallPosture", "text-overflow", width)).toBe("ellipsis");
+    1920,
+    1440,
+    1366,
+    1024,
+    768,
+    430,
+    390,
+    360,
+  ] as const)("keeps one horizontally scrollable flex row at %ipx", (width) => {
+    expect(exactDeclaration(stylesheet, ".resultBalls", "display", width)).toBe("flex");
+    expect(exactDeclaration(stylesheet, ".resultBalls", "align-items", width)).toBe("flex-end");
+    expect(exactDeclaration(stylesheet, ".resultBalls", "flex-wrap", width) ?? "nowrap").toBe("nowrap");
+    expect(exactDeclaration(stylesheet, ".resultBalls", "direction", width)).toBe("ltr");
+    expect(overflowX(width)).toBe("auto");
+    expect(exactDeclaration(stylesheet, ".resultBalls", "overflow-y", width)).toBe("hidden");
+    expect(exactDeclaration(stylesheet, ".resultBalls", "scroll-snap-type", width)).toBe("x mandatory");
+    expect(exactDeclaration(stylesheet, ".resultBalls", "scrollbar-width", width)).toBe("none");
+    expect(exactDeclaration(stylesheet, ".resultBalls", "-webkit-overflow-scrolling", width)).toBe("touch");
+    expect(exactDeclaration(stylesheet, ".resultBall", "scroll-snap-align", width)).toBe("start");
+  });
+
+  it("hides both native scrollbar implementations", () => {
+    expect(declaration(stylesheet, "resultBalls", "scrollbar-color", 1440))
+      .toBe("transparent transparent");
+    expect(exactDeclaration(stylesheet, ".resultBalls::-webkit-scrollbar", "display", 1440))
+      .toBe("none");
+    expect(exactDeclaration(stylesheet, ".resultBalls::-webkit-scrollbar", "width", 1440))
+      .toBe("0");
+    expect(exactDeclaration(stylesheet, ".resultBalls::-webkit-scrollbar", "height", 1440))
+      .toBe("0");
+  });
+
+  it("uses stable 116px desktop slots and exposes roughly 3.35 slots on narrow mobile", () => {
+    for (const width of [768, 1024, 1366, 1440, 1920]) {
+      for (const className of ["resultBall", "resultBallSkeleton"]) {
+        expect(declaration(stylesheet, className, "flex", width)).toBe("0 0 116px");
+        expect(declaration(stylesheet, className, "width", width)).toBe("116px");
+      }
+    }
+
+    for (const width of [360, 390, 430, 639]) {
+      for (const className of ["resultBall", "resultBallSkeleton"]) {
+        expect(compact(declaration(stylesheet, className, "flex-basis", width)))
+          .toBe("calc((100%-24px)/3.35)");
+        expect(compact(declaration(stylesheet, className, "width", width)))
+          .toBe("calc((100%-24px)/3.35)");
+      }
     }
   });
 
-  it("uses the inverse entry index as a positive stagger without reversing layout", () => {
-    const animation = declaration(stylesheet, "resultBall", "animation", 1440);
-    expect(animation).toMatch(/^resultBallGather\s+440ms\b/);
-    expect(animation).toContain("both");
-    expect(compact(declaration(stylesheet, "resultBall", "animation-delay", 1440)))
-      .toBe("calc(var(--result-entry-index)*45ms)");
-    expect(declaration(stylesheet, "resultBall", "opacity", 1440)).toBe("0");
-    expect(declaration(stylesheet, "resultBalls", "direction", 1440)).toBe("ltr");
-    expect(declaration(stylesheet, "resultBall", "order", 1440)).toBeUndefined();
+  it("makes the first premium ball slightly larger and aligns every posture by its base", () => {
+    expect(exactDeclaration(stylesheet, ".resultBall", "--ball-art-width", 1440)).toBe("116px");
+    expect(exactDeclaration(
+      stylesheet,
+      '.resultBall[data-position="1"]',
+      "--ball-art-width",
+      1440,
+    )).toBe("132px");
 
-    expect(keyframeDeclaration("0%", "opacity")).toBe("0");
-    expect(keyframeDeclaration("100%", "opacity")).toBe("1");
-    expect(keyframeDeclaration("100%", "transform")).toBe("none");
-  });
+    expect(exactDeclaration(
+      stylesheet,
+      '.resultBall[data-position="1"]',
+      "--ball-art-width",
+      767,
+    )).toBe("120px");
 
-  it("shows the final state immediately when reduced motion is requested", () => {
-    for (const width of [320, 1024, 1440]) {
-      expect(declaration(
-        stylesheet,
-        "resultBall",
-        "animation",
-        width,
-        "reduce",
-        '.resultBalls[data-animate="true"]',
-      )).toBe("none");
-      expect(declaration(
-        stylesheet,
-        "resultBall",
-        "opacity",
-        width,
-        "reduce",
-        '.resultBalls[data-animate="true"]',
-      )).toBe("1");
-      expect(declaration(
-        stylesheet,
-        "resultBall",
-        "transform",
-        width,
-        "reduce",
-        '.resultBalls[data-animate="true"]',
-      )).toBe("none");
-      expect(declaration(stylesheet, "resultBallSkeleton", "animation", width, "reduce")).toBe("none");
+    expect(compact(exactDeclaration(stylesheet, ".resultBall", "--ball-art-width", 390)))
+      .toBe("clamp(76px,26.6667vw,96px)");
+    expect(compact(exactDeclaration(
+      stylesheet,
+      '.resultBall[data-position="1"]',
+      "--ball-art-width",
+      390,
+    ))).toBe("clamp(90px,30.5556vw,110px)");
+    expect(exactDeclaration(
+      stylesheet,
+      '.resultBall[data-position="1"] .resultBallArt',
+      "left",
+      390,
+    )).toBeUndefined();
+    for (const width of [390, 767]) {
+      expect(exactDeclaration(stylesheet, ".resultBalls", "padding", width))
+        .toBe("4px 2px 2px 15px");
+      expect(exactDeclaration(stylesheet, ".resultBalls", "scroll-padding-inline", width))
+        .toBe("15px 2px");
     }
+    expect(declaration(stylesheet, "resultBallArt", "height", 1440)).toBe("auto");
+    expect(declaration(stylesheet, "resultBallArt", "aspect-ratio", 1440)).toBe("1");
+    expect(exactDeclaration(stylesheet, ".resultBall", "grid-template-columns", 1440))
+      .toBe("minmax(0, 1fr)");
+    expect(exactDeclaration(stylesheet, ".resultBall", "--result-number-y", 1440)).toBe("49%");
+    expect(exactDeclaration(
+      stylesheet,
+      '.resultBall[data-position="1"]',
+      "--result-number-y",
+      1440,
+    )).toBe("59%");
+    expect(exactDeclaration(
+      stylesheet,
+      '.resultBall[data-tone="silver"]',
+      "--result-number-y",
+      1440,
+    )).toBe("55%");
+    expect(exactDeclaration(
+      stylesheet,
+      '.resultBall[data-tone="bronze"]',
+      "--result-number-y",
+      1440,
+    )).toBe("55%");
   });
 
-  it("retains distinct podium accents and a visible decorative rank icon", () => {
+  it("renders every result in its final state without an entrance animation", () => {
+    for (const width of [360, 768, 1024, 1440, 1920]) {
+      expect(exactDeclaration(stylesheet, ".resultBall", "animation", width)).toBeUndefined();
+      expect(exactDeclaration(stylesheet, ".resultBall", "animation-delay", width)).toBeUndefined();
+      expect(exactDeclaration(stylesheet, ".resultBall", "opacity", width)).not.toBe("0");
+      expect(exactDeclaration(stylesheet, ".resultBall", "transform", width)).toBeUndefined();
+    }
+    expect(stylesheetText).not.toMatch(/@keyframes\s+resultBallGather\b/);
+    expect(stylesheetText).not.toMatch(/\.resultBalls\[data-animate=/);
+    expect(carouselComponentText).not.toMatch(/data-animate|--result-entry-index|IntersectionObserver/);
+  });
+
+  it("styles four centered pagination segments with a longer active state", () => {
+    expect(carouselComponentText).toMatch(/const\s+RESULT_PAGE_COUNT\s*=\s*4\s*;/);
+    expect(carouselComponentText).toMatch(/Array\.from\(\{\s*length:\s*RESULT_PAGE_COUNT\s*\}/);
+    expect(declaration(stylesheet, "latestResultsPagination", "display", 390)).toBe("flex");
+    expect(declaration(stylesheet, "latestResultsPagination", "justify-content", 390)).toBe("center");
+    expect(declaration(stylesheet, "latestResultsPagination", "gap", 390)).toBe("8px");
+    expect(exactDeclaration(stylesheet, ".latestResultsSegment", "width", 390)).toBe("24px");
+    expect(exactDeclaration(stylesheet, ".latestResultsSegment", "height", 390)).toBe("8px");
+    expect(exactDeclaration(
+      stylesheet,
+      '.latestResultsSegment[data-active="true"]',
+      "width",
+      390,
+    )).toBe("42px");
+    expect(exactDeclaration(
+      stylesheet,
+      '.latestResultsSegment[data-active="true"]',
+      "opacity",
+      390,
+    )).toBe("1");
+  });
+
+  it("inherits premium posture-label colors for the gold, neutral and bronze podium", () => {
+    expect(declaration(stylesheet, "resultBallPosture", "color", 390)).toBe("currentColor");
+    expect(declaration(stylesheet, "resultBallPosture", "white-space", 390)).toBe("nowrap");
+    expect(declaration(stylesheet, "resultBallPosture", "text-overflow", 390)).toBe("ellipsis");
+    expect(stylesheetText).not.toMatch(/\.resultBallRank\b/);
+
     const palettes = {
-      dark: ["#e8b742", "#aebdce", "#cc814c"],
-      light: ["#b98410", "#71839b", "#a15e36"],
+      dark: ["#efbd3d", "var(--q-muted-strong)", "#d9955d"],
+      light: [
+        "#a36d00",
+        "color-mix(in srgb, var(--q-muted-strong) 90%, #313842)",
+        "#9a542d",
+      ],
     } as const;
     for (const theme of ["dark", "light"] as const) {
-      const accents = [1, 2, 3].map((position) => declaration(
-        stylesheet,
-        "resultBall",
-        "--result-accent",
-        390,
-        "no-preference",
-        '[data-position="' + position + '"]',
-        theme,
-      ));
-      expect(accents).toEqual(palettes[theme]);
-      expect(new Set(accents).size).toBe(3);
+      const baseSelector = theme === "dark"
+        ? ".resultBall"
+        : ':global([data-theme="light"]) .resultBall';
+      const firstSelector = theme === "dark"
+        ? '.resultBall[data-position="1"]'
+        : ':global([data-theme="light"]) .resultBall[data-position="1"]';
+      const thirdSelector = theme === "dark"
+        ? '.resultBall[data-position="3"]'
+        : ':global([data-theme="light"]) .resultBall[data-position="3"]';
+      expect([
+        exactDeclaration(stylesheet, firstSelector, "color", 390, "no-preference", theme),
+        exactDeclaration(stylesheet, baseSelector, "color", 390, "no-preference", theme),
+        exactDeclaration(stylesheet, thirdSelector, "color", 390, "no-preference", theme),
+      ]).toEqual(palettes[theme]);
     }
-    expect(declaration(
+  });
+
+  it("uses a theme-aware, non-interactive right fade only while more results remain", () => {
+    expect(exactDeclaration(stylesheet, ".latestResultsCarousel::after", "content", 390)).toBe('""');
+    expect(exactDeclaration(stylesheet, ".latestResultsCarousel::after", "pointer-events", 390))
+      .toBe("none");
+    expect(exactDeclaration(stylesheet, ".latestResultsCarousel::after", "opacity", 390)).toBe("0");
+    expect(exactDeclaration(
       stylesheet,
-      "resultRankIcon",
-      "position",
+      '.latestResultsCarousel[data-has-next="true"]::after',
+      "opacity",
+      390,
+    )).toBe("0.78");
+    expect(exactDeclaration(stylesheet, ".latestResultsCarousel::after", "background", 390))
+      .toBe("linear-gradient(90deg, transparent, color-mix(in srgb, var(--q-panel) 94%, transparent))");
+    expect(exactDeclaration(
+      stylesheet,
+      ':global([data-theme="light"]) .latestResultsCarousel::after',
+      "background",
       390,
       "no-preference",
-      ".resultBall .resultRankIcon",
-    )).toBe("absolute");
-    expect(declaration(
-      stylesheet,
-      "resultRankIcon",
-      "color",
-      390,
-      "no-preference",
-      ".resultBall .resultRankIcon",
-    )).toBe("var(--result-rank-ink)");
+      "light",
+    )).toBe("linear-gradient(90deg, transparent, color-mix(in srgb, #fff 82%, var(--q-panel)))");
+  });
+
+  it("removes optional carousel and loading motion when reduced motion is requested", () => {
+    for (const width of [360, 1024, 1440]) {
+      expect(declaration(stylesheet, "resultBallSkeleton", "animation", width, "reduce")).toBe("none");
+      expect(exactDeclaration(stylesheet, ".resultBalls", "scroll-behavior", width, "reduce"))
+        .toBe("auto");
+      expect(exactDeclaration(stylesheet, ".resultBallArt", "transition", width, "reduce"))
+        .toBeUndefined();
+      expect(exactDeclaration(stylesheet, ".latestResultsArrow", "transition", width, "reduce"))
+        .toBe("none");
+      expect(exactDeclaration(stylesheet, ".latestResultsSegment", "transition", width, "reduce"))
+        .toBe("none");
+      expect(exactDeclaration(stylesheet, ".latestResultsCarousel::after", "transition", width, "reduce"))
+        .toBe("none");
+    }
   });
 });

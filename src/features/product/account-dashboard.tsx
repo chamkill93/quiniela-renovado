@@ -176,7 +176,18 @@ export function AccountDashboard({
       </footer>
     </section>
 
-    <Modal open={panel !== null} onOpenChange={(open) => { if (!open) setPanel(null); }} title={panel ? panelTitles[panel] : "Cuenta"} size="md">
+    <Modal
+      className={styles.accountDialog}
+      leadingAction={(
+        <button aria-label="Volver a Cuenta" className={styles.dialogBackButton} onClick={() => setPanel(null)} title="Volver a Cuenta" type="button">
+          <span aria-hidden="true" className={styles.dialogBackTriangle} />
+        </button>
+      )}
+      open={panel !== null}
+      onOpenChange={(open) => { if (!open) setPanel(null); }}
+      title={panel ? panelTitles[panel] : "Cuenta"}
+      size="md"
+    >
       {panel === "profile" ? <div className={styles.dialogStack}>
         <dl className={styles.profileDetails}>
           <div><dt>ID de cuenta</dt><dd>{session.id}</dd></div>

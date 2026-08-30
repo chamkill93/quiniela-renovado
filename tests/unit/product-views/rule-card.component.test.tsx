@@ -86,6 +86,23 @@ describe("RuleCard", () => {
     },
   );
 
+  it("shows Invertida only for three distinct digits and their six orders", () => {
+    const rule = TRADITIONAL_RULES.find((candidate) => candidate.id === "invert")!;
+    render(<RuleCard rule={rule} />);
+    const card = screen.getByTestId("rule-card-invert");
+
+    expect(within(card).getByText("001 a 999 · sin repetir", { exact: true })).toBeTruthy();
+    fireEvent.click(within(card).getByRole("button", { name: "Ver reglas de Invertida" }));
+
+    const text = card.textContent ?? "";
+    expect(text).toMatch(/tres cifras (?:diferentes|distintas)/i);
+    expect(text).toMatch(/exactamente seis órdenes|seis órdenes posibles/i);
+    for (const order of ["123", "132", "213", "231", "312", "321"]) {
+      expect(text).toContain(order);
+    }
+    expect(text).not.toMatch(/Con 112|dos cifras iguales generan tres|tres cifras iguales generan uno/i);
+  });
+
   it("opens and closes with Enter and Space without navigating away or losing focus", async () => {
     const user = userEvent.setup();
     render(<RuleCard rule={TRADITIONAL_RULES[2]} />);

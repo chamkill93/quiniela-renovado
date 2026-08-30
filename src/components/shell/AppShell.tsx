@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import {
+  BackToTopButton,
   Icon,
   Logo,
   PreferencesProvider,
@@ -44,6 +45,8 @@ export interface AppShellProps {
   contentClassName?: string;
 }
 
+const mobilePlayMatches = ["/quinielas", "/jugar", "/instantaneas"];
+
 export const defaultShellNavItems: ShellNavItem[] = [
   { href: "/", label: "Inicio", icon: "home", section: "play", mobile: true },
   {
@@ -51,7 +54,7 @@ export const defaultShellNavItems: ShellNavItem[] = [
     label: "Quinielas",
     icon: "head",
     section: "play",
-    match: ["/quinielas", "/jugar", "/instantaneas"],
+    match: mobilePlayMatches,
   },
   { href: "/reglas", label: "Reglas", icon: "rules", section: "play", mobile: true },
   {
@@ -227,7 +230,7 @@ function MobileShellLink({ item, active }: ShellLinkProps) {
   );
 }
 
-function MobilePlayAction() {
+function MobilePlayAction({ active }: { active: boolean }) {
   const { playSound } = usePreferences();
 
   return (
@@ -235,6 +238,8 @@ function MobilePlayAction() {
       href="/quinielas"
       className="mobileNavAction"
       aria-label="Jugar"
+      aria-current={active ? "page" : undefined}
+      data-active={active ? "true" : "false"}
       onClick={() => playSound("nav")}
     >
       <span className="mobileNavActionDisc">
@@ -248,7 +253,7 @@ function MobilePlayAction() {
 function AppShellFrame({
   children,
   balance = 0,
-  balanceLabel = "Saldo disponible",
+  balanceLabel = "Saldo",
   userName = "Mi cuenta",
   role = "player",
   title,
@@ -266,6 +271,12 @@ function AppShellFrame({
   const visibleItems = navItems.filter((item) => !item.adminOnly || role === "admin");
   const mobileItems = visibleItems.filter((item) => item.mobile).slice(0, 4);
   const activeItem = visibleItems.find((item) => isPathActive(pathname, item));
+  const mobilePlayItem = visibleItems.find((item) => item.href === "/quinielas");
+  const mobilePlayActive = mobilePlayItem
+    ? isPathActive(pathname, mobilePlayItem)
+    : mobilePlayMatches.some(
+        (candidate) => pathname === candidate || pathname.startsWith(`${candidate}/`),
+      );
   const pageTitle = title ?? activeItem?.label ?? "quinie.LA";
 
   return (
@@ -314,18 +325,31 @@ function AppShellFrame({
             </div>
             <div className="q-topbar__context">
               <p className="q-topbar__eyebrow">{eyebrow}</p>
-              <p className="q-topbar__title">{pageTitle}</p>
+              <div className="q-topbar__title-row">
+                <p className="q-topbar__title">{pageTitle}</p>
+                {contextStatus ? <div className="q-topbar__status">{contextStatus}</div> : null}
+              </div>
             </div>
-            {contextStatus ? <div className="q-topbar__status">{contextStatus}</div> : null}
           </div>
 
           <div className="q-topbar__actions">
             <Link className="q-balance" href="/saldos" aria-label={`${balanceLabel}: ${formatBalance(balance)}`}>
-              <span className="q-balance__label">{balanceLabel}</span>
+              <span aria-hidden="true" className="q-balance__icon">
+                <Icon name="wallet" size={18} />
+              </span>
               <span className="q-balance__value">{formatBalance(balance)}</span>
             </Link>
             {topbarActions}
             <ThemeSoundControls />
+            <Link
+              aria-label="Abrir soporte"
+              className="q-icon-button q-support-button"
+              data-testid="support-button"
+              href="/ayuda"
+              title="Soporte"
+            >
+              <Icon name="support" size={19} />
+            </Link>
             <Link className="q-user-chip" href="/cuenta" aria-label={`Abrir cuenta de ${userName}`}>
               <span className="q-user-chip__avatar" aria-hidden="true">{initialsFor(userName)}</span>
               <span className="q-user-chip__name">{userName}</span>
@@ -338,6 +362,7 @@ function AppShellFrame({
         </div>
 
         <footer className="q-site-footer">
+          <BackToTopButton />
           <div className="q-site-footer__brand">
             <Logo size="sm" />
           </div>
@@ -352,12 +377,16 @@ function AppShellFrame({
         </footer>
       </div>
 
-      <nav className="mobileNav" aria-label="Navegación móvil">
-        <div className="mobileNavInner">
+      <nav
+        aria-label="Navegación móvil"
+        className="mobileNav"
+        data-variant="floating-pill"
+      >
+        <div className="mobileNavInner" data-testid="mobile-navigation-capsule">
           {mobileItems.slice(0, 2).map((item) => (
             <MobileShellLink key={item.href} item={item} active={isPathActive(pathname, item)} />
           ))}
-          <MobilePlayAction />
+          <MobilePlayAction active={mobilePlayActive} />
           {mobileItems.slice(2, 4).map((item) => (
             <MobileShellLink key={item.href} item={item} active={isPathActive(pathname, item)} />
           ))}

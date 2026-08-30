@@ -83,6 +83,17 @@ describe("rules page data", () => {
     expect(text).not.toMatch(/A la Cabeza|paridad|\bPAR\b|\bIMPAR\b/i);
   });
 
+  it("requires three distinct digits and exactly six orders for Invertida", () => {
+    const text = publicText(TRADITIONAL_RULES.find((rule) => rule.id === "invert")!);
+    expect(text).toMatch(/tres cifras (?:diferentes|distintas)/i);
+    expect(text).toMatch(/exactamente seis órdenes|seis órdenes posibles/i);
+    for (const order of ["123", "132", "213", "231", "312", "321"]) {
+      expect(text).toContain(order);
+    }
+    expect(text).toMatch(/no se admiten cifras repetidas|cifras repetidas.+fuera/i);
+    expect(text).not.toMatch(/dos cifras iguales generan tres|tres cifras iguales generan uno/i);
+  });
+
   it("describes both Redoblona selections and requires both conditions for a successful result", () => {
     const text = publicText(TRADITIONAL_RULES.find((rule) => rule.id === "redoblona")!);
     expect(text).toMatch(/dos números de dos cifras|2 cifras \+ 2 cifras/i);

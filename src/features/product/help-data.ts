@@ -1,34 +1,124 @@
-export const HELP_CATEGORIES = ["Todas", "Cómo jugar", "Sorteos y resultados", "Mis jugadas", "Saldo y cuenta"] as const;
-export type HelpCategory = typeof HELP_CATEGORIES[number];
-
 export interface HelpQuestion {
   id: string;
-  category: Exclude<HelpCategory, "Todas">;
   question: string;
   answer: string;
   href: string;
   linkLabel: string;
+  searchTerms?: string;
 }
 
 export const HELP_QUESTIONS: readonly HelpQuestion[] = [
-  { id: "jugar", category: "Cómo jugar", question: "¿Cómo hago una jugada de quiniela?", answer: "Elegí la modalidad, ingresá tu número y seleccioná el sorteo y el importe. Revisá el resumen antes de tocar Confirmar jugada. Cuando se registre, la vas a encontrar en Mis jugadas.", href: "/quinielas", linkLabel: "Elegir una modalidad" },
-  { id: "modalidades", category: "Cómo jugar", question: "¿Qué diferencia hay entre A la Cabeza y A los Premios?", answer: "A la Cabeza busca acertar las tres cifras del primer resultado. En A los Premios elegís un número de tres cifras y hasta qué posición jugar, entre la 2 y la 14.", href: "/reglas", linkLabel: "Ver las modalidades" },
-  { id: "invertida", category: "Cómo jugar", question: "¿Cómo se juega la Invertida?", answer: "Elegís un número de tres cifras para jugar sus distintos órdenes. Seleccioná hasta qué posición querés jugar, de la 1 a la 14, y completá el sorteo y el importe.", href: "/quinielas/invert", linkLabel: "Ver Invertida" },
-  { id: "redoblona", category: "Cómo jugar", question: "¿Cómo se juega la Redoblona?", answer: "Combinás dos números de dos cifras con un único importe. El alcance inicial va de Cabeza a 14 y el de Redoblona comienza en 7; para ganar deben acertar ambos en posiciones diferentes del mismo sorteo.", href: "/quinielas/redoblona", linkLabel: "Ver Redoblona" },
-  { id: "numeros", category: "Cómo jugar", question: "¿Qué números puedo elegir?", answer: "En A la Cabeza, A los Premios e Invertida se usan números de 001 a 999. En Redoblona ambos números van de 00 a 99. En Sapy’aite también podés elegir el 000. Conservá los ceros a la izquierda cuando corresponda.", href: "/reglas", linkLabel: "Consultar las reglas" },
-  { id: "sapyaite", category: "Cómo jugar", question: "¿En qué se diferencia Sapy’aite de la quiniela tradicional?", answer: "En Sapy’aite elegís tres cifras de 000 a 999 y el importe; el resultado se muestra después de confirmar. En la quiniela tradicional también elegís el sorteo en el que querés participar.", href: "/quinielas/sapyaite", linkLabel: "Conocer Sapy’aite" },
-  { id: "sorteos", category: "Sorteos y resultados", question: "¿Dónde consulto los sorteos y sus horarios?", answer: "Los sorteos de quiniela son Tempranero, Matutino, Vespertino y Nocturno. Revisá la fecha y la hora al seleccionar uno. La cuenta regresiva indica cuándo se realiza el sorteo, no el cierre de recepción de jugadas.", href: "/", linkLabel: "Consultar sorteos" },
-  { id: "resultados", category: "Sorteos y resultados", question: "¿Cómo consulto los resultados de la quiniela?", answer: "En Resultados encontrás los sorteos publicados, agrupados por fecha. Podés consultar días anteriores y abrir el detalle de cada sorteo para ver sus posturas. Para revisar tu jugada, consultá también su comprobante.", href: "/resultados", linkLabel: "Consultar resultados" },
-  { id: "comprobante", category: "Mis jugadas", question: "¿Dónde encuentro el comprobante de mi jugada?", answer: "Entrá en Mis jugadas y tocá Ver mi comprobante. Ahí podés consultar la selección, el importe, la fecha, el estado y el código. Cerrar el comprobante no elimina una jugada registrada.", href: "/mis-jugadas", linkLabel: "Ver mis comprobantes" },
-  { id: "pendiente", category: "Mis jugadas", question: "¿Qué significa que mi jugada esté En proceso?", answer: "La jugada está registrada y todavía no tiene una resolución final. Revisá su estado y comprobante en Mis jugadas. Si necesitás ayuda, tené a mano el código del comprobante.", href: "/mis-jugadas", linkLabel: "Revisar mi jugada" },
-  { id: "rechazo", category: "Mis jugadas", question: "¿Qué hago si mi jugada falla o no se confirma?", answer: "Leé el mensaje y comprobá tu saldo, los datos y el sorteo elegido. Si hubo un corte de conexión, revisá primero Mis jugadas para comprobar si se registró antes de volver a intentarlo.", href: "/mis-jugadas", linkLabel: "Comprobar mis jugadas" },
-  { id: "saldo", category: "Saldo y cuenta", question: "¿Cómo consulto mi saldo y las recargas?", answer: "En Saldo y movimientos podés revisar el disponible y el historial de apuestas, premios, reintegros y recargas. Si la recarga está habilitada, elegí el importe y un medio disponible, y revisá la confirmación.", href: "/saldos", linkLabel: "Ver saldo y movimientos" },
-  { id: "autolimites", category: "Saldo y cuenta", question: "¿Cómo defino mis autolímites o hago una pausa?", answer: "En Cuenta, abrí Autolímites para definir importes y tiempo de juego de la sesión. Tomarme un descanso permite pausar nuevas jugadas y recargas durante el período elegido. Antes de confirmar, revisá el alcance y las condiciones que muestra cada opción.", href: "/cuenta", linkLabel: "Gestionar mi cuenta" },
+  {
+    id: "jugar",
+    question: "¿Cómo hago una jugada de Quiniela?",
+    answer: "Elegí la modalidad, ingresá tu selección y completá la postura o el alcance cuando corresponda. Después seleccioná uno o varios sorteos abiertos, definí el importe por sorteo y revisá el resumen antes de confirmar. Las reglas consideran cada sorteo elegido como una jugada independiente.",
+    href: "/quinielas",
+    linkLabel: "Elegir una modalidad",
+    searchTerms: "apostar confirmar importe resumen",
+  },
+  {
+    id: "modalidades",
+    question: "¿Qué modalidades de Quiniela están disponibles?",
+    answer: "Podés elegir A la Cabeza, A los Premios, Invertida, Redoblona y Sapy’aite. Cada modalidad define qué selección hacés, qué posiciones participan y cómo se compara tu jugada con el resultado. Consultá las reglas antes de confirmar.",
+    href: "/reglas",
+    linkLabel: "Consultar las reglas",
+    searchTerms: "tipos juegos opciones",
+  },
+  {
+    id: "cabeza",
+    question: "¿Cómo se juega A la Cabeza?",
+    answer: "Elegí un número de tres cifras entre 001 y 999. Para acertar, debe coincidir exactamente y en el mismo orden con la primera posición del sorteo confirmado. El 000 no es válido en esta modalidad.",
+    href: "/quinielas/head",
+    linkLabel: "Jugar A la Cabeza",
+    searchTerms: "primera postura posición exacta tres cifras",
+  },
+  {
+    id: "premios",
+    question: "¿Cómo se juega A los Premios?",
+    answer: "Elegí un número de tres cifras entre 001 y 999 y una postura de 2 a 14. El número debe aparecer exactamente, en el mismo orden y dentro de las posiciones cubiertas por la postura elegida. El 000 no es válido en esta modalidad.",
+    href: "/quinielas/prizes",
+    linkLabel: "Jugar A los Premios",
+    searchTerms: "posición límite postura exacta tres cifras",
+  },
+  {
+    id: "invertida",
+    question: "¿Cómo se juega la Invertida?",
+    answer: "Ingresá un número de tres cifras entre 001 y 999, con las tres cifras distintas entre sí, y elegí una postura de 1 a 14. La jugada participa con los seis órdenes posibles de esas cifras. Uno de esos órdenes debe aparecer dentro de la postura elegida.",
+    href: "/quinielas/invert",
+    linkLabel: "Jugar Invertida",
+    searchTerms: "seis 6 combinaciones permutaciones órdenes",
+  },
+  {
+    id: "redoblona",
+    question: "¿Cómo se juega la Redoblona?",
+    answer: "Combiná dos números de dos cifras, de 00 a 99. El alcance inicial va de Cabeza a 14 y el segundo alcance va de 7 a 14; este último debe ser igual o mayor al inicial. Para acertar se necesitan los dos números en posiciones diferentes del mismo sorteo. Si la inicial es Cabeza, esa aparición no se vuelve a contar en el segundo alcance.",
+    href: "/quinielas/redoblona",
+    linkLabel: "Jugar Redoblona",
+    searchTerms: "doble acierto inicial segunda postura dos números",
+  },
+  {
+    id: "sapyaite",
+    question: "¿Cómo se juega Sapy’aite?",
+    answer: "Elegí un número de tres cifras entre 000 y 999 y un importe. El resultado se genera de forma inmediata y se compara con una única selección. Para acertar deben coincidir exactamente las tres cifras y en el mismo orden; no se elige sorteo ni postura.",
+    href: "/quinielas/sapyaite",
+    linkLabel: "Jugar Sapy’aite",
+    searchTerms: "instantáneo inmediato número virtual",
+  },
+  {
+    id: "numeros",
+    question: "¿Qué números puedo elegir?",
+    answer: "A la Cabeza y A los Premios usan números de 001 a 999. En Invertida, la selección debe tener tres cifras distintas entre sí. Redoblona usa dos números de 00 a 99 y Sapy’aite admite de 000 a 999. Conservá los ceros a la izquierda cuando corresponda.",
+    href: "/reglas",
+    linkLabel: "Consultar las reglas",
+    searchTerms: "rango ceros izquierda cifras 000 001 999",
+  },
+  {
+    id: "postura",
+    question: "¿Qué significa la postura?",
+    answer: "La postura indica hasta qué posición del sorteo participa una jugada. La posición 1 es A la Cabeza. A los Premios permite elegir de la 2 a la 14 e Invertida de la 1 a la 14. En Redoblona se elige un alcance inicial y otro para el segundo acierto.",
+    href: "/reglas",
+    linkLabel: "Ver posiciones y alcances",
+    searchTerms: "cabeza premios rango puesto orden",
+  },
+  {
+    id: "sorteos",
+    question: "¿Cómo elijo un sorteo y cuándo cierra?",
+    answer: "Seleccioná uno o varios sorteos que figuren abiertos y comprobá su fecha y hora antes de confirmar. Cada sorteo se registra y evalúa por separado. Las reglas exigen que la jugada quede registrada antes del horario de cierre; una vez cerrado, ya no admite nuevas jugadas.",
+    href: "/",
+    linkLabel: "Consultar sorteos",
+    searchTerms: "tempranero matutino vespertino nocturno horario fecha",
+  },
+  {
+    id: "resultados",
+    question: "¿Dónde consulto los resultados de la Quiniela?",
+    answer: "En Resultados podés elegir la fecha, abrir cada sorteo publicado y revisar sus posiciones. Compará siempre el sorteo, la modalidad, el número y la postura con los datos de tu comprobante.",
+    href: "/resultados",
+    linkLabel: "Consultar resultados",
+    searchTerms: "números ganadores sorteo posturas fecha",
+  },
+  {
+    id: "comprobante",
+    question: "¿Por qué debo revisar y conservar el comprobante?",
+    answer: "El comprobante respalda la jugada registrada. Revisá que muestre correctamente la fecha, el sorteo, la modalidad, los números, la postura o el alcance, el importe y el código de seguridad. Las reglas indican que debés conservarlo para cualquier consulta o reclamo.",
+    href: "/mis-jugadas",
+    linkLabel: "Ver mis comprobantes",
+    searchTerms: "ticket código seguridad respaldo conservar jugada",
+  },
+  {
+    id: "premio-plazo",
+    question: "¿Cuál es el plazo para reclamar un premio?",
+    answer: "Las reglas establecen un plazo de hasta 60 días hábiles después del sorteo. Conservá el comprobante en buenas condiciones, porque es el respaldo de la jugada y puede ser necesario para gestionar el reclamo.",
+    href: "/mis-jugadas",
+    linkLabel: "Buscar mi comprobante",
+    searchTerms: "cobrar pago caducidad vencimiento sesenta 60 días hábiles",
+  },
 ];
 
-export function filterHelpQuestions(query: string, category: HelpCategory) {
+export function filterHelpQuestions(query: string) {
   const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   const terms = normalize(query).trim().split(/\s+/).filter(Boolean);
-  return HELP_QUESTIONS.filter((item) => (category === "Todas" || item.category === category)
-    && terms.every((term) => normalize(`${item.question} ${item.answer} ${item.category}`).includes(term)));
+
+  return HELP_QUESTIONS.filter((item) => terms.every((term) => normalize(
+    `${item.question} ${item.answer} ${item.linkLabel} ${item.searchTerms ?? ""}`,
+  ).includes(term)));
 }

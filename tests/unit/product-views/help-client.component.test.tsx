@@ -2,181 +2,244 @@
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { HelpClient } from "@/features/product/help-client";
-import { HELP_CATEGORIES, HELP_QUESTIONS, filterHelpQuestions, type HelpCategory } from "@/features/product/help-data";
+import { HELP_QUESTIONS, filterHelpQuestions } from "@/features/product/help-data";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
-const categories = [
-  { category: "Cómo jugar", ids: ["jugar", "modalidades", "invertida", "redoblona", "numeros", "sapyaite"] },
-  { category: "Sorteos y resultados", ids: ["sorteos", "resultados"] },
-  { category: "Mis jugadas", ids: ["comprobante", "pendiente", "rechazo"] },
-  { category: "Saldo y cuenta", ids: ["saldo", "autolimites"] },
-] as const;
-
-const destinations: Record<string, string> = {
-  jugar: "/quinielas", modalidades: "/reglas", invertida: "/quinielas/invert",
-  redoblona: "/quinielas/redoblona", numeros: "/reglas", sapyaite: "/quinielas/sapyaite",
-  sorteos: "/", resultados: "/resultados", comprobante: "/mis-jugadas",
-  pendiente: "/mis-jugadas", rechazo: "/mis-jugadas", saldo: "/saldos", autolimites: "/cuenta",
+const expectedDestinations: Record<string, string> = {
+  jugar: "/quinielas",
+  modalidades: "/reglas",
+  cabeza: "/quinielas/head",
+  premios: "/quinielas/prizes",
+  invertida: "/quinielas/invert",
+  redoblona: "/quinielas/redoblona",
+  sapyaite: "/quinielas/sapyaite",
+  numeros: "/reglas",
+  postura: "/reglas",
+  sorteos: "/",
+  resultados: "/resultados",
+  comprobante: "/mis-jugadas",
+  "premio-plazo": "/mis-jugadas",
 };
 
-function region() {
+const forbiddenPublicReferences =
+  /\bpdf\b|\barchivos?\b|\bdocumentos?\b|\bfuentes?\b|\breglamento\b|\binteligencia artificial\b|\bia\b|\bart[ií]culos?\b|\bp[aá]ginas?\b|\bdemo(?:straci[oó]n)?\b|\bmock\b|cuenta de prueba/i;
+
+function question(id: string) {
+  return HELP_QUESTIONS.find((item) => item.id === id)!;
+}
+
+function faqRegion() {
   return screen.getByRole("region", { name: "Preguntas frecuentes" });
 }
-function details() {
-  return Array.from(region().querySelectorAll("details"));
+
+function faqDetails() {
+  return Array.from(faqRegion().querySelectorAll("details"));
 }
-function summary(id: string) {
-  const item = HELP_QUESTIONS.find((question) => question.id === id)!;
-  return within(region()).getByText(item.question).closest("summary")!;
+
+function summaryFor(id: string) {
+  return within(faqRegion()).getByText(question(id).question).closest("summary")!;
 }
-function labels(ids: readonly string[]) {
-  return ids.map((id) => HELP_QUESTIONS.find((item) => item.id === id)!.question);
-}
-function visibleQuestions() {
-  return details().map((item) => item.querySelector("summary")?.textContent);
+
+function renderedQuestions() {
+  return faqDetails().map((detail) => detail.querySelector("summary")?.textContent);
 }
 
 describe("quiniela help data", () => {
-  it("defines 13 unique, complete questions with known categories and relevant destinations", () => {
+  it("defines 13 unique and complete questions with relevant internal destinations", () => {
     expect(HELP_QUESTIONS).toHaveLength(13);
     expect(new Set(HELP_QUESTIONS.map((item) => item.id)).size).toBe(13);
     expect(new Set(HELP_QUESTIONS.map((item) => item.question)).size).toBe(13);
-    expect(HELP_CATEGORIES).toEqual(["Todas", "Cómo jugar", "Sorteos y resultados", "Mis jugadas", "Saldo y cuenta"]);
-    expect(HELP_QUESTIONS.map((item) => item.id)).toEqual(Object.keys(destinations));
+    expect(HELP_QUESTIONS.map((item) => item.id)).toEqual(Object.keys(expectedDestinations));
+    expect(HELP_QUESTIONS.every((item) => !Object.hasOwn(item, "category"))).toBe(true);
+
     for (const item of HELP_QUESTIONS) {
-      expect(HELP_CATEGORIES.slice(1)).toContain(item.category);
       expect(item.question.trim()).not.toBe("");
       expect(item.answer.trim()).not.toBe("");
       expect(item.linkLabel.trim()).not.toBe("");
-      expect(item.href).toBe(destinations[item.id]);
+      expect(item.href).toBe(expectedDestinations[item.id]);
     }
-    expect(JSON.stringify(HELP_QUESTIONS)).not.toMatch(/cuenta de prueba|\bdemo\b|\bmock\b/i);
   });
 
-  it("retains all questions for an empty or whitespace query", () => {
-    expect(filterHelpQuestions("", "Todas")).toEqual(HELP_QUESTIONS);
-    expect(filterHelpQuestions(" \t\n ", "Todas")).toEqual(HELP_QUESTIONS);
-  });
-
-  it.each(categories)("returns only questions in $category", ({ category, ids }) => {
-    expect(filterHelpQuestions("", category).map((item) => item.id)).toEqual(ids);
+  it("keeps all questions for an empty or whitespace-only search", () => {
+    expect(filterHelpQuestions("")).toEqual(HELP_QUESTIONS);
+    expect(filterHelpQuestions(" \t\n ")).toEqual(HELP_QUESTIONS);
   });
 
   it.each([
-    { query: "  INVERTÍDA  ", category: "Todas", ids: ["invertida", "numeros"] },
-    { query: "COMBINAS DOS NÚMEROS", category: "Cómo jugar", ids: ["redoblona"] },
-    { query: "ceros   izquierda", category: "Todas", ids: ["numeros"] },
-    { query: "saldo cuenta", category: "Todas", ids: ["saldo", "autolimites"] },
-    { query: "COMPROBANTE código", category: "Mis jugadas", ids: ["comprobante", "pendiente"] },
-    { query: "recargas", category: "Mis jugadas", ids: [] },
-  ] satisfies { query: string; category: HelpCategory; ids: string[] }[])(
-    "matches every normalized term in '$query' within $category",
-    ({ query, category, ids }) => {
-      expect(filterHelpQuestions(query, category).map((item) => item.id)).toEqual(ids);
-    },
-  );
+    { query: "  PERMUTACIÓN  ", ids: ["invertida"] },
+    { query: "COMBINÁ DOS NÚMEROS", ids: ["redoblona"] },
+    { query: "ceros   izquierda", ids: ["numeros"] },
+    { query: "CÓDIGO seguridad", ids: ["comprobante"] },
+    { query: "sesenta HÁBILES", ids: ["premio-plazo"] },
+    { query: "primera exacta", ids: ["cabeza"] },
+  ])("normalizes accents, case and spacing for '$query'", ({ query: search, ids }) => {
+    expect(filterHelpQuestions(search).map((item) => item.id)).toEqual(ids);
+  });
+
+  it("requires every search term to match the same question", () => {
+    expect(filterHelpQuestions("seguridad sesenta")).toEqual([]);
+    expect(filterHelpQuestions("dos números inicial").map((item) => item.id)).toEqual(["redoblona"]);
+  });
+
+  it("describes the five available Quiniela modalities", () => {
+    expect(question("modalidades").answer).toMatch(/A la Cabeza/);
+    expect(question("modalidades").answer).toMatch(/A los Premios/);
+    expect(question("modalidades").answer).toMatch(/Invertida/);
+    expect(question("modalidades").answer).toMatch(/Redoblona/);
+    expect(question("modalidades").answer).toMatch(/Sapy’aite/);
+  });
+
+  it("documents the traditional ranges and postures without confusing 000 rules", () => {
+    expect(question("cabeza").answer).toMatch(/001 y 999/);
+    expect(question("cabeza").answer).toMatch(/primera posición/);
+    expect(question("cabeza").answer).toMatch(/El 000 no es válido/);
+    expect(question("premios").answer).toMatch(/001 y 999/);
+    expect(question("premios").answer).toMatch(/postura de 2 a 14/);
+    expect(question("postura").answer).toMatch(/posición 1 es A la Cabeza/);
+    expect(question("postura").answer).toMatch(/A los Premios permite elegir de la 2 a la 14/);
+    expect(question("postura").answer).toMatch(/Invertida de la 1 a la 14/);
+    expect(question("sapyaite").answer).toMatch(/000 y 999/);
+  });
+
+  it("requires three different digits and exactly six unique orders for Invertida", () => {
+    expect(question("invertida").answer).toMatch(/tres cifras distintas/);
+    expect(question("invertida").answer).toMatch(/seis órdenes/);
+    expect(question("invertida").answer).not.toMatch(/repet|tres órdenes|un orden|iguales/i);
+  });
+
+  it("defines both Redoblona ranges and the relation between them", () => {
+    expect(question("redoblona").answer).toMatch(/dos números de dos cifras, de 00 a 99/);
+    expect(question("redoblona").answer).toMatch(/alcance inicial va de Cabeza a 14/);
+    expect(question("redoblona").answer).toMatch(/segundo alcance va de 7 a 14/);
+    expect(question("redoblona").answer).toMatch(/igual o mayor al inicial/);
+  });
+
+  it("requires a receipt and security code and states the 60-business-day claim period", () => {
+    expect(question("comprobante").answer).toMatch(/comprobante respalda la jugada registrada/);
+    expect(question("comprobante").answer).toMatch(/código de seguridad/);
+    expect(question("comprobante").answer).toMatch(/debés conservarlo/);
+    expect(question("premio-plazo").answer).toMatch(/hasta 60 días hábiles después del sorteo/);
+    expect(question("premio-plazo").answer).toMatch(/Conservá el comprobante/);
+  });
+
+  it("does not expose document, AI or preview vocabulary", () => {
+    expect(JSON.stringify(HELP_QUESTIONS)).not.toMatch(forbiddenPublicReferences);
+  });
 });
 
 describe("HelpClient", () => {
-  it("labels search, topics and the FAQ and starts with 13 collapsed answers", () => {
+  it("renders the back arrow, labeled search and 13 collapsed FAQs without topic controls", () => {
     const { container } = render(<HelpClient />);
-    expect(screen.getByRole("main")).toBeTruthy();
+
     expect(screen.getByRole("heading", { name: "Centro de ayuda", level: 1 })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Volver atrás" }).getAttribute("href")).toBe("/");
     const searchRegion = screen.getByRole("region", { name: "Buscar ayuda sobre la quiniela" });
     expect(within(searchRegion).getByRole("searchbox", { name: "¿Sobre qué tenés dudas?" })).toBeTruthy();
-    const topics = within(screen.getByRole("group", { name: "Temas de ayuda" }));
-    expect(topics.getAllByRole("button").map((button) => button.textContent)).toEqual(HELP_CATEGORIES);
-    expect(topics.getByRole("button", { pressed: true }).textContent).toBe("Todas");
-    expect(visibleQuestions()).toEqual(HELP_QUESTIONS.map((item) => item.question));
-    expect(details().every((item) => !item.open)).toBe(true);
+    expect(renderedQuestions()).toEqual(HELP_QUESTIONS.map((item) => item.question));
+    expect(faqDetails()).toHaveLength(13);
+    expect(faqDetails().every((detail) => !detail.open)).toBe(true);
     expect(screen.getByRole("status").textContent).toBe("13 respuestas");
     expect(screen.getByRole("status").getAttribute("aria-live")).toBe("polite");
     expect(screen.queryByRole("button", { name: "Limpiar búsqueda" })).toBeNull();
-    expect(container.textContent).not.toMatch(/cuenta de prueba|\bdemo\b|\bmock\b/i);
+
+    expect(screen.queryByRole("group", { name: "Temas de ayuda" })).toBeNull();
+    for (const oldTopic of ["Todas", "Cómo jugar", "Sorteos y resultados", "Mis jugadas", "Saldo y cuenta"]) {
+      expect(screen.queryByRole("button", { name: oldTopic })).toBeNull();
+    }
+    expect(screen.queryByRole("complementary")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Reglas de la quiniela" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Juego responsable" })).toBeNull();
+
+    for (const detail of faqDetails()) {
+      const answer = detail.querySelector("summary + div")!;
+      expect(Array.from(answer.children).map((child) => child.tagName)).toEqual(["P", "A"]);
+    }
+    expect(container.textContent).not.toMatch(forbiddenPublicReferences);
   });
 
-  it.each(categories)("filters $category and restores all questions with Todas", ({ category, ids }) => {
+  it("returns to the previous screen when browser history is available", async () => {
+    const user = userEvent.setup();
+    const browserBack = vi.spyOn(window.history, "back").mockImplementation(() => undefined);
+    window.history.pushState({}, "", "/ayuda");
     render(<HelpClient />);
-    const topics = within(screen.getByRole("group", { name: "Temas de ayuda" }));
-    fireEvent.click(topics.getByRole("button", { name: category }));
-    expect(topics.getByRole("button", { pressed: true }).textContent).toBe(category);
-    expect(visibleQuestions()).toEqual(labels(ids));
-    expect(screen.getByRole("status").textContent).toBe(`${ids.length} respuestas`);
-    fireEvent.click(topics.getByRole("button", { name: "Todas" }));
-    expect(topics.getByRole("button", { pressed: true }).textContent).toBe("Todas");
-    expect(details()).toHaveLength(13);
+
+    await user.click(screen.getByRole("link", { name: "Volver atrás" }));
+
+    expect(browserBack).toHaveBeenCalledOnce();
   });
 
-  it("searches uppercase and accented words, retaining input focus and a singular count", async () => {
+  it("searches uppercase accented terms, updates the count and keeps input focus", async () => {
     const user = userEvent.setup();
     render(<HelpClient />);
     const input = screen.getByRole("searchbox", { name: "¿Sobre qué tenés dudas?" });
-    await user.type(input, "  NÚMEROS   ELEGIR ");
-    expect(visibleQuestions()).toEqual(labels(["numeros"]));
+
+    await user.type(input, "  PERMUTACIÓN  ");
+
+    expect(renderedQuestions()).toEqual([question("invertida").question]);
     expect(screen.getByRole("status").textContent).toBe("1 respuesta");
     expect(document.activeElement).toBe(input);
     expect(screen.getByRole("button", { name: "Limpiar búsqueda" })).toBeTruthy();
   });
 
-  it("combines query and topic, and clears only the query with the search clear button", async () => {
+  it("clears a search and restores every question", async () => {
     const user = userEvent.setup();
     render(<HelpClient />);
     const input = screen.getByRole("searchbox") as HTMLInputElement;
-    await user.click(screen.getByRole("button", { name: "Mis jugadas" }));
-    await user.type(input, "CÓDIGO");
-    expect(visibleQuestions()).toEqual(labels(["comprobante", "pendiente"]));
-    await user.click(screen.getByRole("button", { name: "Cómo jugar" }));
-    expect(screen.getByRole("status").textContent).toBe("0 respuestas");
-    expect(details()).toHaveLength(0);
+
+    await user.type(input, "código seguridad");
+    expect(renderedQuestions()).toEqual([question("comprobante").question]);
     await user.click(screen.getByRole("button", { name: "Limpiar búsqueda" }));
+
     expect(input.value).toBe("");
-    expect(screen.getByRole("button", { pressed: true }).textContent).toBe("Cómo jugar");
-    expect(visibleQuestions()).toEqual(labels(categories[0].ids));
+    expect(faqDetails()).toHaveLength(13);
+    expect(screen.getByRole("status").textContent).toBe("13 respuestas");
     expect(screen.queryByRole("button", { name: "Limpiar búsqueda" })).toBeNull();
   });
 
-  it("shows an empty state and resets both the query and topic from Ver todas las preguntas", async () => {
+  it("shows the empty state and resets the search from Ver todas las preguntas", async () => {
     const user = userEvent.setup();
     render(<HelpClient />);
     const input = screen.getByRole("searchbox") as HTMLInputElement;
-    await user.click(screen.getByRole("button", { name: "Saldo y cuenta" }));
+
     await user.type(input, "consulta-inexistente");
     expect(screen.getByRole("heading", { name: "No encontramos esa consulta", level: 3 })).toBeTruthy();
     expect(screen.getByRole("status").textContent).toBe("0 respuestas");
-    expect(details()).toHaveLength(0);
+    expect(faqDetails()).toHaveLength(0);
     await user.click(screen.getByRole("button", { name: "Ver todas las preguntas" }));
+
     expect(input.value).toBe("");
-    expect(screen.getByRole("button", { pressed: true }).textContent).toBe("Todas");
-    expect(details()).toHaveLength(13);
+    expect(faqDetails()).toHaveLength(13);
     expect(screen.getByRole("status").textContent).toBe("13 respuestas");
     expect(screen.queryByRole("heading", { name: "No encontramos esa consulta" })).toBeNull();
   });
 
-  it("opens the answer and relevant route for every question and retains support and legal links", () => {
+  it("opens every answer with its relevant destination", () => {
     render(<HelpClient />);
+
     for (const item of HELP_QUESTIONS) {
-      const trigger = summary(item.id);
+      const trigger = summaryFor(item.id);
       const disclosure = trigger.closest("details")!;
       fireEvent.click(trigger);
       expect(disclosure.open).toBe(true);
       expect(within(disclosure).getByText(item.answer)).toBeTruthy();
       expect(within(disclosure).getByRole("link", { name: item.linkLabel }).getAttribute("href"))
-        .toBe(destinations[item.id]);
+        .toBe(expectedDestinations[item.id]);
     }
-    const support = within(screen.getByRole("complementary"));
-    expect(support.getByRole("link", { name: "Ir a mi cuenta" }).getAttribute("href")).toBe("/cuenta");
-    expect(screen.getByRole("link", { name: "Reglas de la quiniela" }).getAttribute("href")).toBe("/reglas");
-    expect(screen.getByRole("link", { name: "Juego responsable" }).getAttribute("href")).toBe("/legal/juego-responsable");
   });
 
-  it("keeps answers independent when opening and closing more than one question", async () => {
+  it("keeps multiple answers independent when they are opened and closed", async () => {
     const user = userEvent.setup();
     render(<HelpClient />);
-    const first = summary("jugar");
-    const second = summary("modalidades");
+    const first = summaryFor("jugar");
+    const second = summaryFor("modalidades");
+
     await user.click(first);
     await user.click(second);
     expect(first.closest("details")!.open).toBe(true);
@@ -187,29 +250,25 @@ describe("HelpClient", () => {
     expect(document.activeElement).toBe(first);
   });
 
-  it("provides keyboard tab navigation through search, topics, summaries and expanded answer links", async () => {
+  it("tabs from Volver atrás to search, the first summary and its expanded link", async () => {
     const user = userEvent.setup();
     render(<HelpClient />);
+    const back = screen.getByRole("link", { name: "Volver atrás" });
+    const search = screen.getByRole("searchbox");
+    const first = summaryFor("jugar");
+
     await user.tab();
-    expect(document.activeElement).toBe(screen.getByRole("searchbox"));
-    for (const category of HELP_CATEGORIES) {
-      await user.tab();
-      expect(document.activeElement).toBe(screen.getByRole("button", { name: category }));
-    }
+    expect(document.activeElement).toBe(back);
     await user.tab();
-    const first = summary("jugar");
+    expect(document.activeElement).toBe(search);
+    await user.tab();
     expect(document.activeElement).toBe(first);
-    // user-event 14 does not synthesize native summary activation from Enter/Space.
-    // Change the disclosure state with a native click, then verify its tab order.
+
+    // user-event does not synthesize the browser's native summary activation.
     fireEvent.click(first);
-    expect(first.closest("details")!.open).toBe(true);
     await user.tab();
     expect(document.activeElement).toBe(screen.getByRole("link", { name: "Elegir una modalidad" }));
     await user.tab({ shift: true });
     expect(document.activeElement).toBe(first);
-    fireEvent.click(first);
-    expect(first.closest("details")!.open).toBe(false);
-    // JSDOM/user-event checks CSS visibility but does not hide descendants of a
-    // closed native details element. Its closed-state tab order needs a browser.
   });
 });

@@ -55,6 +55,7 @@ test("renders the accessible product shell without horizontal overflow", async (
   const navigation = activeNavigation(page);
   const themeToggle = page.getByTestId(E2E_SELECTORS.themeToggle);
   const soundToggle = page.getByTestId(E2E_SELECTORS.soundToggle);
+  const supportButton = page.getByTestId("support-button");
 
   await expect(shell).toBeVisible();
   await expect(navigation).toBeVisible();
@@ -65,16 +66,32 @@ test("renders the accessible product shell without horizontal overflow", async (
   await expect(soundToggle).toHaveRole("button");
   await expect(soundToggle).toHaveAccessibleName(/sonido|audio/i);
   await expect(soundToggle).toHaveAttribute("aria-pressed", /^(true|false)$/);
+  await expect(supportButton).toHaveRole("link");
+  await expect(supportButton).toHaveAccessibleName("Abrir soporte");
+  await expect(supportButton).toHaveAttribute("href", "/ayuda");
+  expect(await soundToggle.evaluate((sound) => (
+    sound.closest(".q-preference-controls")?.nextElementSibling?.matches(
+      '[data-testid="support-button"]',
+    ) ?? false
+  ))).toBe(true);
 
   const liveIndicator = page.getByTestId("draw-live-indicator");
   await expect(liveIndicator).toBeVisible();
-  await expect(liveIndicator).toHaveRole("status");
-  await expect(liveIndicator).toHaveAccessibleName("Estado LIVE del sorteo");
+  await expect(liveIndicator).toHaveRole("button");
+  await expect(liveIndicator).toHaveAccessibleName(/Abrir (?:canal LIVE de Quiniela|transmisión LIVE de)/);
+  await expect(liveIndicator).toHaveAttribute("aria-haspopup", "dialog");
+  await expect(liveIndicator).toHaveAttribute("aria-expanded", "false");
   await expectInsideHorizontalViewport(liveIndicator, page);
   if (page.viewportSize()!.width >= 980) {
-    const context = await page.locator(".q-topbar__context").boundingBox();
+    const titleRow = page.locator(".q-topbar__title-row");
+    const title = titleRow.locator(".q-topbar__title");
+    await expect(titleRow).toContainText("Inicio");
+    await expect(titleRow.getByTestId("draw-live-indicator")).toBeVisible();
+    const titleBox = await title.boundingBox();
     const indicator = await liveIndicator.boundingBox();
-    expect(indicator!.x).toBeGreaterThanOrEqual(context!.x + context!.width);
+    expect(indicator!.x).toBeGreaterThanOrEqual(titleBox!.x + titleBox!.width);
+    expect(indicator!.y).toBeLessThan(titleBox!.y + titleBox!.height);
+    expect(indicator!.y + indicator!.height).toBeGreaterThan(titleBox!.y);
   }
 
   const hero = page.getByTestId("home-hero");
@@ -231,6 +248,132 @@ test("renders the accessible product shell without horizontal overflow", async (
   await page.screenshot({ path: testInfo.outputPath("home-responsive.png"), fullPage: true });
 });
 
+test("positions the footer back-to-top button responsively and supports click and keyboard", async ({
+  page,
+}) => {
+  test.slow();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+
+  const button = page.getByRole("button", { name: "Volver al inicio", exact: true });
+  const footer = page.locator(".q-site-footer");
+  const bottomNavigation = page.getByRole("navigation", {
+    name: "Navegación móvil",
+    exact: true,
+  });
+  const viewport = page.viewportSize()!;
+
+  await footer.scrollIntoViewIfNeeded();
+  await expect(button).toBeVisible();
+  await expect(button).toHaveAttribute("type", "button");
+  await expect(button).not.toHaveAttribute("title", /.+/);
+  await expect(button).toHaveText("");
+  await expect.poll(
+    () => button.evaluate((element) => (
+      Object.keys(element).some((key) => key.startsWith("__reactProps$"))
+    )),
+    { timeout: 60_000 },
+  ).toBe(true);
+
+  const metrics = await button.evaluate((element) => {
+    const buttonBox = element.getBoundingClientRect();
+    const footer = element.closest("footer")!;
+    const footerBox = footer.getBoundingClientRect();
+    const ageMarkBox = footer.querySelector<HTMLElement>(".q-age-mark")!.getBoundingClientRect();
+    const footerLinkBoxes = Array.from(
+      footer.querySelectorAll<HTMLElement>(".q-site-footer__links a"),
+      (link) => link.getBoundingClientRect(),
+    );
+    const mobileNavigation = document.querySelector<HTMLElement>(".mobileNav");
+    const mobileNavigationBox = mobileNavigation?.getBoundingClientRect();
+    const mobileNavigationVisible = mobileNavigation
+      ? getComputedStyle(mobileNavigation).display !== "none"
+      : false;
+    const overlaps = (first: DOMRect, second: DOMRect) => (
+      first.left < second.right
+      && first.right > second.left
+      && first.top < second.bottom
+      && first.bottom > second.top
+    );
+
+    return {
+      ageMarkOverlap: overlaps(buttonBox, ageMarkBox),
+      bottomNavigationOverlap: Boolean(
+        mobileNavigationVisible
+        && mobileNavigationBox
+        && overlaps(buttonBox, mobileNavigationBox),
+      ),
+      footerLinkOverlap: footerLinkBoxes.some((linkBox) => overlaps(buttonBox, linkBox)),
+      buttonBottom: buttonBox.bottom,
+      buttonCenter: buttonBox.left + buttonBox.width / 2,
+      buttonHeight: buttonBox.height,
+      buttonRight: buttonBox.right,
+      buttonTop: buttonBox.top,
+      buttonWidth: buttonBox.width,
+      color: getComputedStyle(element).color,
+      footerCenter: footerBox.left + footerBox.width / 2,
+      footerRight: footerBox.right,
+      footerTop: footerBox.top,
+      horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    };
+  });
+
+  expect(metrics.color).toBe("rgb(227, 6, 19)");
+  expect(metrics.horizontalOverflow).toBe(false);
+  expect(metrics.bottomNavigationOverlap).toBe(false);
+  expect(metrics.ageMarkOverlap).toBe(false);
+  expect(metrics.footerLinkOverlap).toBe(false);
+
+  if (viewport.width >= 768) {
+    expect(metrics.buttonWidth).toBeCloseTo(52, 0);
+    expect(metrics.buttonHeight).toBeCloseTo(44, 0);
+    expect(Math.abs(metrics.buttonCenter - metrics.footerCenter)).toBeLessThanOrEqual(1);
+    expect(metrics.footerTop - metrics.buttonTop).toBeGreaterThanOrEqual(20);
+    expect(metrics.footerTop - metrics.buttonTop).toBeLessThanOrEqual(24);
+    expect(Math.abs((metrics.buttonTop + metrics.buttonBottom) / 2 - metrics.footerTop))
+      .toBeLessThanOrEqual(1);
+  } else {
+    expect(metrics.buttonWidth).toBeCloseTo(42, 0);
+    expect(metrics.buttonHeight).toBeCloseTo(38, 0);
+    expect(metrics.footerRight - metrics.buttonRight).toBeCloseTo(18, 0);
+    expect(metrics.footerTop - metrics.buttonTop).toBeGreaterThanOrEqual(20);
+    expect(metrics.footerTop - metrics.buttonTop).toBeLessThanOrEqual(24);
+  }
+
+  async function moveToPageBottom() {
+    await page.evaluate(() => {
+      document.documentElement.style.scrollBehavior = "auto";
+      window.scrollTo(0, document.documentElement.scrollHeight);
+    });
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  }
+
+  await moveToPageBottom();
+  await button.focus();
+  expect(await button.evaluate((element) => (
+    Number.parseFloat(getComputedStyle(element).outlineWidth)
+  ))).toBeGreaterThanOrEqual(2);
+  await page.keyboard.press("Enter");
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+
+  await moveToPageBottom();
+  await footer.scrollIntoViewIfNeeded();
+  await expect(button).toBeVisible();
+  const clickTarget = await button.boundingBox();
+  expect(clickTarget).not.toBeNull();
+  await page.mouse.click(
+    clickTarget!.x + clickTarget!.width / 2,
+    clickTarget!.y + clickTarget!.height / 2,
+  );
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+
+  if (viewport.width < 980) {
+    await expect(bottomNavigation).toBeVisible();
+  } else {
+    await expect(bottomNavigation).toBeHidden();
+  }
+});
+
 test("keeps the Home hero compact and unclipped across narrow Samsung and landscape viewports", async ({
   page,
 }, testInfo) => {
@@ -252,9 +395,22 @@ test("keeps the Home hero compact and unclipped across narrow Samsung and landsc
       page.locator(".q-balance"),
       page.getByTestId(E2E_SELECTORS.themeToggle),
       page.getByTestId(E2E_SELECTORS.soundToggle),
+      page.getByTestId("support-button"),
       page.getByTestId("draw-live-indicator"),
     ]) {
       await expectInsideHorizontalViewport(topbarItem, page);
+    }
+
+    if (viewport.width <= 430) {
+      const mobileBrand = await page.locator(".q-topbar__mobile-brand").boundingBox();
+      const live = await page.getByTestId("draw-live-indicator").boundingBox();
+      const actions = await page.locator(".q-topbar__actions").boundingBox();
+      expect(live!.x).toBeGreaterThanOrEqual(mobileBrand!.x + mobileBrand!.width);
+      expect(live!.y).toBeLessThan(mobileBrand!.y + mobileBrand!.height);
+      expect(live!.y + live!.height).toBeGreaterThan(mobileBrand!.y);
+      expect(actions!.y).toBeGreaterThanOrEqual(
+        Math.max(mobileBrand!.y + mobileBrand!.height, live!.y + live!.height),
+      );
     }
 
     const metrics = await hero.evaluate((element) => {
@@ -296,12 +452,13 @@ test("keeps the Home hero compact and unclipped across narrow Samsung and landsc
 
     const drawCards = page.getByTestId("home-draw-card");
     const resultCards = page.getByTestId("home-result-card");
+    const resultTrack = page.getByTestId("home-results-balls");
     const megaBanner = page.getByTestId("home-megaloto-banner");
     await expect(drawCards).toHaveCount(4);
     await expect(resultCards).toHaveCount(14);
     for (const item of [
       ...await drawCards.all(),
-      ...await resultCards.all(),
+      resultTrack,
       megaBanner,
       megaBanner.getByRole("img", { name: "Logo oficial de Mega Loto" }),
       megaBanner.getByRole("heading", { name: "Sorteo exclusivo con 6 números." }),
@@ -311,6 +468,112 @@ test("keeps the Home hero compact and unclipped across narrow Samsung and landsc
     }
     await expectNoHorizontalOverflow(page);
   }
+});
+
+test("keeps the floating mobile navigation capsule usable across narrow viewports", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name !== HOME_HERO_GUARDIAN_PROJECT,
+    `Mobile navigation matrix runs only in ${HOME_HERO_GUARDIAN_PROJECT}`,
+  );
+  test.slow();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+
+  const navigation = page.getByRole("navigation", { name: "Navegación móvil", exact: true });
+  const capsule = page.getByTestId("mobile-navigation-capsule");
+  const portraitViewports = HOME_HERO_VIEWPORTS.filter(({ height, width }) => height > width);
+
+  for (const viewport of portraitViewports) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await expect(capsule, viewport.name).toBeVisible();
+    const targets = capsule.getByRole("link");
+    const labels = capsule.locator(".mobileNavLabel");
+    await expect(targets).toHaveCount(5);
+    await expect(labels).toHaveText(["Inicio", "Reglas", "Jugar", "Resultados", "Cuenta"]);
+    await expect(capsule.locator('a[aria-current="page"]')).toHaveCount(1);
+    await expect(capsule.locator('a[aria-current="page"]')).toHaveAccessibleName("Inicio");
+
+    const metrics = await capsule.evaluate((element) => {
+      const capsuleBox = element.getBoundingClientRect();
+      const viewportWidth = document.documentElement.clientWidth;
+      const links = Array.from(element.querySelectorAll<HTMLElement>(":scope > a"));
+      const action = element.querySelector<HTMLElement>(".mobileNavAction")!;
+      const actionBox = action.getBoundingClientRect();
+      const disc = action.querySelector<HTMLElement>(".mobileNavActionDisc")!;
+      const discBox = disc.getBoundingClientRect();
+      const targetMetrics = links.map((link) => {
+        const box = link.getBoundingClientRect();
+        const label = link.querySelector<HTMLElement>(".mobileNavLabel")!;
+        const separator = getComputedStyle(link, "::after");
+        const separatorContent = separator.content;
+        return {
+          className: link.className,
+          height: box.height,
+          labelFits: label.scrollWidth <= label.clientWidth + 1
+            && label.scrollHeight <= label.clientHeight + 1,
+          separator: separatorContent !== "none"
+            && separatorContent !== "normal"
+            && Number.parseFloat(separator.width) >= 1
+            && Number.parseFloat(separator.height) >= 16,
+          width: box.width,
+        };
+      });
+      return {
+        actionCentered: Math.abs(
+          actionBox.left + actionBox.width / 2 - (capsuleBox.left + capsuleBox.width / 2),
+        ),
+        capsuleRadius: Number.parseFloat(getComputedStyle(element).borderTopLeftRadius),
+        discCentered: Math.abs(
+          discBox.left + discBox.width / 2 - (actionBox.left + actionBox.width / 2),
+        ),
+        discHeight: discBox.height,
+        discWidth: discBox.width,
+        leftMargin: capsuleBox.left,
+        rightMargin: viewportWidth - capsuleBox.right,
+        scrollFits: element.scrollWidth <= element.clientWidth + 1,
+        targetMetrics,
+      };
+    });
+
+    expect(Math.abs(metrics.leftMargin - metrics.rightMargin), `${viewport.name}: symmetric margins`)
+      .toBeLessThanOrEqual(1);
+    expect(metrics.leftMargin, `${viewport.name}: floating margin`).toBeGreaterThanOrEqual(3);
+    expect(metrics.capsuleRadius, `${viewport.name}: capsule radius`)
+      .toBeGreaterThanOrEqual(metrics.discHeight / 2);
+    expect(metrics.scrollFits, `${viewport.name}: capsule content fits`).toBe(true);
+    expect(metrics.targetMetrics.filter(({ separator }) => separator)).toHaveLength(4);
+    expect(metrics.targetMetrics.filter(({ className, separator }) => className === "mobileNavLink" && separator))
+      .toHaveLength(3);
+    expect(metrics.targetMetrics.filter(({ className, separator }) => className === "mobileNavAction" && separator))
+      .toHaveLength(1);
+    for (const target of metrics.targetMetrics) {
+      expect(target.width, `${viewport.name}: target width`).toBeGreaterThanOrEqual(44);
+      expect(target.height, `${viewport.name}: target height`).toBeGreaterThanOrEqual(44);
+      expect(target.labelFits, `${viewport.name}: label fits`).toBe(true);
+    }
+    expect(metrics.actionCentered, `${viewport.name}: Jugar centered`).toBeLessThanOrEqual(1);
+    expect(metrics.discCentered, `${viewport.name}: play disc centered`).toBeLessThanOrEqual(1);
+    expect(Math.abs(metrics.discWidth - metrics.discHeight), `${viewport.name}: circular play disc`)
+      .toBeLessThanOrEqual(1);
+    await expectNoHorizontalOverflow(page);
+  }
+
+  for (const destination of [
+    { href: "/reglas", name: "Reglas" },
+    { href: "/resultados", name: "Resultados" },
+    { href: "/quinielas", name: "Jugar" },
+  ]) {
+    const link = navigation.getByRole("link", { name: destination.name, exact: true });
+    await expect(link).toHaveAttribute("href", destination.href);
+    await link.click();
+    await expect(page).toHaveURL(new RegExp(`${destination.href}$`));
+    const current = navigation.locator('a[aria-current="page"]');
+    await expect(current).toHaveCount(1);
+    await expect(current).toHaveAccessibleName(destination.name);
+  }
+  await expect(navigation.getByRole("link", { name: "Jugar", exact: true })).toHaveAttribute("data-active", "true");
 });
 
 test("shows six compact Quinielas cards with Sapy’aite and green Mega Loto", async ({
@@ -547,42 +810,50 @@ test("renders the latest draw as fourteen responsive balls in position order", a
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   const viewportWidth = page.viewportSize()!.width;
-  const expectedColumns = viewportWidth >= 1_280 ? 14 : viewportWidth >= 768 ? 7 : viewportWidth >= 360 ? 5 : 4;
-  const expectedRows = Math.ceil(14 / expectedColumns);
   const section = page.getByTestId("home-results-section");
-  const balls = section.getByRole("list", {
+  const carousel = section.getByTestId("home-results-carousel");
+  const track = section.getByRole("list", {
     name: "Las 14 posturas del último sorteo publicado",
     exact: true,
   });
-  const cards = balls.getByRole("listitem");
+  const cards = track.getByRole("listitem");
+  const previous = section.getByTestId("home-results-previous");
+  const next = section.getByTestId("home-results-next");
+  const pagination = section.getByTestId("home-results-pagination");
+  const segments = pagination.getByTestId("home-results-pagination-segment");
   const positions = Array.from({ length: 14 }, (_, index) => String(index + 1));
-  const reverseEntryOrder = Array.from({ length: 14 }, (_, index) => String(14 - index));
+  const expectedTones = positions.map((position) => {
+    if (position === "1") return "gold";
+    if (position === "2") return "silver";
+    if (position === "3") return "bronze";
+    return "red";
+  });
 
   await expect(section.getByRole("heading", { level: 2, name: "Último sorteo publicado", exact: true })).toBeVisible();
   await expect(section.getByText("Resultados de muestra", { exact: true })).toHaveCount(0);
   await expect(section.getByTestId("home-results-draw")).toBeVisible();
-  await expect(balls).toHaveAttribute("data-testid", "home-results-balls");
-  await expect(balls).not.toHaveAttribute("tabindex");
+  await expect(carousel).toBeVisible();
+  await expect(track).toHaveAttribute("data-testid", "home-results-balls");
+  await expect(track).toHaveAttribute("aria-roledescription", "carrusel");
+  await expect(track).toHaveAttribute("tabindex", "0");
+  await expect(track).not.toHaveAttribute("data-animate");
   await expect(cards).toHaveCount(14);
   await expect(cards.getByTestId("home-result-value")).toHaveCount(14);
   await expect(cards.getByTestId("home-result-posture")).toHaveCount(14);
+  await expect(segments).toHaveCount(4);
+  await expect(pagination).toHaveAttribute("aria-hidden", "true");
 
   expect(await cards.evaluateAll((elements) => elements.map((element) => element.getAttribute("data-position"))))
     .toEqual(positions);
-  expect(await cards.evaluateAll((elements) => elements.map((element) => element.getAttribute("data-entry-order"))))
-    .toEqual(reverseEntryOrder);
   expect(await cards.getByTestId("home-result-value").allTextContents())
     .toEqual(Array.from({ length: 14 }, () => expect.stringMatching(/^\d{3}$/)));
   expect(await cards.getByTestId("home-result-posture").allTextContents())
-    .toEqual(positions.map((position) => `${position}.ª postura`));
+    .toEqual(positions.map((position) => `${position}ª POSTURA`));
 
   await expect(section.getByRole("tab")).toHaveCount(0);
   await expect(section.getByRole("tablist")).toHaveCount(0);
   await expect(section.getByRole("tabpanel")).toHaveCount(0);
-  await expect(section.getByTestId("home-results-carousel")).toHaveCount(0);
-  await expect(section.getByTestId("home-results-carousel-track")).toHaveCount(0);
-  await expect(section.getByTestId("home-results-previous")).toHaveCount(0);
-  await expect(section.getByTestId("home-results-next")).toHaveCount(0);
+  expect(await section.textContent()).not.toMatch(/desliz|swipe|arrastr/i);
   for (const formerModality of ["A LA CABEZA", "A LOS PREMIOS", "REDOBLONA", "INVERTIDA"]) {
     await expect(section.getByText(formerModality, { exact: true })).toHaveCount(0);
   }
@@ -590,113 +861,181 @@ test("renders the latest draw as fourteen responsive balls in position order", a
   const cardDetails = await cards.evaluateAll((elements) => elements.map((element) => {
     const value = element.querySelector<HTMLElement>('[data-testid="home-result-value"]')!;
     const posture = element.querySelector<HTMLElement>('[data-testid="home-result-posture"]')!;
-    const icon = element.querySelector<SVGElement>('[data-testid="home-result-rank"]');
+    const image = element.querySelector<HTMLImageElement>("img")!;
+    const imageSource = new URL(image.currentSrc || image.src);
     const cardBox = element.getBoundingClientRect();
+    const imageBox = image.getBoundingClientRect();
     const valueBox = value.getBoundingClientRect();
     const postureBox = posture.getBoundingClientRect();
-    const iconBox = icon?.getBoundingClientRect();
     const style = getComputedStyle(element);
     return {
+      animationDelay: style.animationDelay,
       animationName: style.animationName,
-      borderRadius: style.borderRadius,
-      customEntryIndex: style.getPropertyValue("--result-entry-index").trim(),
-      height: cardBox.height,
+      assetPath: imageSource.pathname === "/_next/image"
+        ? decodeURIComponent(imageSource.searchParams.get("url") ?? imageSource.pathname)
+        : imageSource.pathname,
+      entryIndex: style.getPropertyValue("--result-entry-index").trim(),
+      entryOrder: element.getAttribute("data-entry-order"),
+      imageDecorative: image.getAttribute("alt") === "" && image.getAttribute("aria-hidden") === "true",
       label: element.getAttribute("aria-label"),
       left: cardBox.left,
-      opacity: style.opacity,
+      bottom: cardBox.bottom,
+      imageBottom: imageBox.bottom,
+      imageWidth: imageBox.width,
+      numberIsHtml: value.namespaceURI === "http://www.w3.org/1999/xhtml" && value.tagName === "STRONG",
       position: Number(element.getAttribute("data-position")),
       posture: posture.textContent,
-      rank: icon?.getAttribute("data-rank") ?? null,
-      rankFocusable: icon?.getAttribute("focusable") ?? null,
-      rankHidden: icon?.getAttribute("aria-hidden") ?? null,
-      rankInside: !iconBox || (iconBox.left >= cardBox.left - 1 && iconBox.right <= cardBox.right + 1
-        && iconBox.top >= cardBox.top - 1 && iconBox.bottom <= cardBox.bottom + 1),
+      postureBottom: postureBox.bottom,
+      postureInside: postureBox.left >= cardBox.left - 1 && postureBox.right <= cardBox.right + 1,
       top: cardBox.top,
-      transform: style.transform,
+      tone: element.getAttribute("data-tone"),
       value: value.textContent?.trim(),
-      valueInside: valueBox.left >= cardBox.left - 1 && valueBox.right <= cardBox.right + 1
-        && valueBox.top >= cardBox.top - 1 && valueBox.bottom <= cardBox.bottom + 1,
-      postureInside: postureBox.left >= cardBox.left - 1 && postureBox.right <= cardBox.right + 1
-        && postureBox.top >= cardBox.top - 1 && postureBox.bottom <= cardBox.bottom + 1,
-      width: cardBox.width,
+      valueInsideArt: valueBox.left >= imageBox.left - 1 && valueBox.right <= imageBox.right + 1
+        && valueBox.top >= imageBox.top - 1 && valueBox.bottom <= imageBox.bottom + 1,
     };
   }));
 
   for (const [index, card] of cardDetails.entries()) {
     const position = index + 1;
+    const tone = expectedTones[index];
     expect(card.position).toBe(position);
     expect(card.value).toMatch(/^\d{3}$/);
-    expect(card.posture).toBe(`${position}.ª postura`);
+    expect(card.numberIsHtml).toBe(true);
+    expect(card.posture).toBe(`${position}ª POSTURA`);
     expect(card.label).toBe(`${position}.ª postura: número ${card.value}`);
-    expect(card.customEntryIndex).toBe(String(14 - position));
-    expect(card.rank).toBe(position <= 3 ? ["gold", "silver", "bronze"][position - 1] : null);
-    if (position <= 3) {
-      expect(card.rankHidden).toBe("true");
-      expect(card.rankFocusable).toBe("false");
-      expect(card.rankInside).toBe(true);
-    }
+    expect(card.entryOrder).toBe(String(14 - index));
+    expect(card.entryIndex).toBe("");
     expect(card.animationName).toBe("none");
-    expect(card.opacity).toBe("1");
-    expect(card.transform).toBe("none");
-    expect(card.borderRadius).toBe("50%");
-    expect(Math.abs(card.width - card.height)).toBeLessThanOrEqual(1);
-    expect(card.valueInside).toBe(true);
+    expect(card.animationDelay).toBe("0s");
+    expect(card.tone).toBe(tone);
+    expect(card.assetPath).toBe(`/assets/results/balls/ball-${tone}.webp`);
+    expect(card.imageDecorative).toBe(true);
+    expect(card.valueInsideArt).toBe(true);
     expect(card.postureInside).toBe(true);
   }
 
-  expect(new Set(cardDetails.map((card) => Math.round(card.top))).size).toBe(expectedRows);
-  for (const [index, card] of cardDetails.entries()) {
-    const column = index % expectedColumns;
-    if (column === 0) {
-      expect(card.left).toBeCloseTo(cardDetails[0].left, 0);
-      if (index > 0) expect(card.top).toBeGreaterThan(cardDetails[index - expectedColumns].top);
-    } else {
-      expect(card.left).toBeGreaterThan(cardDetails[index - 1].left);
-      expect(card.top).toBeCloseTo(cardDetails[index - 1].top, 0);
-    }
+  expect(new Set(cardDetails.map((card) => Math.round(card.bottom))).size).toBe(1);
+  expect(new Set(cardDetails.map((card) => Math.round(card.imageBottom))).size).toBe(1);
+  expect(new Set(cardDetails.map((card) => Math.round(card.postureBottom))).size).toBe(1);
+  expect(cardDetails[0].imageWidth).toBeGreaterThan(cardDetails[1].imageWidth);
+  expect(cardDetails[0].top).toBeLessThan(cardDetails[1].top);
+  for (let index = 1; index < cardDetails.length; index += 1) {
+    expect(cardDetails[index].left).toBeGreaterThan(cardDetails[index - 1].left);
   }
 
-  const trackMetrics = await balls.evaluate((element) => {
+  const trackMetrics = await track.evaluate((element) => {
     const style = getComputedStyle(element);
+    const scrollbarStyle = getComputedStyle(element, "::-webkit-scrollbar");
     return {
       clientWidth: element.clientWidth,
       direction: style.direction,
-      columns: style.gridTemplateColumns.split(" ").filter(Boolean).length,
       display: style.display,
+      flexWrap: style.flexWrap,
       overflowX: style.overflowX,
-      rows: new Set(Array.from(element.children, (child) => Math.round(child.getBoundingClientRect().top))).size,
+      overflowY: style.overflowY,
+      scrollbarDisplay: scrollbarStyle.display,
+      scrollbarWidth: style.scrollbarWidth,
       scrollLeft: element.scrollLeft,
+      scrollSnapType: style.scrollSnapType,
       scrollWidth: element.scrollWidth,
     };
   });
-  expect(trackMetrics.columns).toBe(expectedColumns);
   expect(trackMetrics.direction).toBe("ltr");
-  expect(trackMetrics.display).toBe("grid");
-  expect(trackMetrics.overflowX).toBe("hidden");
-  expect(trackMetrics.rows).toBe(expectedRows);
+  expect(trackMetrics.display).toBe("flex");
+  expect(trackMetrics.flexWrap).toBe("nowrap");
+  expect(["auto", "scroll"]).toContain(trackMetrics.overflowX);
+  expect(trackMetrics.overflowY).toBe("hidden");
+  expect(trackMetrics.scrollbarWidth).toBe("none");
+  expect(trackMetrics.scrollbarDisplay).toBe("none");
+  expect(trackMetrics.scrollSnapType).toContain("x mandatory");
   expect(trackMetrics.scrollLeft).toBeLessThanOrEqual(1);
-  expect(trackMetrics.scrollWidth).toBeLessThanOrEqual(trackMetrics.clientWidth + 1);
-  await expectInsideHorizontalViewport(balls, page);
-  for (const card of await cards.all()) await expectInsideHorizontalViewport(card, page);
+  await expectInsideHorizontalViewport(track, page);
   await expectNoHorizontalOverflow(page);
 
-  await page.emulateMedia({ reducedMotion: "no-preference" });
-  const motion = await cards.evaluateAll((elements) => elements.map((element) => {
-    const style = getComputedStyle(element);
-    return {
-      delayMs: Number.parseFloat(style.animationDelay) * 1_000,
-      name: style.animationName,
-    };
-  }));
-  expect(motion.every(({ name }) => name.includes("resultBallGather"))).toBe(true);
-  expect(motion.map(({ delayMs }) => Math.round(delayMs)))
-    .toEqual(Array.from({ length: 14 }, (_, index) => (13 - index) * 45));
+  const hasOverflow = trackMetrics.scrollWidth > trackMetrics.clientWidth + 1;
+  await expect(carousel).toHaveAttribute("data-has-next", hasOverflow ? "true" : "false");
+  await expect(previous).toBeDisabled();
+  await expect(previous).toBeHidden();
+  if (viewportWidth >= 768 && hasOverflow) {
+    await expect(next).toBeEnabled();
+    await expect(next).toBeVisible();
+  } else {
+    await expect(next).toBeHidden();
+    if (!hasOverflow) await expect(next).toBeDisabled();
+  }
 
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  expect(await cards.evaluateAll((elements) => elements.every((element) => {
-    const style = getComputedStyle(element);
-    return style.animationName === "none" && style.opacity === "1" && style.transform === "none";
-  }))).toBe(true);
+  expect(await segments.evaluateAll((elements) => elements.map((element) => element.getAttribute("data-active"))))
+    .toEqual(["true", "false", "false", "false"]);
+  expect(await segments.locator("img").evaluateAll((images) => images.map((image) =>
+    new URL((image as HTMLImageElement).currentSrc || (image as HTMLImageElement).src).pathname,
+  ))).toEqual([
+    "/assets/results/ui/carousel-indicator-active.svg",
+    "/assets/results/ui/carousel-indicator-inactive.svg",
+    "/assets/results/ui/carousel-indicator-inactive.svg",
+    "/assets/results/ui/carousel-indicator-inactive.svg",
+  ]);
+
+  if ([360, 390, 430].includes(viewportWidth)) {
+    const mobileGeometry = await track.evaluate((element) => {
+      const trackBox = element.getBoundingClientRect();
+      const images = Array.from(element.querySelectorAll<HTMLImageElement>("li img"))
+        .slice(0, 4)
+        .map((image) => image.getBoundingClientRect());
+      const visibleWidth = Math.max(0, Math.min(images[3].right, trackBox.right)
+        - Math.max(images[3].left, trackBox.left));
+      return {
+        firstThreeComplete: images.slice(0, 3).every((box) =>
+          box.left >= trackBox.left - 1 && box.right <= trackBox.right + 1,
+        ),
+        fourthVisibleRatio: visibleWidth / images[3].width,
+      };
+    });
+    expect(mobileGeometry.firstThreeComplete).toBe(true);
+    expect(mobileGeometry.fourthVisibleRatio).toBeGreaterThanOrEqual(0.3);
+    expect(mobileGeometry.fourthVisibleRatio).toBeLessThanOrEqual(0.4);
+
+    const fade = await carousel.evaluate((element) => {
+      const style = getComputedStyle(element, "::after");
+      return {
+        backgroundImage: style.backgroundImage,
+        content: style.content,
+        opacity: Number.parseFloat(style.opacity),
+        pointerEvents: style.pointerEvents,
+        width: Number.parseFloat(style.width),
+      };
+    });
+    expect(fade.content).not.toBe("none");
+    expect(fade.backgroundImage).toContain("linear-gradient");
+    expect(fade.opacity).toBeGreaterThan(0);
+    expect(fade.pointerEvents).toBe("none");
+    expect(fade.width).toBeGreaterThan(0);
+  }
+
+  if (hasOverflow) {
+    if (viewportWidth >= 768) {
+      await next.click();
+      await expect.poll(() => track.evaluate((element) => element.scrollLeft)).toBeGreaterThan(1);
+      await expect(previous).toBeEnabled();
+      await expect(previous).toBeVisible();
+    }
+
+    await track.focus();
+    await expect(track).toBeFocused();
+    await track.press("End");
+    await expect.poll(() => track.evaluate((element) =>
+      Math.abs(element.scrollWidth - element.clientWidth - element.scrollLeft),
+    )).toBeLessThanOrEqual(2);
+    await expect(segments.nth(3)).toHaveAttribute("data-active", "true");
+    if (viewportWidth >= 768) {
+      await expect(previous).toBeVisible();
+      await expect(next).toBeHidden();
+    }
+
+    await track.press("Home");
+    await expect.poll(() => track.evaluate((element) => Math.abs(element.scrollLeft))).toBeLessThanOrEqual(2);
+    await expect(segments.first()).toHaveAttribute("data-active", "true");
+  }
+
   await expectNoHorizontalOverflow(page);
   await page.screenshot({ path: testInfo.outputPath("home-latest-draw-results.png"), fullPage: true });
 });

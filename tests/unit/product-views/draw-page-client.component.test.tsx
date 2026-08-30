@@ -27,6 +27,7 @@ const operationalCatalog: GamingCatalog = {
     closesAt: "2026-08-27T15:30:00.000Z",
   })),
 };
+const advertisingVideoIds = ["Z3eXyAIz65I", "JV9ajM_6Rsc"] as const;
 
 function productState(overrides: Record<string, unknown> = {}) {
   return {
@@ -73,6 +74,29 @@ function expectNoDrawMetadata() {
   )).toHaveLength(0);
 }
 
+function expectAdvertisingPlayer() {
+  const player = screen.getByTestId("draw-advertising-player") as HTMLIFrameElement;
+  const frame = screen.getByTestId("draw-stream-frame");
+  const source = player.getAttribute("src") ?? "";
+  expect(player.tagName).toBe("IFRAME");
+  expect(frame.getAttribute("data-stream-mode")).toBe("advertising");
+  expect(frame.contains(player)).toBe(true);
+  expect(source).toContain(`youtube-nocookie.com/embed/${advertisingVideoIds[0]}`);
+  for (const videoId of advertisingVideoIds) expect(source).toContain(videoId);
+  expect(source).toContain(`playlist=${advertisingVideoIds.join(",")}`);
+  expect(player.getAttribute("title")).toBe("Publicidad de Quiniela");
+  expect(screen.queryByTestId("draw-preview-video")).toBeNull();
+  return player;
+}
+
+function expectPreviewLive(drawName: string) {
+  const video = screen.getByTestId("draw-preview-video") as HTMLVideoElement;
+  expect(screen.getByTestId("draw-stream-frame").getAttribute("data-stream-mode")).toBe("live");
+  expect(video.getAttribute("aria-label")).toBe(`Streaming de ${drawName}`);
+  expect(screen.queryByTestId("draw-advertising-player")).toBeNull();
+  return video;
+}
+
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-08-27T12:15:00.000Z"));
@@ -86,21 +110,14 @@ afterEach(() => {
 });
 
 describe("DrawPageClient preview transmission", () => {
-  it("plays the attached video with accessible controls and no extra labels", () => {
+  it("shows both advertising videos before the LIVE window with no extra labels", () => {
     render(<DrawPageClient definition={early} selectedDate="2026-08-27" streamUrl={null} />);
     initializeClock();
 
-    const video = screen.getByTestId("draw-preview-video") as HTMLVideoElement;
-    expect(video.tagName).toBe("VIDEO");
-    expect(video.getAttribute("src")).toBe(previewVideoPath);
-    expect(video.autoplay).toBe(true);
-    expect(video.muted).toBe(true);
-    expect(video.loop).toBe(true);
-    expect(video.playsInline).toBe(true);
-    expect(video.controls).toBe(true);
-    expect(video.getAttribute("aria-label")).toBe("Streaming de Tempranero");
+    const player = expectAdvertisingPlayer();
+    expect(player.getAttribute("allow")).toContain("autoplay");
+    expect(player.getAttribute("referrerpolicy")).toBe("strict-origin-when-cross-origin");
     expect(screen.queryByTestId("draw-stream-placeholder")).toBeNull();
-    expect(screen.getByTestId("draw-stream-frame").querySelector("iframe")).toBeNull();
     expect(screen.queryByRole("status")).toBeNull();
     expectNoDrawMetadata();
   });
@@ -114,7 +131,7 @@ describe("DrawPageClient preview transmission", () => {
     const frame = screen.getByTestId("draw-stream-frame");
     const timer = expectCountdown("01", "15");
     expect(title).toBe(screen.getByTestId("draw-page-title"));
-    expect(frame.contains(screen.getByTestId("draw-preview-video"))).toBe(true);
+    expect(frame.contains(expectAdvertisingPlayer())).toBe(true);
     expect(Array.from(page.children)).toEqual([title, frame, timer]);
     expectNoDrawMetadata();
   });
@@ -154,6 +171,7 @@ describe("DrawPageClient preview transmission", () => {
   });
 
   it("uses the simulation in preview even when an operational embed is configured", () => {
+    vi.setSystemTime(new Date("2026-08-27T13:25:00.000Z"));
     render(
       <DrawPageClient
         definition={early}
@@ -162,12 +180,12 @@ describe("DrawPageClient preview transmission", () => {
     );
     initializeClock();
 
-    expect(screen.getByTestId("draw-preview-video").getAttribute("src"))
-      .toBe(previewVideoPath);
+    expect(expectPreviewLive("Tempranero").getAttribute("src")).toBe(previewVideoPath);
     expect(screen.queryByTitle("Streaming de Tempranero")).toBeNull();
   });
 
   it("offers a recoverable error when the local video cannot load", () => {
+    vi.setSystemTime(new Date("2026-08-27T13:25:00.000Z"));
     render(<DrawPageClient definition={early} streamUrl={null} />);
     initializeClock();
     const firstVideo = screen.getByTestId("draw-preview-video");
@@ -215,43 +233,73 @@ describe("DrawPageClient Paraguay schedule", () => {
     expectCountdown("14", "00");
   });
 
-  it.each([undefined, "2026-08-27"])("removes the complete countdown at zero without restarting the video or rolling to tomorrow (selected date: %s)", (selectedDate) => {
-    vi.setSystemTime(new Date("2026-08-27T13:29:59.000Z"));
+  it.each([
+    ["tempranero", "Tempranero", "2026-08-27T10:45:00-03:00"],
+    ["matutino", "Matutino", "2026-08-27T13:15:00-03:00"],
+    ["vespertino", "Vespertino", "2026-08-27T16:45:00-03:00"],
+    ["nocturno", "Nocturno", "2026-08-27T20:45:00-03:00"],
+  ])("keeps the current %s occurrence LIVE when its direct route opens after draw time", (slug, name, instant) => {
+    vi.setSystemTime(new Date(instant));
+    render(<DrawPageClient definition={getDrawPageDefinition(slug)!} streamUrl={null} />);
+    initializeClock();
+
+    expectPreviewLive(name);
+    expectNoCountdown();
+  });
+
+  it("does not use another slot's LIVE occurrence on a direct route", () => {
+    vi.setSystemTime(new Date("2026-08-27T10:45:00-03:00"));
+    render(
+      <DrawPageClient
+        definition={getDrawPageDefinition("matutino")!}
+        streamUrl={null}
+      />,
+    );
+    initializeClock();
+
+    expectAdvertisingPlayer();
+    expectCountdown("02", "15");
+  });
+
+  it.each([undefined, "2026-08-27"])("switches ads to LIVE at T-10 and back to ads at T+30 without closing (selected date: %s)", (selectedDate) => {
+    vi.setSystemTime(new Date("2026-08-27T13:19:59.000Z"));
     render(<DrawPageClient definition={early} selectedDate={selectedDate} streamUrl={null} />);
     initializeClock();
-    const video = screen.getByTestId("draw-preview-video") as HTMLVideoElement;
-    const frame = screen.getByTestId("draw-stream-frame");
+    const firstAdvertisingPlayer = expectAdvertisingPlayer();
+    const page = screen.getByTestId("draw-page");
+    expectCountdown("00", "10", "01");
+
+    act(() => vi.advanceTimersByTime(1_000));
+    const video = expectPreviewLive("Tempranero");
     video.currentTime = 17;
-    expectCountdown("00", "00", "01");
+    expectCountdown("00", "10", "00");
+    expect(firstAdvertisingPlayer.isConnected).toBe(false);
 
-    act(() => vi.advanceTimersByTime(999));
-    expectCountdown("00", "00", "01");
-
-    act(() => vi.advanceTimersByTime(1));
+    act(() => vi.advanceTimersByTime(10 * 60_000));
     expectNoCountdown();
-    expect(screen.getByTestId("draw-preview-video")).toBe(video);
+    expect(expectPreviewLive("Tempranero")).toBe(video);
     expect(video.currentTime).toBe(17);
-    expect(Array.from(screen.getByTestId("draw-page").children)).toEqual([
+    expect(Array.from(page.children)).toEqual([
       screen.getByTestId("draw-page-title"),
-      frame,
+      screen.getByTestId("draw-stream-frame"),
     ]);
     expect(screen.queryByRole("status")).toBeNull();
 
-    vi.setSystemTime(new Date("2026-08-28T12:00:00.000Z"));
-    fireEvent.focus(window);
+    act(() => vi.advanceTimersByTime(29 * 60_000 + 59_000));
+    expect(expectPreviewLive("Tempranero")).toBe(video);
+    act(() => vi.advanceTimersByTime(1_000));
 
     expectNoCountdown();
-    expect(screen.getByTestId("draw-preview-video")).toBe(video);
-    expect(video.currentTime).toBe(17);
-    expect(screen.getByTestId("draw-stream-frame")).toBe(frame);
-    expect(Array.from(screen.getByTestId("draw-page").children)).toHaveLength(2);
+    expect(expectAdvertisingPlayer()).not.toBe(firstAdvertisingPlayer);
+    expect(video.isConnected).toBe(false);
+    expect(Array.from(page.children)).toHaveLength(2);
   });
 
   it("never displays a zero-valued countdown when opened at the selected draw time", () => {
     vi.setSystemTime(new Date("2026-08-27T13:30:00.000Z"));
     render(<DrawPageClient definition={early} selectedDate="2026-08-27" streamUrl={null} />);
-    const video = screen.getByTestId("draw-preview-video");
     initializeClock();
+    const video = expectPreviewLive("Tempranero");
 
     expectNoCountdown();
     expect(screen.queryByRole("status")).toBeNull();
@@ -300,6 +348,7 @@ describe("DrawPageClient operational mode", () => {
   });
 
   it("preserves the authorized iframe and the actual backoffice schedule", () => {
+    vi.setSystemTime(new Date("2026-08-27T15:40:00.000Z"));
     render(
       <DrawPageClient
         definition={early}
@@ -312,13 +361,16 @@ describe("DrawPageClient operational mode", () => {
     const frame = screen.getByTitle("Streaming de Tempranero");
     expect(frame.tagName).toBe("IFRAME");
     expect(frame.getAttribute("src")).toBe("https://stream.example/authorized-player");
+    expect(screen.getByTestId("draw-stream-frame").getAttribute("data-stream-mode")).toBe("live");
+    expect(screen.queryByTestId("draw-advertising-player")).toBeNull();
     expect(screen.queryByTestId("draw-preview-video")).toBeNull();
     expect(screen.queryByTestId("draw-stream-placeholder")).toBeNull();
-    expectCountdown("03", "30");
+    expectCountdown("00", "05");
     expectNoDrawMetadata();
   });
 
   it("keeps the no-signal placeholder instead of introducing a fake backoffice stream", () => {
+    vi.setSystemTime(new Date("2026-08-27T15:40:00.000Z"));
     render(<DrawPageClient definition={early} streamUrl={null} />);
     initializeClock();
 
@@ -339,10 +391,10 @@ describe("DrawPageClient operational mode", () => {
     initializeClock();
 
     expectNoCountdown();
-    expect(screen.queryByTestId("draw-preview-video")).toBeNull();
+    const advertisingPlayer = expectAdvertisingPlayer();
     expect(Array.from(screen.getByTestId("draw-page").children)).toEqual([
       screen.getByTestId("draw-page-title"),
-      screen.getByTestId("draw-stream-placeholder"),
+      advertisingPlayer.parentElement,
     ]);
   });
 
@@ -363,10 +415,10 @@ describe("DrawPageClient operational mode", () => {
 
     expectNoCountdown();
     expectNoDrawMetadata();
-    expect(screen.queryByTestId("draw-preview-video")).toBeNull();
+    const advertisingPlayer = expectAdvertisingPlayer();
     expect(Array.from(screen.getByTestId("draw-page").children)).toEqual([
       screen.getByTestId("draw-page-title"),
-      screen.getByTestId("draw-stream-placeholder"),
+      advertisingPlayer.parentElement,
     ]);
   });
 });

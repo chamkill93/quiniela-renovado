@@ -54,6 +54,27 @@ describe("server-side gaming schemas", () => {
     ).toMatchObject({ gameId: "redoblona" });
   });
 
+  it("accepts only three distinct digits for Invertida", () => {
+    for (const number of ["012", "102", "120", "987"]) {
+      expect(traditionalPlayRequestSchema.parse({
+        gameId: "invert",
+        amount: 500,
+        drawId: "early",
+        selection: { number, position: 1 },
+      }).selection).toEqual({ number, position: 1 });
+    }
+
+    for (const number of ["000", "001", "007", "011", "101", "112", "777", "12", "1000"]) {
+      const result = traditionalPlayRequestSchema.safeParse({
+        gameId: "invert",
+        amount: 500,
+        drawId: "early",
+        selection: { number, position: 1 },
+      });
+      expect(result.success).toBe(false);
+    }
+  });
+
   it("enforces the complete Redoblona contract while allowing equal numbers", () => {
     expect(traditionalPlayRequestSchema.parse({
       gameId: "redoblona",

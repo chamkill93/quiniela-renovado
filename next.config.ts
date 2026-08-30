@@ -50,7 +50,11 @@ const backofficeOrigins = new Set(
 );
 connectSources.push(...backofficeOrigins);
 
-const frameSources = new Set(["'self'"]);
+const frameSources = new Set([
+  "'self'",
+  "https://www.youtube.com",
+  "https://www.youtube-nocookie.com",
+]);
 [
   process.env.NEXT_PUBLIC_DRAW_STREAM_TEMPRANERO_URL,
   process.env.NEXT_PUBLIC_DRAW_STREAM_MATUTINO_URL,

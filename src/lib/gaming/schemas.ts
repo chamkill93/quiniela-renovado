@@ -19,6 +19,11 @@ export const threeDigitSchema = z
   .string()
   .regex(/^(?!000)\d{3}$/, "Usá un número entre 001 y 999.");
 
+export const invertNumberSchema = threeDigitSchema.refine(
+  (value) => new Set(value).size === 3,
+  "Las tres cifras de Invertida deben ser distintas.",
+);
+
 export const exactThreeDigitSchema = z
   .string()
   .regex(/^\d{3}$/, "Usá exactamente tres cifras entre 000 y 999.");
@@ -122,7 +127,7 @@ export const traditionalPlayRequestSchema = z.discriminatedUnion("gameId", [
     amount: traditionalStakeSchema,
     drawId: drawIdSchema,
     selection: z.object({
-      number: threeDigitSchema,
+      number: invertNumberSchema,
       position: z.number().int().min(1).max(14),
     }),
   }),

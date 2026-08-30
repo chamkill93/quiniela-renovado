@@ -428,6 +428,19 @@ test("completes Home with scheduled draws, fourteen result balls and the officia
   await expect(drawsSection.locator('[data-testid="home-draw-card"]:enabled')).toHaveCount(1);
   await expect(liveIndicator).toBeVisible();
   await expect(liveIndicator).toHaveAttribute("data-active", "false");
+  await expect(liveIndicator).toHaveAttribute("aria-haspopup", "dialog");
+  await liveIndicator.click();
+  const liveDialog = page.getByRole("dialog", { name: "LIVE de Quiniela" });
+  await expect(liveDialog).toBeVisible();
+  await expect(liveIndicator).toHaveAttribute("aria-expanded", "true");
+  await expect(liveDialog.getByText("PROGRAMACIÓN PUBLICITARIA", { exact: true })).toBeVisible();
+  const popoutAdvertising = liveDialog.getByTestId("draw-advertising-player");
+  await expect(popoutAdvertising).toHaveAttribute("src", /youtube-nocookie\.com\/embed\/Z3eXyAIz65I/);
+  await expect(popoutAdvertising).toHaveAttribute("src", /JV9ajM_6Rsc/);
+  await liveDialog.getByRole("button", { name: "Cerrar transmisión LIVE" }).click();
+  await expect(liveDialog).toHaveCount(0);
+  await expect(liveIndicator).toBeFocused();
+  await expect(liveIndicator).toHaveAttribute("aria-expanded", "false");
   await expect(inlineStream).toBeHidden();
   await expect(inlineStream).toHaveAttribute("id", "home-draw-stream");
   await expect(page.getByTestId("draw-preview-video")).toHaveCount(0);
@@ -497,7 +510,8 @@ test("completes Home with scheduled draws, fourteen result balls and the officia
   await expect(resultMetadata).toContainText("26/08/2026");
   await expect(resultMetadata).toContainText("20:30");
   await expect(resultBalls).toHaveAttribute("data-testid", "home-results-balls");
-  await expect(resultBalls).not.toHaveAttribute("tabindex");
+  await expect(resultBalls).toHaveAttribute("tabindex", "0");
+  await expect(resultBalls).toHaveAttribute("aria-roledescription", "carrusel");
   await expect(resultCards).toHaveCount(14);
   expect(await resultCards.evaluateAll((elements) =>
     elements.map((element) => element.getAttribute("data-position")),
@@ -507,7 +521,7 @@ test("completes Home with scheduled draws, fourteen result balls and the officia
   )).toEqual(expectedEntryOrder);
   expect(await resultCards.getByTestId("home-result-value").allTextContents()).toEqual(nightValues);
   expect(await resultCards.getByTestId("home-result-posture").allTextContents())
-    .toEqual(expectedPositions.map((position) => `${position}.ª postura`));
+    .toEqual(expectedPositions.map((position) => `${position}ª POSTURA`));
 
   for (const [index, value] of nightValues.entries()) {
     const position = index + 1;
@@ -515,33 +529,36 @@ test("completes Home with scheduled draws, fourteen result balls and the officia
     await expect(card).toHaveAttribute("data-position", String(position));
     await expect(card).toHaveAttribute("data-entry-order", String(15 - position));
     await expect(card.getByTestId("home-result-value")).toHaveText(value);
-    await expect(card.getByTestId("home-result-posture")).toHaveText(`${position}.ª postura`);
+    await expect(card.getByTestId("home-result-posture")).toHaveText(`${position}ª POSTURA`);
     await expect(card).toHaveAccessibleName(`${position}.ª postura: número ${value}`);
   }
 
-  const rankIcons = resultCards.getByTestId("home-result-rank");
-  await expect(rankIcons).toHaveCount(3);
-  for (const [index, rank] of ["gold", "silver", "bronze"].entries()) {
-    const icon = resultCards.nth(index).getByTestId("home-result-rank");
-    await expect(icon).toHaveAttribute("data-rank", rank);
-    await expect(icon).toHaveAttribute("aria-hidden", "true");
-    await expect(icon).toHaveAttribute("focusable", "false");
+  for (const [index, tone] of ["gold", "silver", "bronze"].entries()) {
+    const card = resultCards.nth(index);
+    await expect(card).toHaveAttribute("data-tone", tone);
+    expect(decodeURIComponent(await card.locator("img").getAttribute("src") ?? ""))
+      .toContain(`/assets/results/balls/ball-${tone}-reference.png`);
+    await expect(card.locator("img")).toHaveAttribute("alt", "");
   }
-  await expect(resultCards.nth(3).getByTestId("home-result-rank")).toHaveCount(0);
+  await expect(resultsSection.locator('[data-testid="home-result-card"][data-tone="red"]')).toHaveCount(11);
+  await expect(resultCards.getByTestId("home-result-rank")).toHaveCount(0);
 
   await expect(resultsSection.getByRole("tab")).toHaveCount(0);
   await expect(resultsSection.getByRole("tablist")).toHaveCount(0);
   await expect(resultsSection.getByRole("tabpanel")).toHaveCount(0);
-  await expect(resultsSection.getByTestId("home-results-carousel")).toHaveCount(0);
-  await expect(resultsSection.getByTestId("home-results-carousel-track")).toHaveCount(0);
-  await expect(resultsSection.getByTestId("home-results-previous")).toHaveCount(0);
-  await expect(resultsSection.getByTestId("home-results-next")).toHaveCount(0);
+  await expect(resultsSection.getByTestId("home-results-carousel")).toHaveCount(1);
+  await expect(resultsSection.getByTestId("home-results-previous")).toHaveCount(1);
+  await expect(resultsSection.getByTestId("home-results-next")).toHaveCount(1);
+  await expect(resultsSection.getByTestId("home-results-pagination-segment")).toHaveCount(4);
+  await expect(resultsSection.getByTestId("home-results-pagination-segment").first())
+    .toHaveAttribute("data-active", "true");
+  await expect(resultsSection.getByText(/desliz|swipe|arrastr/i)).toHaveCount(0);
   for (const formerModality of ["A LA CABEZA", "A LOS PREMIOS", "REDOBLONA", "INVERTIDA"]) {
     await expect(resultsSection.getByText(formerModality, { exact: true })).toHaveCount(0);
   }
 
   await resultBalls.scrollIntoViewIfNeeded();
-  await expect(resultBalls).toHaveAttribute("data-animate", "true");
+  await expect(resultBalls).not.toHaveAttribute("data-animate");
   const entryMotion = await resultCards.evaluateAll((elements) => elements.map((element) => {
     const style = getComputedStyle(element);
     return {
@@ -551,10 +568,10 @@ test("completes Home with scheduled draws, fourteen result balls and the officia
     };
   }));
   expect(entryMotion.map(({ customIndex }) => customIndex))
-    .toEqual(Array.from({ length: 14 }, (_, index) => String(13 - index)));
+    .toEqual(Array.from({ length: 14 }, () => ""));
   expect(entryMotion.map(({ delayMs }) => Math.round(delayMs)))
-    .toEqual(Array.from({ length: 14 }, (_, index) => (13 - index) * 45));
-  expect(entryMotion.every(({ name }) => name.includes("resultBallGather"))).toBe(true);
+    .toEqual(Array.from({ length: 14 }, () => 0));
+  expect(entryMotion.every(({ name }) => name === "none")).toBe(true);
 
   await expect(resultsSection.getByText("999", { exact: true })).toHaveCount(0);
   await expect(resultsSection.getByText(/muestra|demostración|demo/i)).toHaveCount(0);
@@ -599,8 +616,6 @@ test("completes Home with scheduled draws, fourteen result balls and the officia
   expect(verticalOrder).toEqual([...verticalOrder].sort((a, b) => a - b));
 
   const viewportWidth = page.viewportSize()?.width ?? 0;
-  const resultColumns = viewportWidth >= 1_280 ? 14 : viewportWidth >= 768 ? 7 : viewportWidth >= 360 ? 5 : 4;
-  const resultRows = Math.ceil(14 / resultColumns);
   const drawColumns = await page.getByTestId("home-draw-grid").evaluate((element) =>
     getComputedStyle(element).gridTemplateColumns.split(" ").filter(Boolean).length,
   );
@@ -611,27 +626,55 @@ test("completes Home with scheduled draws, fourteen result balls and the officia
 
   await expect(resultsSection.getByRole("button", { name: "Ver más resultados" })).toHaveCount(0);
   await expectInsideHorizontalViewport(resultBalls, page);
-  for (const card of await resultCards.all()) await expectInsideHorizontalViewport(card, page);
   const ballTrack = await resultBalls.evaluate((element) => {
     const style = getComputedStyle(element);
     return {
       clientWidth: element.clientWidth,
-      columns: style.gridTemplateColumns.split(" ").filter(Boolean).length,
       direction: style.direction,
       display: style.display,
+      flexWrap: style.flexWrap,
       overflowX: style.overflowX,
-      rows: new Set(Array.from(element.children, (child) => Math.round(child.getBoundingClientRect().top))).size,
+      scrollbarWidth: style.scrollbarWidth,
       scrollLeft: element.scrollLeft,
       scrollWidth: element.scrollWidth,
     };
   });
-  expect(ballTrack.columns).toBe(resultColumns);
-  expect(ballTrack.display).toBe("grid");
+  expect(ballTrack.display).toBe("flex");
+  expect(ballTrack.flexWrap).toBe("nowrap");
   expect(ballTrack.direction).toBe("ltr");
-  expect(ballTrack.overflowX).toBe("hidden");
-  expect(ballTrack.rows).toBe(resultRows);
+  expect(ballTrack.overflowX).toBe("auto");
+  expect(ballTrack.scrollbarWidth).toBe("none");
   expect(ballTrack.scrollLeft).toBeLessThanOrEqual(1);
-  expect(ballTrack.scrollWidth).toBeLessThanOrEqual(ballTrack.clientWidth + 1);
+  expect(ballTrack.scrollWidth).toBeGreaterThan(ballTrack.clientWidth);
+
+  const previousResults = resultsSection.getByTestId("home-results-previous");
+  const nextResults = resultsSection.getByTestId("home-results-next");
+  if (viewportWidth < 768) {
+    await expect(previousResults).toBeHidden();
+    await expect(nextResults).toBeHidden();
+    const mobileGeometry = await resultBalls.evaluate((element) => {
+      const track = element.getBoundingClientRect();
+      const cards = Array.from(
+        element.querySelectorAll(':scope > [data-testid="home-result-card"]'),
+        (child) => child.getBoundingClientRect(),
+      );
+      const visibleFraction = (box: DOMRect) => (
+        Math.max(0, Math.min(track.right, box.right) - Math.max(track.left, box.left)) / box.width
+      );
+      return cards.slice(0, 4).map((box) => visibleFraction(box));
+    });
+    expect(mobileGeometry.slice(0, 3).every((fraction) => fraction >= 0.99)).toBe(true);
+    expect(mobileGeometry[3]).toBeGreaterThanOrEqual(0.28);
+    expect(mobileGeometry[3]).toBeLessThanOrEqual(0.42);
+  } else {
+    await expect(previousResults).toBeHidden();
+    await expect(nextResults).toBeVisible();
+  }
+
+  await resultBalls.evaluate((element) => element.scrollTo({ left: element.scrollWidth }));
+  await expect(resultsSection.getByTestId("home-results-pagination-segment").nth(3))
+    .toHaveAttribute("data-active", "true");
+  await resultBalls.evaluate((element) => element.scrollTo({ left: 0 }));
 
   if (viewportWidth < 768) {
     const widths = await Promise.all([
@@ -653,25 +696,25 @@ test("completes Home with scheduled draws, fourteen result balls and the officia
   await expect(earlyCard).toHaveAttribute("aria-label", /^Ocultar sorteo: Tempranero,/);
   await expect(earlyCard.getByTestId("home-next-draw-action")).toHaveText("Ocultar");
   const previewVideo = page.getByTestId("draw-preview-video");
-  await expect(previewVideo).toBeVisible();
-  await expect(previewVideo).toHaveCount(1);
-  await expect(previewVideo).toHaveAttribute("src", "/assets/video/quinie-streaming-simulado.mp4");
-  await expect(previewVideo).toHaveAttribute("autoplay", "");
-  await expect(previewVideo).toHaveAttribute("loop", "");
-  await expect(previewVideo).toHaveAttribute("playsinline", "");
-  await expect(previewVideo).toHaveJSProperty("muted", true);
+  const advertisingPlayer = page.getByTestId("draw-advertising-player");
+  await expect(previewVideo).toHaveCount(0);
+  await expect(advertisingPlayer).toBeVisible();
+  await expect(advertisingPlayer).toHaveCount(1);
+  await expect(advertisingPlayer).toHaveAttribute("src", /youtube-nocookie\.com\/embed\/Z3eXyAIz65I/);
+  await expect(advertisingPlayer).toHaveAttribute("src", /JV9ajM_6Rsc/);
+  await expect(advertisingPlayer).toHaveAttribute("allow", /autoplay/);
   await expect(inlineStream.getByTestId("draw-countdown")).toHaveText("01:15:00");
   await expect(inlineStream.getByRole("heading")).toHaveCount(1);
   await expect(inlineStream.getByText("Último resultado", { exact: true })).toHaveCount(0);
   await expect(inlineStream.getByText("Historial reciente", { exact: true })).toHaveCount(0);
   await expect(drawsSection.locator("main")).toHaveCount(0);
   await expect(drawsSection.getByRole("link")).toHaveCount(0);
-  await expect(inlineStream.locator("iframe")).toHaveCount(0);
+  await expect(inlineStream.locator("iframe")).toHaveCount(1);
   await expectNoHorizontalOverflow(page);
 
   await earlyCard.click();
   await expect(inlineStream).toBeHidden();
-  await expect(previewVideo).toHaveCount(0);
+  await expect(advertisingPlayer).toHaveCount(0);
   await expect(earlyCard).toHaveAttribute("aria-expanded", "false");
   await expect(earlyCard.getByTestId("home-next-draw-action")).toHaveText("Ver sorteo");
   await expect(page).toHaveURL(homeUrl);
@@ -679,24 +722,32 @@ test("completes Home with scheduled draws, fourteen result balls and the officia
   await earlyCard.focus();
   await earlyCard.press("Enter");
   await expect(inlineStream).toBeVisible();
-  await expect(previewVideo).toHaveCount(1);
+  await expect(advertisingPlayer).toHaveCount(1);
   await expect(earlyCard).toHaveAttribute("aria-expanded", "true");
   await expect(page).toHaveURL(homeUrl);
 
   await earlyCard.press("Space");
   await expect(inlineStream).toBeHidden();
-  await expect(previewVideo).toHaveCount(0);
+  await expect(advertisingPlayer).toHaveCount(0);
   await expect(earlyCard).toHaveAttribute("aria-expanded", "false");
   await expect(page).toHaveURL(homeUrl);
 
   await earlyCard.press("Space");
   await expect(inlineStream).toBeVisible();
-  await expect(previewVideo).toHaveCount(1);
+  await expect(advertisingPlayer).toHaveCount(1);
   await expect(morningCard).toBeDisabled();
   await page.clock.setFixedTime(new Date("2026-08-27T13:20:00.000Z"));
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
   await expect(liveIndicator).toHaveAttribute("data-active", "true");
   await expect(liveIndicator).toHaveAttribute("data-draw-id", "early");
+  await expect(advertisingPlayer).toHaveCount(0);
+  await expect(previewVideo).toBeVisible();
+  await expect(previewVideo).toHaveCount(1);
+  await expect(previewVideo).toHaveAttribute("src", "/assets/video/quinie-streaming-simulado.mp4");
+  await expect(previewVideo).toHaveAttribute("autoplay", "");
+  await expect(previewVideo).toHaveAttribute("loop", "");
+  await expect(previewVideo).toHaveAttribute("playsinline", "");
+  await expect(previewVideo).toHaveJSProperty("muted", true);
   await expect(earlyCard).toBeEnabled();
   await page.clock.setFixedTime(new Date("2026-08-27T13:30:00.000Z"));
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
@@ -708,12 +759,15 @@ test("completes Home with scheduled draws, fourteen result balls and the officia
   await page.clock.setFixedTime(new Date("2026-08-27T14:00:00.000Z"));
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
   await expect(liveIndicator).toHaveAttribute("data-active", "false");
+  await expect(previewVideo).toHaveCount(0);
+  await expect(advertisingPlayer).toHaveCount(1);
   await morningCard.click();
   await expect(inlineStream.getByRole("heading", { level: 3, name: "Matutino" })).toBeVisible();
   await expect(inlineStream).toHaveAttribute("data-draw-target-at", "2026-08-27T16:00:00.000Z");
   await expect(inlineStream.getByTestId("draw-countdown")).toHaveText("02:00:00");
-  await expect(previewVideo).toHaveCount(1);
-  await expect(previewVideo).toHaveAttribute("aria-label", "Streaming de Matutino");
+  await expect(previewVideo).toHaveCount(0);
+  await expect(advertisingPlayer).toHaveCount(1);
+  await expect(advertisingPlayer).toHaveAttribute("title", "Publicidad de Quiniela");
   await expect(earlyCard).toHaveAttribute("aria-expanded", "false");
   await expect(morningCard).toHaveAttribute("aria-expanded", "true");
   await expect(drawsSection.locator('[data-testid="home-draw-card"][aria-expanded="true"]'))
@@ -723,6 +777,7 @@ test("completes Home with scheduled draws, fourteen result balls and the officia
   await morningCard.press("Enter");
   await expect(inlineStream).toBeHidden();
   await expect(previewVideo).toHaveCount(0);
+  await expect(advertisingPlayer).toHaveCount(0);
   await expect(morningCard).toHaveAttribute("aria-expanded", "false");
   await expect(page).toHaveURL(homeUrl);
 });
@@ -974,7 +1029,7 @@ for (const gameId of ["head", "prizes", "invert", "redoblona"] as const) {
     });
     const money = (value: number, symbol = "Gs.") => `${symbol} ${new Intl.NumberFormat("es-PY").format(value)}`;
     await page.goto(`/quinielas/${gameId}`, { waitUntil: "domcontentloaded" });
-    const headerBalance = page.getByRole("banner").getByRole("link", { name: /^Saldo disponible:/ }).locator(".q-balance__value");
+    const headerBalance = page.getByRole("banner").getByRole("link", { name: /^Saldo:/ }).locator(".q-balance__value");
     const reviewButton = page.getByRole("button", { name: "Revisar y pagar", exact: true });
     const stake = page.getByTestId("traditional-stake");
     await expect(page.getByRole("combobox", { name: "Importe por sorteo", exact: true })).toHaveCount(0);
@@ -1086,7 +1141,7 @@ test("traditional checkout accepts 40,000 across four draws and a separate ident
     expect(after.session.balance).toBe(initial.session.balance - batch * 40_000);
     expect(after.plays).toHaveLength(initial.plays.length + batch * 4);
     expect(new Set(after.plays.map((play) => play.id)).size).toBe(after.plays.length);
-    await expect(page.getByRole("banner").getByRole("link", { name: /^Saldo disponible:/ }).locator(".q-balance__value"))
+    await expect(page.getByRole("banner").getByRole("link", { name: /^Saldo:/ }).locator(".q-balance__value"))
       .toHaveText("₲ " + new Intl.NumberFormat("es-PY").format(after.session.balance));
     if (batch === 1) {
       expect(new Set(submissions.map((input) => input.drawId))).toEqual(new Set(["early", "morning", "evening", "night"]));

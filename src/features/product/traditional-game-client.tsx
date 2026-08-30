@@ -442,7 +442,7 @@ function TraditionalBetForm({ game }: { game: ProductGame<TraditionalGameId> }) 
                 onRedoblonaBlur={() => setTouched((current) => ({ ...current, redoblonaNumber: true }))}
                 onRedoblonaUntil={(value) => updateDraft("redoblonaUntil", value)}
               /> : <div className={styles.numberPanel}>
-                <div className={styles.singleNumber}><NumberField id="traditional-number" label="Número de tres cifras" hideLabel accessibleLabel="Número de tres cifras" digits={3} value={draft.number} error={touched.number ? draftErrors.number : undefined} onChange={(value) => updateDraft("number", value)} onBlur={() => setTouched((current) => ({ ...current, number: true }))} /></div>
+                <div className={styles.singleNumber}><NumberField id="traditional-number" label="Número de tres cifras" hideLabel accessibleLabel="Número de tres cifras" digits={3} value={draft.number} hint={game.id === "invert" ? "Del 001 al 999, con tres cifras distintas" : undefined} error={touched.number ? draftErrors.number : undefined} onChange={(value) => updateDraft("number", value)} onBlur={() => setTouched((current) => ({ ...current, number: true }))} /></div>
                 {game.id !== "head" && remoteGame && positionRange ? <PositionField definition={remoteGame} value={draft.position} onChange={(value) => updateDraft("position", value)} error={draftErrors.position} /> : <div className={styles.positionNote}><Icon name="head" size={17} /><span>A la <strong>1.ª posición</strong></span></div>}
               </div>}
               <div className={styles.randomAction}>
@@ -537,13 +537,13 @@ function StepHeading({ number, id, title }: { number: string; id: string; title:
   return <div className={styles.stepHeading}><span className={styles.stepNumber} aria-hidden="true">{number}</span><div><h2 id={id}>{title}</h2></div></div>;
 }
 
-function NumberField({ id, label, hideLabel = false, accessibleLabel, digits, value, error, onChange, onBlur }: {
-  id: string; label: string; hideLabel?: boolean; accessibleLabel: string; digits: number; value: string; error?: string; onChange: (value: string) => void; onBlur: () => void;
+function NumberField({ id, label, hideLabel = false, accessibleLabel, digits, value, hint, error, onChange, onBlur }: {
+  id: string; label: string; hideLabel?: boolean; accessibleLabel: string; digits: number; value: string; hint?: string; error?: string; onChange: (value: string) => void; onBlur: () => void;
 }) {
   return <div className={styles.numberField}><label htmlFor={id} className={hideLabel ? "q-sr-only" : undefined}>{label}</label>
     <input id={id} aria-label={accessibleLabel} className={styles.numberInput} type="text" inputMode="numeric" autoComplete="off" spellCheck={false} maxLength={digits} placeholder={digits === 3 ? "123" : "12"} value={value} aria-invalid={Boolean(error)} aria-describedby={id + "-hint" + (error ? " " + id + "-error" : "")}
       onChange={(event) => onChange(event.target.value.replace(/\D/g, "").slice(0, digits))} onBlur={(event) => { onChange(normalizeTraditionalNumber(event.target.value, digits)); onBlur(); }} />
-    <span className="q-sr-only" id={id + "-hint"}>{digits === 3 ? "Del 001 al 999" : "Del 00 al 99"}</span>{error ? <span id={id + "-error"} className={styles.fieldError}>{error}</span> : null}
+    <span className="q-sr-only" id={id + "-hint"}>{hint ?? (digits === 3 ? "Del 001 al 999" : "Del 00 al 99")}</span>{error ? <span id={id + "-error"} className={styles.fieldError}>{error}</span> : null}
   </div>;
 }
 

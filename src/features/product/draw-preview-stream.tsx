@@ -10,7 +10,7 @@ export function DrawPreviewStream({ drawName }: { drawName: string }) {
   const [failed, setFailed] = useState(false);
 
   return (
-    <div className={styles.streamFrame} data-testid="draw-stream-frame">
+    <div className={styles.streamFrame} data-stream-mode="live" data-testid="draw-stream-frame">
       {failed ? (
         <div className={styles.videoError} role="alert">
           <strong>No pudimos reproducir el video.</strong>

@@ -100,6 +100,27 @@ describe("Account dashboard", () => {
     expect(document.querySelector('a[target="_blank"]')).toBeNull();
   });
 
+  it.each([
+    ["Mis datos", "Mis datos"],
+    ["Seguridad y acceso", "Seguridad y acceso"],
+    ["Contactar por WhatsApp", "Contactar por WhatsApp"],
+    ["Autolímites", "Autolímites"],
+    ["Tomarme un descanso", "Pausa de juego"],
+  ])("returns from the %s panel to Cuenta and restores focus", async (triggerName, panelName) => {
+    const user = userEvent.setup();
+    render(<AccountClient />);
+    const trigger = screen.getByRole("button", { name: triggerName });
+
+    await user.click(trigger);
+    const dialog = screen.getByRole("dialog", { name: panelName });
+    const back = within(dialog).getByRole("button", { name: "Volver a Cuenta" });
+    await waitFor(() => expect(document.activeElement).toBe(back));
+    await user.click(back);
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+
   it("shows available profile fields without inventing personal contact data", async () => {
     const user = userEvent.setup();
     useProductMock.mockReturnValue({ ...base, session: { ...session, role: "ADMIN" } });

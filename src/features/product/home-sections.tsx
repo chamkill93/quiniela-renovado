@@ -3,11 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  useEffect,
   useMemo,
   useRef,
   useState,
-  type CSSProperties,
 } from "react";
 
 import { drawDateKey } from "@/lib/gaming/draw-calendar";
@@ -25,8 +23,8 @@ import {
   selectHomeLatestDrawResults,
   type HomeDrawCardView,
   type HomeLatestDrawResults,
-  type HomeResultPositionView,
 } from "./home-sections-data";
+import { HomeLatestResultsCarousel } from "./home-latest-results-carousel";
 import styles from "./home-sections.module.css";
 import { useDrawClock } from "./use-draw-clock";
 import { useDrawScheduleRefresh } from "./use-draw-schedule-refresh";
@@ -263,60 +261,6 @@ function ResultsSkeleton() {
   );
 }
 
-function ResultRankIcon({ position }: { position: number }) {
-  if (position !== 1 && position !== 2 && position !== 3) return null;
-
-  return (
-    <svg
-      aria-hidden="true"
-      className={styles.resultRankIcon}
-      data-rank={position === 1 ? "gold" : position === 2 ? "silver" : "bronze"}
-      data-testid="home-result-rank"
-      focusable="false"
-      viewBox="0 0 24 24"
-    >
-      {position === 1 ? (
-        <>
-          <path d="m3 7 4.5 3L12 3l4.5 7L21 7l-2 13H5L3 7Z" fill="currentColor" stroke="currentColor" strokeLinejoin="round" />
-          <path d="M6.5 16.5h11M9 12l3-5 3 5" fill="none" stroke="var(--result-rank-highlight)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
-        </>
-      ) : (
-        <>
-          <path d="m6 2 5 1 1 6-4 2-2-9Zm12 0-5 1-1 6 4 2 2-9Z" fill="currentColor" opacity="0.65" />
-          <circle cx="12" cy="15" r="7" fill="currentColor" />
-          <circle cx="12" cy="15" r="4.5" fill="none" stroke="var(--result-rank-highlight)" strokeWidth="1.2" />
-          <path d="m12 12 0.9 1.9 2.1 0.3-1.5 1.5 0.4 2.1-1.9-1-1.9 1 0.4-2.1L9 14.2l2.1-0.3L12 12Z" fill="var(--result-rank-highlight)" />
-        </>
-      )}
-    </svg>
-  );
-}
-
-function ResultBall({ result }: { result: HomeResultPositionView }) {
-  const entryIndex = 14 - result.position;
-  const resultLabel = result.value === null ? "pendiente" : `número ${result.value}`;
-
-  return (
-    <li
-      aria-label={`${result.position}.ª postura: ${resultLabel}`}
-      className={styles.resultBall}
-      data-entry-order={entryIndex + 1}
-      data-position={result.position}
-      data-pending={result.value === null ? "true" : "false"}
-      data-testid="home-result-card"
-      style={{ "--result-entry-index": entryIndex } as CSSProperties}
-    >
-      <ResultRankIcon position={result.position} />
-      <strong className={styles.resultBallValue} data-testid="home-result-value">
-        {result.value ?? "—"}
-      </strong>
-      <span className={styles.resultBallPosture} data-testid="home-result-posture">
-        {result.position}.ª postura
-      </span>
-    </li>
-  );
-}
-
 function PublishedResultsPanel({
   results,
   loading,
@@ -326,31 +270,10 @@ function PublishedResultsPanel({
   loading: boolean;
   emptyMessage: string;
 }) {
-  const resultsListRef = useRef<HTMLOListElement>(null);
   const orderedResults = useMemo(
     () => results?.positions.slice().sort((left, right) => left.position - right.position) ?? [],
     [results],
   );
-
-  useEffect(() => {
-    const list = resultsListRef.current;
-    if (!list || !results || loading) return;
-    const reveal = () => list.setAttribute("data-animate", "true");
-    const reducedMotion = typeof window.matchMedia === "function"
-      && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reducedMotion || typeof IntersectionObserver === "undefined") {
-      reveal();
-      return;
-    }
-
-    const observer = new IntersectionObserver((entries) => {
-      if (!entries.some((entry) => entry.isIntersecting)) return;
-      reveal();
-      observer.disconnect();
-    }, { threshold: 0.18 });
-    observer.observe(list);
-    return () => observer.disconnect();
-  }, [loading, results]);
 
   return (
     <section
@@ -380,18 +303,10 @@ function PublishedResultsPanel({
       </div>
       <div className={styles.resultsContent}>
         {loading ? <ResultsSkeleton /> : results ? (
-          <ol
-            aria-label="Las 14 posturas del último sorteo publicado"
-            className={styles.resultBalls}
-            data-animate="false"
-            data-testid="home-results-balls"
+          <HomeLatestResultsCarousel
             key={`${results.id}:${results.occurredAt}`}
-            ref={resultsListRef}
-          >
-            {orderedResults.map((result) => (
-              <ResultBall key={result.position} result={result} />
-            ))}
-          </ol>
+            results={orderedResults}
+          />
         ) : (
           <div className={styles.emptyResults}>
             <p role="status">{emptyMessage}</p>

@@ -18,6 +18,7 @@ export interface ModalProps {
   description?: string;
   children: ReactNode;
   footer?: ReactNode;
+  leadingAction?: ReactNode;
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
   closeLabel?: string;
@@ -42,6 +43,7 @@ export function Modal({
   description,
   children,
   footer,
+  leadingAction,
   size = "md",
   className,
   closeLabel = "Cerrar",
@@ -126,7 +128,8 @@ export function Modal({
         onKeyDown={handleKeyDown}
       >
         <header className="q-modal__header">
-          <div>
+          <div className="q-modal__heading">
+            {leadingAction}
             <h2 id={titleId} className="q-modal__title">{title}</h2>
             {description ? <p id={descriptionId} className="q-modal__description">{description}</p> : null}
           </div>

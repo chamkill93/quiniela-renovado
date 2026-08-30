@@ -3,7 +3,11 @@
 import { useMemo } from "react";
 
 import { isDrawDateKey } from "@/lib/gaming/draw-calendar";
-import { buildPreviewDailyDraws, buildPreviewDrawsForDate } from "@/lib/gaming/daily-draw-schedule";
+import {
+  buildPreviewDailyDraws,
+  buildPreviewDrawsForDate,
+  selectLiveDraw,
+} from "@/lib/gaming/daily-draw-schedule";
 import { useProduct } from "@/providers/product-provider";
 
 import {
@@ -33,9 +37,12 @@ export function DrawPageClient({
     () => {
       if (isSimulated) {
         if (openedAt === null) return null;
+        const liveDraw = dateKey ? null : selectLiveDraw(openedAt);
         const previewDraws = dateKey
           ? buildPreviewDrawsForDate(dateKey)
-          : buildPreviewDailyDraws(openedAt);
+          : liveDraw?.id === definition.drawId
+            ? [liveDraw]
+            : buildPreviewDailyDraws(openedAt);
         return selectDrawPageSchedule(previewDraws, definition, dateKey, openedAt);
       }
       return catalog

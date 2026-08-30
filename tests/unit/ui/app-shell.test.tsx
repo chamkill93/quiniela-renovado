@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppShell } from "@/components/shell/AppShell";
 import { ProductFrame } from "@/features/product/product-frame";
@@ -16,36 +16,90 @@ afterEach(() => {
   cleanup();
   vi.useRealTimers();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("AppShell navigation", () => {
-  it("replaces mobile Quiniela with Reglas and keeps Jugar in the center", () => {
+  it("shows only the emphasized balance amount and places support beside sound", () => {
+    render(<AppShell balance={123_456}><main>Inicio</main></AppShell>);
+    const header = screen.getByRole("banner");
+    const topbar = within(header);
+    const balance = topbar.getByRole("link", { name: "Saldo: ₲ 123.456" });
+    const balanceIcon = balance.querySelector(".q-balance__icon");
+    const balanceValue = balance.querySelector(".q-balance__value");
+
+    expect(balance.getAttribute("href")).toBe("/saldos");
+    expect(balance.textContent).toBe("₲ 123.456");
+    expect(balance.querySelector(".q-balance__label")).toBeNull();
+    expect(balanceIcon?.getAttribute("aria-hidden")).toBe("true");
+    expect(balanceIcon?.querySelector(".q-icon")?.getAttribute("aria-hidden")).toBe("true");
+    expect(balanceValue?.textContent).toBe("₲ 123.456");
+
+    const sound = topbar.getByTestId("sound-toggle");
+    const support = topbar.getByTestId("support-button");
+    const preferenceControls = sound.closest(".q-preference-controls");
+    expect(support.tagName).toBe("A");
+    expect(support.getAttribute("href")).toBe("/ayuda");
+    expect(support.getAttribute("aria-label")).toBe("Abrir soporte");
+    expect(support.getAttribute("title")).toBe("Soporte");
+    expect(preferenceControls).not.toBeNull();
+    expect(preferenceControls!.lastElementChild).toBe(sound);
+    expect(preferenceControls!.nextElementSibling).toBe(support);
+  });
+
+  it("renders the mobile navigation as a floating capsule with Jugar as its third destination", () => {
     render(<AppShell><main>Inicio</main></AppShell>);
     expect(useProductMock).not.toHaveBeenCalled();
     expect(screen.queryByTestId("draw-live-indicator")).toBeNull();
-    const navigation = within(screen.getByRole("navigation", { name: "Navegación móvil" }));
+    const navigationElement = screen.getByRole("navigation", { name: "Navegación móvil" });
+    const navigation = within(navigationElement);
+    const capsule = screen.getByTestId("mobile-navigation-capsule");
     const links = navigation.getAllByRole("link");
 
+    expect(navigationElement.getAttribute("data-variant")).toBe("floating-pill");
+    expect(capsule.classList.contains("mobileNavInner")).toBe(true);
+    expect(capsule.parentElement).toBe(navigationElement);
     expect(links.map((link) => link.textContent)).toEqual([
       "Inicio", "Reglas", "Jugar", "Resultados", "Cuenta",
     ]);
     expect(links.map((link) => link.getAttribute("href"))).toEqual([
       "/", "/reglas", "/quinielas", "/resultados", "/cuenta",
     ]);
-    expect(navigation.getByRole("link", { name: "Reglas" }).querySelector("svg path")).not.toBeNull();
+    expect(Array.from(capsule.children)).toEqual(links);
+
+    const play = links[2];
+    expect(play).toBe(navigation.getByRole("link", { name: /^Jugar$/ }));
+    expect(play.classList.contains("mobileNavAction")).toBe(true);
+    expect(play.querySelector("a, button, input, select, textarea, [tabindex]")).toBeNull();
+    expect(within(play).getByText("Jugar").getAttribute("aria-hidden")).toBe("true");
+
+    for (const link of links) {
+      const icon = link.querySelector(".mobileNavIcon");
+      expect(icon?.getAttribute("aria-hidden")).toBe("true");
+      expect(icon?.querySelector("svg")?.getAttribute("focusable")).toBe("false");
+    }
     expect(navigation.queryByRole("link", { name: /Quiniela/i })).toBeNull();
   });
 
-  it("marks Reglas as active only on the rules page", () => {
-    const { rerender } = render(<AppShell currentPath="/reglas"><main>Reglas</main></AppShell>);
+  it.each([
+    { currentPath: "/", activeLabel: "Inicio" },
+    { currentPath: "/reglas", activeLabel: "Reglas" },
+    { currentPath: "/quinielas/redoblona", activeLabel: "Jugar" },
+    { currentPath: "/jugar", activeLabel: "Jugar" },
+    { currentPath: "/instantaneas", activeLabel: "Jugar" },
+    { currentPath: "/resultados", activeLabel: "Resultados" },
+    { currentPath: "/cuenta", activeLabel: "Cuenta" },
+  ])("marks only $activeLabel as current at $currentPath", ({ currentPath, activeLabel }) => {
+    render(<AppShell currentPath={currentPath}><main>{activeLabel}</main></AppShell>);
     const navigation = within(screen.getByRole("navigation", { name: "Navegación móvil" }));
-    expect(navigation.getAllByRole("link", { current: "page" })).toEqual([
-      navigation.getByRole("link", { name: "Reglas" }),
-    ]);
+    const active = navigation.getByRole("link", { name: activeLabel, current: "page" });
+    expect(navigation.getAllByRole("link", { current: "page" })).toEqual([active]);
+    expect(active.getAttribute("aria-current")).toBe("page");
 
-    rerender(<AppShell currentPath="/quinielas"><main>Quinielas</main></AppShell>);
-    expect(navigation.getByRole("link", { name: "Reglas" }).getAttribute("aria-current")).toBeNull();
-    expect(navigation.getByRole("link", { name: "Jugar" }).getAttribute("href")).toBe("/quinielas");
+    const play = navigation.getByRole("link", { name: /^Jugar$/ });
+    const playIsActive = activeLabel === "Jugar";
+    expect(play.getAttribute("href")).toBe("/quinielas");
+    expect(play.getAttribute("data-active")).toBe(String(playIsActive));
   });
 
   it("preserves both Quinielas and Reglas in the desktop sidebar", () => {
@@ -62,13 +116,15 @@ describe("AppShell navigation", () => {
     const footer = within(screen.getByRole("navigation", { name: "Información y ayuda" }).closest("footer")!);
 
     expect(footer.getByRole("img", { name: "quinie.LA" })).toBeTruthy();
+    expect(footer.getByRole("button", { name: "Volver al inicio" })).toBeTruthy();
+    expect(footer.queryByText("Volver al inicio")).toBeNull();
     expect(footer.queryByText("Quiniela online · Paraguay")).toBeNull();
     expect(footer.getAllByRole("link")).toHaveLength(5);
     expect(within(screen.getByRole("main")).getByText("Quiniela online · Paraguay")).toBeTruthy();
   });
 });
 
-describe("ProductFrame LIVE status", () => {
+describe("ProductFrame LIVE launcher", () => {
   const drawsAt = Date.parse("2026-08-28T13:30:00.000Z");
   const catalog = buildGamingCatalog("REFUND", new Date(drawsAt - 60 * 60_000));
   const product = { catalog, gatewayMode: "preview", session: null };
@@ -76,6 +132,11 @@ describe("ProductFrame LIVE status", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(drawsAt - 10 * 60_000 - 1_000);
+    vi.stubGlobal(
+      "requestAnimationFrame",
+      (callback: FrameRequestCallback) => window.setTimeout(() => callback(performance.now()), 0),
+    );
+    vi.stubGlobal("cancelAnimationFrame", (handle: number) => window.clearTimeout(handle));
     useProductMock.mockReturnValue(product);
   });
 
@@ -84,30 +145,137 @@ describe("ProductFrame LIVE status", () => {
   }
 
   function expectLiveState(active: boolean) {
-    const indicator = screen.getByRole("status", { name: "Estado LIVE del sorteo" });
-    expect(indicator.getAttribute("data-active")).toBe(String(active));
-    expect(indicator.getAttribute("data-draw-id")).toBe(active ? "early" : null);
+    const launcher = screen.getByTestId("draw-live-indicator");
+    expect(launcher.getAttribute("role")).toBeNull();
+    expect(launcher.tagName).toBe("BUTTON");
+    expect(launcher.getAttribute("type")).toBe("button");
+    expect(launcher.getAttribute("aria-haspopup")).toBe("dialog");
+    expect(launcher.getAttribute("aria-expanded")).toBe("false");
+    expect(launcher.getAttribute("data-active")).toBe(String(active));
+    expect(launcher.getAttribute("data-draw-id")).toBe(active ? "early" : null);
+    expect(launcher.getAttribute("aria-label")).toBe(active
+      ? "Abrir transmisión LIVE de Tempranero"
+      : "Abrir canal LIVE de Quiniela");
     const message = active ? "Sorteo en horario LIVE: Tempranero" : "Fuera del horario LIVE";
-    expect(within(indicator).getByText(message).classList.contains("q-sr-only")).toBe(true);
-    return indicator;
+    const status = screen.getByRole("status");
+    expect(status.textContent).toBe(message);
+    expect(status.classList.contains("q-sr-only")).toBe(true);
+    expect(status).not.toBe(launcher);
+    expect(launcher.contains(status)).toBe(false);
+    expect(status.contains(launcher)).toBe(false);
+    return { launcher, status };
   }
 
-  it("starts inactive and places a noninteractive LIVE status beside the heading before account actions", () => {
+  it("keeps an accessible status separate from the LIVE dialog launcher beside the heading", () => {
     vi.setSystemTime(drawsAt - 5 * 60_000);
     mountFrame();
-    const indicator = expectLiveState(false);
-    expect(indicator).toBe(screen.getByTestId("draw-live-indicator"));
-    expect(within(indicator).getByText("LIVE")).toBeTruthy();
-    expect(indicator.closest("a, button")).toBeNull();
-    expect(within(indicator).queryByRole("link")).toBeNull();
-    expect(within(indicator).queryByRole("button")).toBeNull();
-    const heading = indicator.closest(".q-topbar__heading");
+    const { launcher, status } = expectLiveState(false);
+    expect(within(launcher).getByText("LIVE").getAttribute("aria-hidden")).toBe("true");
+    expect(status.getAttribute("aria-live")).toBe("polite");
+    const titleRow = launcher.closest(".q-topbar__title-row");
+    const statusWrapper = launcher.closest(".q-topbar__status");
+    expect(titleRow).not.toBeNull();
+    expect(statusWrapper).not.toBeNull();
+    expect(titleRow!.querySelector(".q-topbar__title")?.textContent).toBe("Inicio");
+    expect(titleRow!.querySelector(".q-topbar__title")?.nextElementSibling).toBe(statusWrapper);
+    expect(statusWrapper!.contains(status)).toBe(true);
+    const heading = titleRow!.closest(".q-topbar__heading");
     expect(heading).not.toBeNull();
+    expect(heading!.contains(status)).toBe(true);
     const actions = heading!.closest("header")!.querySelector(".q-topbar__actions")!;
-    expect(actions.contains(indicator)).toBe(false);
+    expect(actions.contains(launcher)).toBe(false);
     expect(heading!.compareDocumentPosition(actions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     act(() => { vi.advanceTimersByTime(0); });
     expectLiveState(true);
+  });
+
+  it("opens the LIVE dialog with both YouTube advertisements outside the draw window", () => {
+    mountFrame();
+    act(() => { vi.advanceTimersByTime(0); });
+    const { launcher } = expectLiveState(false);
+
+    fireEvent.click(launcher);
+
+    const dialog = screen.getByRole("dialog", { name: "LIVE de Quiniela" });
+    const popout = within(dialog).getByTestId("draw-live-popout");
+    const frame = within(popout).getByTestId("draw-stream-frame");
+    const advertisingPlayer = within(frame).getByTestId("draw-advertising-player");
+    const source = advertisingPlayer.getAttribute("src") ?? "";
+    expect(launcher.getAttribute("aria-expanded")).toBe("true");
+    expect(popout.getAttribute("data-mode")).toBe("advertising");
+    expect(frame.getAttribute("data-stream-mode")).toBe("advertising");
+    expect(advertisingPlayer.tagName).toBe("IFRAME");
+    expect(advertisingPlayer.getAttribute("title")).toBe("Publicidad de Quiniela");
+    expect(source).toMatch(/^https:\/\/www\.youtube-nocookie\.com\/embed\//);
+    expect(source).toContain("Z3eXyAIz65I");
+    expect(source).toContain("JV9ajM_6Rsc");
+    expect(within(dialog).queryByTestId("draw-preview-video")).toBeNull();
+  });
+
+  it("opens the LIVE dialog with the local preview stream inside the draw window", () => {
+    vi.setSystemTime(drawsAt - 10 * 60_000);
+    mountFrame();
+    act(() => { vi.advanceTimersByTime(0); });
+    const { launcher } = expectLiveState(true);
+
+    fireEvent.click(launcher);
+
+    const dialog = screen.getByRole("dialog", { name: "LIVE de Quiniela" });
+    const popout = within(dialog).getByTestId("draw-live-popout");
+    const video = within(popout).getByTestId("draw-preview-video") as HTMLVideoElement;
+    expect(launcher.getAttribute("aria-expanded")).toBe("true");
+    expect(popout.getAttribute("data-mode")).toBe("live");
+    expect(video.getAttribute("src")).toBe("/assets/video/quinie-streaming-simulado.mp4");
+    expect(video.getAttribute("aria-label")).toBe("Streaming de Tempranero");
+    expect(video.autoplay).toBe(true);
+    expect(video.muted).toBe(true);
+    expect(video.loop).toBe(true);
+    expect(video.playsInline).toBe(true);
+    expect(within(dialog).queryByTestId("draw-advertising-player")).toBeNull();
+  });
+
+  it("switches an open popout from advertising to the local stream at the LIVE boundary", () => {
+    mountFrame();
+    act(() => { vi.advanceTimersByTime(0); });
+    const launcher = screen.getByTestId("draw-live-indicator");
+    fireEvent.click(launcher);
+    const dialog = screen.getByRole("dialog", { name: "LIVE de Quiniela" });
+    expect(within(dialog).getByTestId("draw-advertising-player")).toBeTruthy();
+    expect(within(dialog).queryByTestId("draw-preview-video")).toBeNull();
+
+    act(() => { vi.advanceTimersByTime(1_000); });
+
+    expect(launcher.getAttribute("data-active")).toBe("true");
+    expect(within(dialog).queryByTestId("draw-advertising-player")).toBeNull();
+    expect(within(dialog).getByTestId("draw-preview-video").getAttribute("src"))
+      .toBe("/assets/video/quinie-streaming-simulado.mp4");
+  });
+
+  it("closes the LIVE dialog with Escape or its close button and restores launcher focus", () => {
+    mountFrame();
+    act(() => { vi.advanceTimersByTime(0); });
+    const launcher = screen.getByTestId("draw-live-indicator");
+    launcher.focus();
+    fireEvent.click(launcher);
+    act(() => { vi.advanceTimersByTime(0); });
+    let dialog = screen.getByRole("dialog", { name: "LIVE de Quiniela" });
+
+    fireEvent.keyDown(dialog, { key: "Escape" });
+
+    expect(screen.queryByRole("dialog", { name: "LIVE de Quiniela" })).toBeNull();
+    expect(screen.queryByTestId("draw-advertising-player")).toBeNull();
+    expect(launcher.getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(launcher);
+
+    fireEvent.click(launcher);
+    act(() => { vi.advanceTimersByTime(0); });
+    dialog = screen.getByRole("dialog", { name: "LIVE de Quiniela" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cerrar transmisión LIVE" }));
+
+    expect(screen.queryByRole("dialog", { name: "LIVE de Quiniela" })).toBeNull();
+    expect(screen.queryByTestId("draw-advertising-player")).toBeNull();
+    expect(launcher.getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(launcher);
   });
 
   it("turns active at T-10 minutes, remains active through T+29:59 and turns inactive exactly at T+30", () => {

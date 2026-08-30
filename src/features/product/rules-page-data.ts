@@ -61,24 +61,24 @@ export const TRADITIONAL_RULES = [
   },
   {
     id: "invert", family: "traditional", title: "Invertida",
-    copy: "Tus tres cifras participan con sus órdenes distintos.",
+    copy: "Elegí tres cifras diferentes y participá con sus seis órdenes posibles.",
     facts: [
-      { label: "Número", value: "001 a 999" },
+      { label: "Número", value: "001 a 999 · sin repetir" },
       { label: "Postura", value: "De 1 a 14" },
     ],
     instructions: [
-      "Ingresá un número de tres cifras, entre 001 y 999. Podés usar cifras repetidas, como 112.",
+      "Ingresá un número de tres cifras diferentes, entre 001 y 999. No se admiten cifras repetidas.",
       "Elegí una postura de 1 a 14 para indicar hasta qué posición participa la selección.",
       "Seleccioná uno o varios sorteos abiertos y definí el importe por sorteo.",
-      "Revisá las cifras, la postura, los sorteos y el total. Confirmá antes del cierre y guardá el comprobante.",
+      "Revisá las tres cifras, la postura, los sorteos y el total. Confirmá antes del cierre y guardá el comprobante.",
     ],
     conditions: [
-      "Se consideran los órdenes distintos que pueden formarse con esas mismas tres cifras, sin agregar ni quitar ninguna.",
-      "Tres cifras diferentes generan seis órdenes; dos cifras iguales generan tres; tres cifras iguales generan uno. Los órdenes repetidos se cuentan una sola vez.",
+      "Las tres cifras deben ser diferentes entre sí y generan exactamente seis órdenes posibles.",
+      "Los seis órdenes usan las mismas tres cifras, sin agregar, quitar ni repetir ninguna.",
       "Para coincidir, uno de esos órdenes debe aparecer dentro de las posiciones cubiertas por la postura del sorteo confirmado.",
-      "Compartir solo una o dos cifras no es suficiente. El 000 no se puede seleccionar.",
+      "Compartir solo una o dos cifras no es suficiente. Cualquier número con cifras repetidas, incluido el 000, queda fuera de esta modalidad.",
     ],
-    example: "Con 123 se forman 123, 132, 213, 231, 312 y 321: un 213 dentro de la postura coincide, pero un 124 no. Con 112 solo se forman 112, 121 y 211.",
+    example: "Con 123 se forman exactamente 123, 132, 213, 231, 312 y 321: un 213 dentro de la postura coincide, pero un 124 no.",
     href: "/quinielas/invert",
   },
   {

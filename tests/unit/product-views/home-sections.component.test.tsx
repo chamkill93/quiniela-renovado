@@ -15,6 +15,7 @@ vi.mock("@/features/product/draw-icon", () => ({ DrawIcon: () => null }));
 import { HomeSections } from "@/features/product/home-sections";
 
 const catalog = buildGamingCatalog("REFUND", new Date("2026-08-26T10:00:00.000Z"));
+const advertisingVideoIds = ["Z3eXyAIz65I", "JV9ajM_6Rsc"] as const;
 const resultsCatalog: GamingCatalog = {
   ...catalog,
   draws: [
@@ -24,7 +25,7 @@ const resultsCatalog: GamingCatalog = {
   ],
 };
 const latestDrawValues = [
-  "497", "208", "000", "731", "112", "005", "830",
+  "085", "208", "007", "731", "112", "005", "830",
   "701", "550", "909", "123", "888", "010", "044",
 ];
 
@@ -120,25 +121,23 @@ describe("HomeSections latest draw results", () => {
     expect(balls.map((ball) => within(ball).getByTestId("home-result-value").textContent))
       .toEqual(values);
     expect(balls.map((ball) => within(ball).getByTestId("home-result-posture").textContent))
-      .toEqual(allPositions.map((position) => position + ".ª postura"));
+      .toEqual(allPositions.map((position) => position + "ª POSTURA"));
     return balls;
   }
 
   function expectPositionRanks(balls: readonly HTMLElement[]) {
-    const ranksByPosition: Record<number, string> = { 1: "gold", 2: "silver", 3: "bronze" };
+    const tonesByPosition: Record<number, string> = { 1: "gold", 2: "silver", 3: "bronze" };
     for (const ball of balls) {
       const position = Number(ball.getAttribute("data-position"));
-      const expectedRank = ranksByPosition[position];
-      const icons = within(ball).queryAllByTestId("home-result-rank");
-      expect(icons).toHaveLength(expectedRank ? 1 : 0);
-      if (!expectedRank) continue;
-
-      const icon = icons[0];
-      expect(ball.firstElementChild).toBe(icon);
-      expect(icon.tagName.toLowerCase()).toBe("svg");
-      expect(icon.getAttribute("data-rank")).toBe(expectedRank);
-      expect(icon.getAttribute("aria-hidden")).toBe("true");
-      expect(icon.getAttribute("focusable")).toBe("false");
+      const expectedTone = tonesByPosition[position] ?? "red";
+      const image = ball.querySelector("img");
+      expect(ball.getAttribute("data-tone")).toBe(expectedTone);
+      expect(decodeURIComponent(image?.getAttribute("src") ?? ""))
+        .toContain(`/assets/results/balls/ball-${expectedTone}.webp`);
+      expect(image?.getAttribute("alt")).toBe("");
+      expect(image?.getAttribute("aria-hidden")).toBe("true");
+      expect(within(ball).queryByTestId("home-result-rank-badge")).toBeNull();
+      expect(within(ball).queryByTestId("home-result-rank")).toBeNull();
     }
   }
 
@@ -156,8 +155,9 @@ describe("HomeSections latest draw results", () => {
     expect(within(screen.getByTestId("home-draw-grid")).getAllByRole("button")).toHaveLength(4);
     expect(within(resultsSection()).getByRole("heading", { name: "Último sorteo publicado" })).toBeTruthy();
     expect(resultsList().tagName).toBe("OL");
-    expect(resultsList().getAttribute("tabindex")).toBeNull();
-    expect(resultsList().getAttribute("data-animate")).toBe("true");
+    expect(resultsList().getAttribute("tabindex")).toBe("0");
+    expect(resultsList().getAttribute("aria-roledescription")).toBe("carrusel");
+    expect(resultsList().getAttribute("data-animate")).toBeNull();
     expectBalls(latestDrawValues);
     expectMetadata();
     expect(screen.queryByText("Resultados de muestra")).toBeNull();
@@ -167,14 +167,17 @@ describe("HomeSections latest draw results", () => {
     }
     expect(within(resultsSection()).queryAllByRole("tab")).toHaveLength(0);
     expect(within(resultsSection()).queryByRole("tabpanel")).toBeNull();
-    expect(within(resultsSection()).queryByTestId("home-results-carousel")).toBeNull();
-    expect(within(resultsSection()).queryByTestId("home-results-carousel-track")).toBeNull();
+    expect(within(resultsSection()).getByTestId("home-results-carousel").contains(resultsList())).toBe(true);
+    expect(within(resultsSection()).getAllByTestId("home-results-pagination-segment")).toHaveLength(4);
+    expect(within(resultsSection()).getByRole("button", { name: "Ver resultados anteriores" })).toBeTruthy();
+    expect(within(resultsSection()).getByRole("button", { name: "Ver resultados siguientes" })).toBeTruthy();
+    expect(within(resultsSection()).queryByText(/desliz|swipe|arrastr/i)).toBeNull();
     expect(within(resultsSection()).queryByRole("button", { name: "Ver más resultados" })).toBeNull();
     expect(within(resultsSection()).getByRole("link", { name: /Ver todos/i }).getAttribute("href"))
       .toBe("/resultados");
   });
 
-  it("keeps visual and accessible order 1 through 14 while staggering entry from 14 back to 1", () => {
+  it("keeps visual and accessible order 1 through 14 without an entrance-animation property", () => {
     mountResults();
     const balls = expectBalls(latestDrawValues);
 
@@ -182,16 +185,11 @@ describe("HomeSections latest draw results", () => {
     expect(balls.map((ball) => ball.getAttribute("data-entry-order")))
       .toEqual(allPositions.map((position) => String(15 - position)));
     expect(balls.map((ball) => ball.style.getPropertyValue("--result-entry-index")))
-      .toEqual(allPositions.map((position) => String(14 - position)));
-    expect([...balls]
-      .sort((left, right) => Number(left.dataset.entryOrder) - Number(right.dataset.entryOrder))
-      .map((ball) => Number(ball.dataset.position)))
-      .toEqual([...allPositions].reverse());
+      .toEqual(allPositions.map(() => ""));
     expect(balls.every((ball) => ball.style.order === "")).toBe(true);
   });
 
-  it("starts the entrance when the result cluster reaches the visible area", () => {
-    let intersectionCallback: IntersectionObserverCallback | undefined;
+  it("does not register a visibility-driven entrance animation", () => {
     const observeMock = vi.fn();
     const disconnectMock = vi.fn();
     vi.stubGlobal("IntersectionObserver", class {
@@ -204,38 +202,32 @@ describe("HomeSections latest draw results", () => {
       unobserve = vi.fn();
 
       constructor(callback: IntersectionObserverCallback) {
-        intersectionCallback = callback;
+        void callback;
       }
     });
 
     mountResults();
     const list = resultsList();
-    expect(list.getAttribute("data-animate")).toBe("false");
-    expect(observeMock).toHaveBeenCalledWith(list);
-
-    act(() => intersectionCallback?.([
-      { isIntersecting: true } as IntersectionObserverEntry,
-    ], {} as IntersectionObserver));
-
-    expect(list.getAttribute("data-animate")).toBe("true");
-    expect(disconnectMock).toHaveBeenCalledOnce();
+    expect(list.getAttribute("data-animate")).toBeNull();
+    expect(observeMock).not.toHaveBeenCalled();
+    expect(disconnectMock).not.toHaveBeenCalled();
   });
 
-  it("decorates only actual positions 1, 2 and 3 with gold, silver and bronze ranks", () => {
+  it("uses gold, silver and bronze assets for the podium and one red asset for positions 4 through 14", () => {
     mountResults();
     const balls = expectBalls(latestDrawValues);
 
     expectPositionRanks(balls);
-    expect(within(resultsList()).getAllByTestId("home-result-rank")
-      .map((icon) => icon.getAttribute("data-rank"))).toEqual(["gold", "silver", "bronze"]);
-    for (const position of allPositions.slice(3)) {
-      expect(within(balls[position - 1]).queryByTestId("home-result-rank")).toBeNull();
-    }
+    expect(balls.slice(0, 3).map((ball) => ball.getAttribute("data-tone")))
+      .toEqual(["gold", "silver", "bronze"]);
+    expect(new Set(balls.slice(3).map((ball) => ball.querySelector("img")?.getAttribute("src"))).size)
+      .toBe(1);
+    expect(within(resultsList()).queryByTestId("home-result-rank")).toBeNull();
   });
 
   it.each([
-    [1, "497"],
-    [3, "000"],
+    [1, "085"],
+    [3, "007"],
     [14, "044"],
   ] as const)("names posture %i and its canonical three-digit number accessibly", (position, value) => {
     mountResults();
@@ -443,6 +435,30 @@ describe("HomeSections inline draw streaming", () => {
     return screen.getByTestId("home-draw-stream");
   }
 
+  function expectAdvertisingPlayer() {
+    const player = within(streamPanel()).getByTestId("draw-advertising-player") as HTMLIFrameElement;
+    const frame = within(streamPanel()).getByTestId("draw-stream-frame");
+    const source = player.getAttribute("src") ?? "";
+    expect(player.tagName).toBe("IFRAME");
+    expect(frame.getAttribute("data-stream-mode")).toBe("advertising");
+    expect(frame.contains(player)).toBe(true);
+    expect(source).toContain(`youtube-nocookie.com/embed/${advertisingVideoIds[0]}`);
+    for (const videoId of advertisingVideoIds) expect(source).toContain(videoId);
+    expect(source).toContain(`playlist=${advertisingVideoIds.join(",")}`);
+    expect(player.getAttribute("title")).toBe("Publicidad de Quiniela");
+    expect(within(streamPanel()).queryByTestId("draw-preview-video")).toBeNull();
+    return player;
+  }
+
+  function expectPreviewLive(drawName: string) {
+    const video = within(streamPanel()).getByTestId("draw-preview-video") as HTMLVideoElement;
+    expect(within(streamPanel()).getByTestId("draw-stream-frame").getAttribute("data-stream-mode"))
+      .toBe("live");
+    expect(video.getAttribute("aria-label")).toBe(`Streaming de ${drawName}`);
+    expect(within(streamPanel()).queryByTestId("draw-advertising-player")).toBeNull();
+    return video;
+  }
+
   function expectStreamCountdown(hours: string, minutes: string, seconds = "00") {
     const timer = within(streamPanel()).getByRole("timer");
     expect(timer).toBe(within(streamPanel()).getByTestId("draw-countdown"));
@@ -504,6 +520,7 @@ describe("HomeSections inline draw streaming", () => {
     expect(streamPanel().hidden).toBe(true);
     expect(screen.queryByTestId("home-draw-stream-title")).toBeNull();
     expect(screen.queryByTestId("draw-preview-video")).toBeNull();
+    expect(screen.queryByTestId("draw-advertising-player")).toBeNull();
     expect(screen.queryByTestId("draw-stream-frame")).toBeNull();
   });
 
@@ -512,7 +529,7 @@ describe("HomeSections inline draw streaming", () => {
     ["11:00", "2026-08-27T14:00:00.000Z", "morning", "Matutino", "matutino", "13:00", "2026-08-27T16:00:00.000Z"],
     ["14:00", "2026-08-27T17:00:00.000Z", "evening", "Vespertino", "vespertino", "16:30", "2026-08-27T19:30:00.000Z"],
     ["18:00", "2026-08-27T21:00:00.000Z", "night", "Nocturno", "nocturno", "20:30", "2026-08-27T23:30:00.000Z"],
-  ])("at %s in Paraguay opens the next scheduled draw inline for that calendar date", (_localTime, instant, id, label, slug, time, targetAt) => {
+  ])("at %s in Paraguay opens advertising for the next scheduled draw on that calendar date", (_localTime, instant, id, label, slug, time, targetAt) => {
     vi.setSystemTime(new Date(instant));
     mountHome();
 
@@ -538,8 +555,7 @@ describe("HomeSections inline draw streaming", () => {
     expect(button.getAttribute("aria-expanded")).toBe("true");
     expect(button.getAttribute("aria-label")).toMatch(new RegExp(`^Ocultar sorteo: ${label},`));
     expect(screen.getByTestId("home-next-draw-action").textContent).toBe("Ocultar");
-    expect(screen.getByTestId("draw-preview-video").getAttribute("aria-label"))
-      .toBe(`Streaming de ${label}`);
+    expectAdvertisingPlayer();
     expect(streamPanel().querySelector("main")).toBeNull();
     expect(window.location.href).toBe(initialUrl);
   });
@@ -637,9 +653,8 @@ describe("HomeSections inline draw streaming", () => {
 
     expect(streamPanel().getAttribute("data-draw-target-at"))
       .toBe("2026-08-27T12:40:00.000Z");
-    const iframe = within(streamPanel()).getByTitle("Streaming de Vespertino");
-    expect(iframe.tagName).toBe("IFRAME");
-    expect(iframe.getAttribute("src")).toBe("https://stream.example/vespertino");
+    expectAdvertisingPlayer();
+    expect(within(streamPanel()).queryByTitle("Streaming de Vespertino")).toBeNull();
     expect(screen.queryByTestId("draw-preview-video")).toBeNull();
     expectStreamCountdown("00", "25");
   });
@@ -670,7 +685,7 @@ describe("HomeSections inline draw streaming", () => {
     expect(screen.queryByTestId("draw-preview-video")).toBeNull();
   });
 
-  it("toggles the selected stream off and mounts a fresh player only when reopened", () => {
+  it("toggles the selected stream off and mounts a fresh advertising player only when reopened", () => {
     mountHome();
     const button = nextDrawButton();
     const initialUrl = window.location.href;
@@ -679,13 +694,9 @@ describe("HomeSections inline draw streaming", () => {
 
     fireEvent.click(button);
 
-    const firstVideo = screen.getByTestId("draw-preview-video") as HTMLVideoElement;
-    expect(firstVideo.getAttribute("src")).toBe("/assets/video/quinie-streaming-simulado.mp4");
-    expect(firstVideo.autoplay).toBe(true);
-    expect(firstVideo.muted).toBe(true);
-    expect(firstVideo.loop).toBe(true);
-    expect(firstVideo.playsInline).toBe(true);
-    expect(firstVideo.controls).toBe(true);
+    const firstPlayer = expectAdvertisingPlayer();
+    expect(firstPlayer.getAttribute("allow")).toContain("autoplay");
+    expect(firstPlayer.getAttribute("referrerpolicy")).toBe("strict-origin-when-cross-origin");
     expect(button.getAttribute("aria-expanded")).toBe("true");
     expect(streamPanel().hidden).toBe(false);
     expectDrawAction("collapse");
@@ -703,6 +714,7 @@ describe("HomeSections inline draw streaming", () => {
     expect(button.getAttribute("aria-label")).toMatch(/^Ver sorteo: Tempranero,/);
     expectDrawAction("play");
     expect(screen.queryByTestId("draw-preview-video")).toBeNull();
+    expect(screen.queryByTestId("draw-advertising-player")).toBeNull();
     expect(screen.queryByTestId("draw-countdown")).toBeNull();
     expect(screen.queryByTestId("home-draw-stream-title")).toBeNull();
 
@@ -710,8 +722,8 @@ describe("HomeSections inline draw streaming", () => {
 
     expect(streamPanel().hidden).toBe(false);
     expectDrawAction("collapse");
-    expect(screen.getByTestId("draw-preview-video")).not.toBe(firstVideo);
-    expect(screen.getAllByTestId("draw-preview-video")).toHaveLength(1);
+    expect(expectAdvertisingPlayer()).not.toBe(firstPlayer);
+    expect(screen.getAllByTestId("draw-advertising-player")).toHaveLength(1);
     expect(window.location.href).toBe(initialUrl);
     expect(within(screen.getByTestId("home-draws-section")).queryAllByRole("link"))
       .toHaveLength(0);
@@ -723,12 +735,12 @@ describe("HomeSections inline draw streaming", () => {
     const morningButton = screen.getByRole("button", { name: /^Ver sorteo: Matutino,/ });
     const panel = streamPanel();
     fireEvent.click(earlyButton);
-    const earlyVideo = screen.getByTestId("draw-preview-video");
+    const earlyAdvertisingPlayer = expectAdvertisingPlayer();
 
     fireEvent.click(morningButton);
 
     expect((morningButton as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByTestId("draw-preview-video")).toBe(earlyVideo);
+    expect(expectAdvertisingPlayer()).toBe(earlyAdvertisingPlayer);
     expect(within(panel).getByRole("heading", { name: "Tempranero" })).toBeTruthy();
 
     vi.setSystemTime(new Date("2026-08-27T14:00:00.000Z"));
@@ -746,10 +758,8 @@ describe("HomeSections inline draw streaming", () => {
     expect(screen.getAllByTestId("home-draw-card").filter(
       (card) => card.getAttribute("aria-expanded") === "true",
     )).toEqual([morningButton]);
-    expect(screen.getAllByTestId("draw-preview-video")).toHaveLength(1);
-    expect(screen.getByTestId("draw-preview-video")).not.toBe(earlyVideo);
-    expect(screen.getByTestId("draw-preview-video").getAttribute("aria-label"))
-      .toBe("Streaming de Matutino");
+    expect(screen.getAllByTestId("draw-advertising-player")).toHaveLength(1);
+    expect(expectAdvertisingPlayer()).not.toBe(earlyAdvertisingPlayer);
     expectDrawAction("collapse");
     expectStreamCountdown("02", "00");
     expect(panel.querySelector("main")).toBeNull();
@@ -757,61 +767,67 @@ describe("HomeSections inline draw streaming", () => {
     fireEvent.click(morningButton);
     expect(panel.hidden).toBe(true);
     expect(screen.queryByTestId("draw-preview-video")).toBeNull();
+    expect(screen.queryByTestId("draw-advertising-player")).toBeNull();
   });
 
-  it("keeps the opened video across the draw boundary and provides an independent close control", () => {
-    vi.setSystemTime(new Date("2026-08-27T13:29:58.000Z"));
+  it("keeps the panel open while switching advertising to preview LIVE and back at exact boundaries", () => {
+    vi.setSystemTime(new Date("2026-08-27T13:19:59.000Z"));
     mountHome();
     const button = nextDrawButton();
     fireEvent.click(button);
-    const video = screen.getByTestId("draw-preview-video") as HTMLVideoElement;
+    const panel = streamPanel();
+    const firstAdvertisingPlayer = expectAdvertisingPlayer();
     const accessibleName = button.getAttribute("aria-label");
-    video.currentTime = 17;
-    expectStreamCountdown("00", "00", "02");
+    expectStreamCountdown("00", "10", "01");
 
     act(() => vi.advanceTimersByTime(1_000));
-    expectStreamCountdown("00", "00", "01");
-    expect(screen.getByTestId("draw-preview-video")).toBe(video);
-    expect(video.currentTime).toBe(17);
-    expect(button.getAttribute("aria-label")).toBe(accessibleName);
 
-    act(() => vi.advanceTimersByTime(999));
-    expectStreamCountdown("00", "00", "01");
-    act(() => vi.advanceTimersByTime(1));
+    const video = expectPreviewLive("Tempranero");
+    video.currentTime = 17;
+    expect(firstAdvertisingPlayer.isConnected).toBe(false);
+    expect(panel.hidden).toBe(false);
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+    expect(button.getAttribute("aria-label")).toBe(accessibleName);
+    expectStreamCountdown("00", "10", "00");
+
+    act(() => vi.advanceTimersByTime(10 * 60_000));
 
     expect(activeDraw().getAttribute("data-draw-id")).toBe("morning");
     expect((button as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(button);
-    expect(button.getAttribute("aria-expanded")).toBe("true");
-    expect(button.getAttribute("aria-label")).toMatch(/^Ocultar sorteo: Tempranero,/);
     expect(nextDrawButton().getAttribute("aria-expanded")).toBe("false");
     expect(screen.getByTestId("home-next-draw-action").textContent).toBe("Ver sorteo");
-    expect(within(streamPanel()).queryByTestId("draw-countdown")).toBeNull();
-    expect(within(streamPanel()).queryByRole("status")).toBeNull();
-    expect(screen.getByTestId("draw-preview-video")).toBe(video);
+    expect(within(panel).queryByTestId("draw-countdown")).toBeNull();
+    expect(expectPreviewLive("Tempranero")).toBe(video);
     expect(video.currentTime).toBe(17);
-    expect(streamPanel().getAttribute("data-draw-target-at")).toBe("2026-08-27T13:30:00.000Z");
+    expect(panel.getAttribute("data-draw-target-at")).toBe("2026-08-27T13:30:00.000Z");
 
-    vi.setSystemTime(new Date("2026-08-28T12:00:00.000Z"));
-    fireEvent.focus(window);
+    act(() => vi.advanceTimersByTime(29 * 60_000 + 59_000));
+    expect(expectPreviewLive("Tempranero")).toBe(video);
+    expect(panel.hidden).toBe(false);
 
-    expect(streamPanel().getAttribute("data-draw-target-at")).toBe("2026-08-27T13:30:00.000Z");
-    expect(within(streamPanel()).queryByTestId("draw-countdown")).toBeNull();
-    expect(screen.getByTestId("draw-preview-video")).toBe(video);
-    expect(video.currentTime).toBe(17);
+    act(() => vi.advanceTimersByTime(1_000));
+
+    const secondAdvertisingPlayer = expectAdvertisingPlayer();
+    expect(secondAdvertisingPlayer).not.toBe(firstAdvertisingPlayer);
+    expect(video.isConnected).toBe(false);
+    expect(panel.hidden).toBe(false);
     expect(button.getAttribute("aria-expanded")).toBe("true");
+    expect(button.getAttribute("aria-label")).toMatch(/^Ocultar sorteo: Tempranero,/);
+    expect(panel.getAttribute("data-draw-target-at")).toBe("2026-08-27T13:30:00.000Z");
 
-    const closeButton = within(streamPanel()).getByRole("button", { name: "Cerrar sorteo de Tempranero" });
+    const closeButton = within(panel).getByRole("button", { name: "Cerrar sorteo de Tempranero" });
     closeButton.focus();
     fireEvent.click(closeButton);
 
-    expect(streamPanel().hidden).toBe(true);
+    expect(panel.hidden).toBe(true);
     expect(screen.queryByTestId("draw-preview-video")).toBeNull();
+    expect(screen.queryByTestId("draw-advertising-player")).toBeNull();
     expect(button.getAttribute("aria-expanded")).toBe("false");
     expect(document.activeElement).toBe(nextDrawButton());
   });
 
   it("keeps backoffice without an authorized source free of preview video", () => {
+    vi.setSystemTime(new Date("2026-08-27T13:25:00.000Z"));
     vi.stubEnv("NEXT_PUBLIC_DRAW_STREAM_TEMPRANERO_URL", "");
     useProductMock.mockReturnValue({
       catalog: buildGamingCatalog("REFUND", new Date("2026-08-27T12:15:00.000Z")),
@@ -825,11 +841,14 @@ describe("HomeSections inline draw streaming", () => {
 
     expect(within(streamPanel()).getByTestId("draw-stream-placeholder").textContent)
       .toBe("Transmisión no disponible");
+    expect(within(streamPanel()).getByTestId("draw-stream-placeholder").getAttribute("data-stream-mode"))
+      .toBe("live");
     expect(streamPanel().querySelector("iframe")).toBeNull();
     expect(screen.queryByTestId("draw-preview-video")).toBeNull();
+    expect(screen.queryByTestId("draw-advertising-player")).toBeNull();
   });
 
-  it("updates a same-day operational time without reloading its iframe or adopting tomorrow's schedule", () => {
+  it("updates a same-day operational time and switches ads to authorized LIVE without adopting tomorrow", () => {
     vi.stubEnv("NEXT_PUBLIC_DRAW_STREAM_TEMPRANERO_URL", "https://stream.example/tempranero");
     const sameDayCatalog = buildGamingCatalog("REFUND", new Date("2026-08-27T12:15:00.000Z"));
     const operationalState = {
@@ -843,7 +862,7 @@ describe("HomeSections inline draw streaming", () => {
     const { rerender } = mountHome();
     const button = nextDrawButton();
     fireEvent.click(button);
-    const iframe = within(streamPanel()).getByTitle("Streaming de Tempranero");
+    const initialAdvertisingPlayer = expectAdvertisingPlayer();
     expectStreamCountdown("01", "15");
 
     useProductMock.mockReturnValue({
@@ -859,7 +878,26 @@ describe("HomeSections inline draw streaming", () => {
 
     expect(streamPanel().getAttribute("data-draw-target-at")).toBe("2026-08-27T14:00:00.000Z");
     expectStreamCountdown("01", "45");
-    expect(within(streamPanel()).getByTitle("Streaming de Tempranero")).toBe(iframe);
+    expect(expectAdvertisingPlayer()).toBe(initialAdvertisingPlayer);
+
+    vi.setSystemTime(new Date("2026-08-27T13:50:00.000Z"));
+    fireEvent.focus(window);
+
+    const liveIframe = within(streamPanel()).getByTitle("Streaming de Tempranero");
+    expect(liveIframe.tagName).toBe("IFRAME");
+    expect(liveIframe.getAttribute("src")).toBe("https://stream.example/tempranero");
+    expect(within(streamPanel()).getByTestId("draw-stream-frame").getAttribute("data-stream-mode"))
+      .toBe("live");
+    expect(screen.queryByTestId("draw-advertising-player")).toBeNull();
+    expect(streamPanel().hidden).toBe(false);
+
+    vi.setSystemTime(new Date("2026-08-27T14:30:00.000Z"));
+    fireEvent.focus(window);
+
+    const postLiveAdvertisingPlayer = expectAdvertisingPlayer();
+    expect(postLiveAdvertisingPlayer).toBe(initialAdvertisingPlayer);
+    expect(postLiveAdvertisingPlayer).toBe(liveIframe);
+    expect(streamPanel().hidden).toBe(false);
 
     useProductMock.mockReturnValue({
       ...operationalState,
@@ -869,7 +907,7 @@ describe("HomeSections inline draw streaming", () => {
 
     expect(streamPanel().getAttribute("data-draw-target-at")).toBeNull();
     expect(within(streamPanel()).queryByTestId("draw-countdown")).toBeNull();
-    expect(within(streamPanel()).getByTitle("Streaming de Tempranero")).toBe(iframe);
+    expect(expectAdvertisingPlayer()).toBe(postLiveAdvertisingPlayer);
     expect(screen.queryByTestId("draw-preview-video")).toBeNull();
 
     useProductMock.mockReturnValue({ ...operationalState, catalog: { ...sameDayCatalog, draws: [] } });
@@ -877,7 +915,7 @@ describe("HomeSections inline draw streaming", () => {
 
     expect((button as HTMLButtonElement).disabled).toBe(true);
     expect(button.getAttribute("aria-expanded")).toBe("true");
-    expect(within(streamPanel()).getByTitle("Streaming de Tempranero")).toBe(iframe);
+    expect(expectAdvertisingPlayer()).toBe(postLiveAdvertisingPlayer);
     fireEvent.click(button);
     expect(streamPanel().hidden).toBe(false);
     const closeButton = within(streamPanel()).getByRole("button", { name: "Cerrar sorteo de Tempranero" });

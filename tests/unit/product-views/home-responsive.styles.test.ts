@@ -185,23 +185,46 @@ describe("Home responsive stylesheet cascade", () => {
     );
     expect(declaration(shellStyles, ".q-topbar__heading", "min-width", viewport)).toBe("0");
     expect(declaration(shellStyles, ".q-topbar__heading", "flex", viewport)).toBe("0 1 auto");
+    expect(declaration(shellStyles, ".q-topbar__heading", "flex-direction", viewport)).toBe("row");
+    expect(declaration(shellStyles, ".q-topbar__heading", "align-items", viewport)).toBe("center");
     expect(declaration(shellStyles, ".q-topbar__mobile-brand", "display", viewport)).toBe("block");
     expect(declaration(shellStyles, ".q-topbar__mobile-brand", "min-width", viewport)).toBe("0");
+    expect(declaration(shellStyles, ".q-topbar__context", "display", viewport)).toBe("contents");
+    expect(declaration(shellStyles, ".q-topbar__title-row", "display", viewport)).toBe("contents");
+    expect(declaration(shellStyles, ".q-topbar__eyebrow", "display", viewport)).toBe("none");
+    expect(declaration(shellStyles, ".q-topbar__title", "display", viewport)).toBe("none");
     expect(declaration(shellStyles, ".q-topbar__actions", "min-width", viewport)).toBe("0");
     expect(declaration(shellStyles, ".q-shell-main", "min-width", viewport)).toBe("0");
     expect(declaration(shellStyles, ".q-shell-content", "min-width", viewport)).toBe("0");
+    expect(declaration(shellStyles, ".q-balance__label", "display", viewport)).toBeUndefined();
+    expect(declaration(shellStyles, ".q-topbar", "display", viewport)).toBe("grid");
+    expect(declaration(shellStyles, ".q-topbar__heading", "width", viewport)).toBe("100%");
+    expect(declaration(shellStyles, ".q-topbar__actions", "width", viewport)).toBe("100%");
+    expect(declaration(shellStyles, ".q-balance", "margin-right", viewport)).toBe("auto");
 
     if (viewport.width < 320) {
       expect(declaration(shellStyles, ".q-topbar", "gap", viewport)).toBe(".25rem");
       expect(declaration(shellStyles, ".q-topbar", "padding", viewport)).toBe(".55rem .5rem");
       expect(declaration(shellStyles, ".q-logo--sm .q-logo__plate", "width", viewport)).toBe("4.45rem");
-      expect(declaration(shellStyles, ".q-balance", "min-width", viewport)).toBe("4.65rem");
-      expect(declaration(shellStyles, ".q-balance", "max-width", viewport)).toBe("4.9rem");
-      expect(declaration(shellStyles, ".q-balance__label", "display", viewport)).toBe("none");
+      expect(declaration(shellStyles, ".q-balance", "min-width", viewport)).toBe("4.9rem");
+      expect(declaration(shellStyles, ".q-balance", "max-width", viewport)).toBe("5.25rem");
+      expect(declaration(shellStyles, ".q-balance__icon", "width", viewport)).toBe("1.15rem");
+      expect(declaration(shellStyles, ".q-icon-button", "width", viewport)).toBe("2rem");
       expect(declaration(shellStyles, ".q-shell-content", "padding", viewport)).toBe(".75rem .65rem 0");
     } else {
       expect(declaration(shellStyles, ".q-topbar", "padding", viewport)).toBe(".65rem .8rem");
-      expect(declaration(shellStyles, ".q-balance__label", "display", viewport)).toBeUndefined();
+      expect(declaration(shellStyles, ".q-balance", "min-width", viewport)).toBe(
+        viewport.width <= 390 ? "5.65rem" : "6.35rem",
+      );
+      expect(declaration(shellStyles, ".q-balance", "max-width", viewport)).toBe(
+        viewport.width <= 390 ? "6.2rem" : "7rem",
+      );
+      expect(declaration(shellStyles, ".q-balance__icon", "width", viewport)).toBe(
+        viewport.width <= 390 ? "1.4rem" : "1.65rem",
+      );
+      expect(declaration(shellStyles, ".q-icon-button", "width", viewport)).toBe(
+        viewport.width <= 390 ? "2.2rem" : "2.45rem",
+      );
       expect(declaration(shellStyles, ".q-shell-content", "padding", viewport)).toBe("1rem .85rem 0");
     }
   });

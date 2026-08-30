@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { buildPreviewDailyDraws, buildPreviewDrawsForDate, selectLiveDraw } from "@/lib/gaming/daily-draw-schedule";
+import {
+  buildPreviewDailyDraws,
+  buildPreviewDrawsForDate,
+  isDrawOccurrenceLive,
+  selectLiveDraw,
+} from "@/lib/gaming/daily-draw-schedule";
 import { drawDateKey } from "@/lib/gaming/draw-calendar";
 import type { DrawDefinition } from "@/lib/gaming/types";
 
@@ -85,9 +90,28 @@ describe("indicador LIVE de sorteos diarios", () => {
       [30 * minute + 1, false],
     ] as const) {
       const nowMs = drawsAtMs + offset;
+      expect(isDrawOccurrenceLive(nowMs, draw.drawsAt)).toBe(live);
       expect(selectLiveDraw(nowMs)).toEqual(live ? draw : null);
       expect(selectLiveDraw(nowMs, [draw])).toBe(live ? draw : null);
     }
+  });
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.MAX_VALUE])(
+    "rechaza el reloj inválido %s para una ocurrencia individual",
+    (nowMs) => expect(isDrawOccurrenceLive(nowMs, dailyDraws[0].drawsAt)).toBe(false),
+  );
+
+  it.each([null, undefined, "", " ", "sin-fecha", "2026-13-26T13:30:00Z", "2026-02-30T13:30:00Z"])(
+    "rechaza la ocurrencia individual inválida %s",
+    (drawsAt) => expect(isDrawOccurrenceLive(Date.parse("2026-08-26T13:30:00Z"), drawsAt)).toBe(false),
+  );
+
+  it("interpreta una ocurrencia con offset sin depender de closesAt", () => {
+    const drawsAt = "2026-08-26T15:20:00-03:00";
+    expect(isDrawOccurrenceLive(Date.parse("2026-08-26T18:09:59.999Z"), drawsAt)).toBe(false);
+    expect(isDrawOccurrenceLive(Date.parse("2026-08-26T18:10:00.000Z"), drawsAt)).toBe(true);
+    expect(isDrawOccurrenceLive(Date.parse("2026-08-26T18:49:59.999Z"), drawsAt)).toBe(true);
+    expect(isDrawOccurrenceLive(Date.parse("2026-08-26T18:50:00.000Z"), drawsAt)).toBe(false);
   });
 
   it.each(dailyDraws)("conserva $id en LIVE después de que el próximo sorteo avance", (draw) => {

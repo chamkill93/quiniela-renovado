@@ -10,3 +10,11 @@ work
 *.log
 *.tsbuildinfo
 .DS_Store
+
+# Design-source artwork kept locally; production uses optimized WebP assets.
+public/assets/results/balls/*-reference.png
+public/assets/results/balls/ball-bronze.svg
+public/assets/results/balls/ball-gold.svg
+public/assets/results/balls/ball-red.svg
+public/assets/results/balls/ball-silver.svg
+public/assets/results/source/

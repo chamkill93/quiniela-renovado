@@ -53,6 +53,20 @@ export function buildPreviewDailyDraws(nowMs: number): readonly DrawDefinition[]
 const LIVE_BEFORE_DRAW_MS = 10 * 60 * 1_000;
 const LIVE_AFTER_DRAW_MS = 30 * 60 * 1_000;
 
+/** Whether one dated occurrence is inside the shared LIVE window. */
+export function isDrawOccurrenceLive(
+  nowMs: number,
+  drawsAt: string | null | undefined,
+): boolean {
+  const scheduled = drawsAt?.trim();
+  if (!scheduled || !Number.isFinite(nowMs) || !Number.isFinite(new Date(nowMs).getTime())) {
+    return false;
+  }
+  const drawsAtMs = Date.parse(scheduled);
+  if (!Number.isFinite(drawsAtMs) || !isDrawDateKey(scheduled.slice(0, 10))) return false;
+  return nowMs >= drawsAtMs - LIVE_BEFORE_DRAW_MS && nowMs < drawsAtMs + LIVE_AFTER_DRAW_MS;
+}
+
 /** LIVE follows a dated draw occurrence, independently of its sales cutoff. */
 export function selectLiveDraw(nowMs: number, draws?: readonly DrawDefinition[]): DrawDefinition | null {
   if (!Number.isFinite(nowMs) || !Number.isFinite(new Date(nowMs).getTime())) return null;
@@ -75,7 +89,7 @@ export function selectLiveDraw(nowMs: number, draws?: readonly DrawDefinition[])
     const scheduled = draw.drawsAt.trim();
     const drawsAtMs = Date.parse(scheduled);
     if (!Number.isFinite(drawsAtMs) || !isDrawDateKey(scheduled.slice(0, 10))) return [];
-    if (nowMs < drawsAtMs - LIVE_BEFORE_DRAW_MS || nowMs >= drawsAtMs + LIVE_AFTER_DRAW_MS) return [];
+    if (!isDrawOccurrenceLive(nowMs, scheduled)) return [];
     return [{ draw, drawsAtMs, slotIndex }];
   });
 

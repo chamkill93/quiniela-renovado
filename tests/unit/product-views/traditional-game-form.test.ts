@@ -6,6 +6,7 @@ import {
   getRedoblonaRanges,
   getTraditionalPositionLabel,
   getTraditionalPositionRange,
+  isValidInvertNumber,
   normalizeTraditionalNumber,
   randomizeTraditionalDraft,
   validateTraditionalDraft,
@@ -67,7 +68,7 @@ describe("borrador de apuestas tradicionales", () => {
     expect(normalizeTraditionalNumber("1234", 3)).toBe("123");
   });
 
-  it.each(["head", "prizes", "invert"] as const)(
+  it.each(["head", "prizes"] as const)(
     "valida 001–999 para %s y acepta números que se completarán al enviar",
     (gameId) => {
       const draft = createTraditionalDraft(gameId);
@@ -79,6 +80,18 @@ describe("borrador de apuestas tradicionales", () => {
       }
     },
   );
+
+  it("acepta Invertida sólo cuando el número normalizado tiene tres cifras distintas", () => {
+    const draft = createTraditionalDraft("invert");
+    for (const number of ["12", "012", "102", "120", "987"]) {
+      expect(validateTraditionalDraft("invert", { ...draft, number }, definition("invert"))).toEqual({});
+      expect(isValidInvertNumber(normalizeTraditionalNumber(number, 3))).toBe(true);
+    }
+    for (const number of ["", "0", "1", "7", "00", "01", "000", "001", "007", "011", "101", "112", "777", "1000"]) {
+      expect(validateTraditionalDraft("invert", { ...draft, number }, definition("invert")).number)
+        .toMatch(/001.*999.*tres cifras distintas|001 y 999/);
+    }
+  });
 
   it("valida dos números de dos cifras y los alcances de Redoblona", () => {
     const draft = createTraditionalDraft("redoblona");
@@ -142,7 +155,7 @@ describe("borrador de apuestas tradicionales", () => {
     "construye el contrato de %s con ceros, sin campos ajenos ni mutar el borrador",
     (gameId) => {
       const draft = Object.freeze({
-        ...createTraditionalDraft(gameId), number: "7", initialNumber: "5", redoblonaNumber: "0",
+        ...createTraditionalDraft(gameId), number: gameId === "invert" ? "12" : "7", initialNumber: "5", redoblonaNumber: "0",
       });
       const request = buildTraditionalPlayInput(gameId, 5_000, "early", draft);
       expect(request).toEqual({
@@ -153,10 +166,10 @@ describe("borrador de apuestas tradicionales", () => {
           ? { initialNumber: "05", initialUntil: 1, redoblonaNumber: "00", redoblonaUntil: 7 }
           : gameId === "head"
             ? { number: "007" }
-            : { number: "007", position: gameId === "invert" ? 1 : 2 },
+            : { number: gameId === "invert" ? "012" : "007", position: gameId === "invert" ? 1 : 2 },
       });
       expect(traditionalPlayRequestSchema.parse(request)).toEqual(request);
-      expect(draft.number).toBe("7");
+      expect(draft.number).toBe(gameId === "invert" ? "12" : "7");
     },
   );
 
@@ -175,12 +188,22 @@ describe("borrador de apuestas tradicionales", () => {
 });
 
 describe("selección tradicional al azar", () => {
-  it.each(["head", "prizes", "invert"] as const)("respeta ambos extremos de 001–999 para %s", (gameId) => {
+  it.each(["head", "prizes"] as const)("respeta ambos extremos de 001–999 para %s", (gameId) => {
     const random = mockRandom(0, 998);
     const draft = createTraditionalDraft(gameId);
     expect(randomizeTraditionalDraft(gameId, draft).number).toBe("001");
     expect(randomizeTraditionalDraft(gameId, draft).number).toBe("999");
     expect(random).toHaveBeenCalledTimes(2);
+  });
+
+  it("genera Invertidas de tres cifras distintas y evita repetir la selección anterior", () => {
+    const random = mockRandom(0, 719, 0, 718);
+    const draft = createTraditionalDraft("invert");
+    expect(randomizeTraditionalDraft("invert", draft).number).toBe("012");
+    expect(randomizeTraditionalDraft("invert", draft).number).toBe("987");
+    expect(randomizeTraditionalDraft("invert", { ...draft, number: "12" }).number).toBe("013");
+    expect(randomizeTraditionalDraft("invert", { ...draft, number: "987" }).number).toBe("986");
+    expect(random).toHaveBeenCalledTimes(4);
   });
 
   it("incluye 00 y 99 en ambos números y conserva los dos alcances de Redoblona", () => {

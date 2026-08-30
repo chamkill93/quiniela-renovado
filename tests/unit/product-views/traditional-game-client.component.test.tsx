@@ -223,6 +223,7 @@ describe("TraditionalGameClient selection", () => {
       expect(head.value).toMatch(gameId === "redoblona" ? /^\d{2}$/ : /^\d{3}$/);
       expect(Number(head.value)).toBeGreaterThanOrEqual(gameId === "redoblona" ? 0 : 1);
       expect(Number(head.value)).toBeLessThanOrEqual(gameId === "redoblona" ? 99 : 999);
+      if (gameId === "invert") expect(new Set(head.value).size).toBe(3);
       if (gameId === "redoblona") {
         const second = numberInput("Número de Redoblona");
         expect(second.value).toMatch(/^\d{2}$/);
@@ -327,6 +328,33 @@ describe("TraditionalGameClient selection", () => {
     enterNumber("");
     expect(input.value).toBe("");
     expect(reviewButton().disabled).toBe(true);
+    expect(request).not.toHaveBeenCalled();
+    expectUnchangedAccount();
+  });
+
+  it("explains and blocks repeated digits in Invertida", async () => {
+    const gateway = createFixtureProductGateway(fixtureConfig());
+    const request = vi.spyOn(gateway, "requestPlay");
+    renderGame("invert", gateway);
+    await waitUntilReady();
+    fireEvent.click(chipButton(500));
+
+    const input = numberInput();
+    expect(document.getElementById("traditional-number-hint")?.textContent)
+      .toBe("Del 001 al 999, con tres cifras distintas");
+    enterNumber("112");
+
+    expect(input.value).toBe("112");
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getByText("Elegí un número del 001 al 999 con tres cifras distintas.")).toBeTruthy();
+    expect(reviewButton().disabled).toBe(true);
+    fireEvent.click(reviewButton());
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    enterNumber("123");
+    expect(input.getAttribute("aria-invalid")).toBe("false");
+    expect(screen.queryByText("Elegí un número del 001 al 999 con tres cifras distintas.")).toBeNull();
+    expect(reviewButton().disabled).toBe(false);
     expect(request).not.toHaveBeenCalled();
     expectUnchangedAccount();
   });

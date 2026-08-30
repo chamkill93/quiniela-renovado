@@ -27,6 +27,10 @@ export function normalizeTraditionalNumber(value: string, digits: number): strin
   return number ? number.padStart(digits, "0") : "";
 }
 
+export function isValidInvertNumber(value: string): boolean {
+  return /^(?!000)\d{3}$/.test(value) && new Set(value).size === 3;
+}
+
 export function getTraditionalPositionRange(
   definition: TraditionalGameDefinition,
 ): { min: number; max: number } | null {
@@ -85,6 +89,11 @@ export function validateTraditionalDraft(
     }
   } else if (!isNumberInRange(draft.number, 3, 1, 999)) {
     errors.number = "Ingresá un número entre 001 y 999.";
+  } else if (
+    gameId === "invert"
+    && !isValidInvertNumber(normalizeTraditionalNumber(draft.number, 3))
+  ) {
+    errors.number = "Elegí un número del 001 al 999 con tres cifras distintas.";
   }
 
   // A la Cabeza has a fixed server-side position, absent from its request.
@@ -144,11 +153,10 @@ export function buildTraditionalPlayInput(
   };
 }
 
-function randomNumber(min: number, max: number, digits: number, previous: string) {
-  const previousNumber = isNumberInRange(previous, digits, min, max)
-    ? Number(previous)
-    : null;
-  const count = max - min + 1 - (previousNumber === null ? 0 : 1);
+function randomIndex(count: number) {
+  if (!Number.isSafeInteger(count) || count < 1) {
+    throw new RangeError("Random option count must be positive.");
+  }
   const sourceSize = 2 ** 32;
   const unbiasedLimit = sourceSize - (sourceSize % count);
   const buffer = new Uint32Array(1);
@@ -158,10 +166,34 @@ function randomNumber(min: number, max: number, digits: number, previous: string
     crypto.getRandomValues(buffer);
   } while (buffer[0] >= unbiasedLimit);
 
-  let value = min + (buffer[0] % count);
+  return buffer[0] % count;
+}
+
+function randomNumber(min: number, max: number, digits: number, previous: string) {
+  const previousNumber = isNumberInRange(previous, digits, min, max)
+    ? Number(previous)
+    : null;
+  const count = max - min + 1 - (previousNumber === null ? 0 : 1);
+  let value = min + randomIndex(count);
   // Exclude the previous value without retrying an otherwise valid sample.
   if (previousNumber !== null && value >= previousNumber) value += 1;
   return normalizeTraditionalNumber(String(value), digits);
+}
+
+const VALID_INVERT_NUMBERS = Array.from(
+  { length: 999 },
+  (_, index) => String(index + 1).padStart(3, "0"),
+).filter(isValidInvertNumber);
+
+function randomInvertNumber(previous: string) {
+  const normalizedPrevious = normalizeTraditionalNumber(previous, 3);
+  const previousIndex = isValidInvertNumber(normalizedPrevious)
+    ? VALID_INVERT_NUMBERS.indexOf(normalizedPrevious)
+    : -1;
+  const count = VALID_INVERT_NUMBERS.length - (previousIndex >= 0 ? 1 : 0);
+  let candidateIndex = randomIndex(count);
+  if (previousIndex >= 0 && candidateIndex >= previousIndex) candidateIndex += 1;
+  return VALID_INVERT_NUMBERS[candidateIndex];
 }
 
 export function randomizeTraditionalDraft(
@@ -174,6 +206,9 @@ export function randomizeTraditionalDraft(
       initialNumber: randomNumber(0, 99, 2, draft.initialNumber),
       redoblonaNumber: randomNumber(0, 99, 2, draft.redoblonaNumber),
     };
+  }
+  if (gameId === "invert") {
+    return { ...draft, number: randomInvertNumber(draft.number) };
   }
   return { ...draft, number: randomNumber(1, 999, 3, draft.number) };
 }
