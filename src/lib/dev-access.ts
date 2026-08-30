@@ -5,6 +5,14 @@ export const DEFAULT_DEV_ACCESS_CODE = "Admin123#";
 
 const DEV_ACCESS_TOKEN_VERSION = "quinie-dev-access:v1";
 
+/**
+ * The review gate fails closed: only the exact server-side value `false`
+ * publishes the site without requiring the DEV cookie.
+ */
+export function isDevAccessRequired() {
+  return process.env.DEV_ACCESS_REQUIRED !== "false";
+}
+
 function configuredAccessCode() {
   return process.env.DEV_ACCESS_CODE || DEFAULT_DEV_ACCESS_CODE;
 }

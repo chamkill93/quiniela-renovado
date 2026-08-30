@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   createDevAccessCookieValue,
   DEV_ACCESS_COOKIE_NAME,
+  isDevAccessRequired,
   isValidDevAccessCode,
 } from "@/lib/dev-access";
 
@@ -16,6 +17,10 @@ function jsonResponse(body: object, status: number) {
 }
 
 export async function POST(request: NextRequest) {
+  if (!isDevAccessRequired()) {
+    return jsonResponse({ message: "No encontrado." }, 404);
+  }
+
   let body: unknown;
 
   try {
