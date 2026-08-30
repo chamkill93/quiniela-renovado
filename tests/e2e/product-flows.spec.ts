@@ -537,7 +537,7 @@ test("completes Home with scheduled draws, fourteen result balls and the officia
     const card = resultCards.nth(index);
     await expect(card).toHaveAttribute("data-tone", tone);
     expect(decodeURIComponent(await card.locator("img").getAttribute("src") ?? ""))
-      .toContain(`/assets/results/balls/ball-${tone}-reference.png`);
+      .toContain(`/assets/results/balls/ball-${tone}.webp`);
     await expect(card.locator("img")).toHaveAttribute("alt", "");
   }
   await expect(resultsSection.locator('[data-testid="home-result-card"][data-tone="red"]')).toHaveCount(11);

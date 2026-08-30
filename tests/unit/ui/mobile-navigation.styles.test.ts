@@ -125,8 +125,8 @@ function expectFiveDestinations(viewport: Viewport, centerMinimum: string) {
     expect(declaration(selector, "border-radius", viewport)).toBe("999px");
   }
   expect(declaration(".mobileNavLabel", "overflow", viewport)).toBe("hidden");
-  expect(declaration(".mobileNavLabel", "min-height", viewport)).toBe("1.2em");
-  expect(declaration(".mobileNavLabel", "line-height", viewport)).toBe("1.2");
+  expect(declaration(".mobileNavLabel", "min-height", viewport)).toBe("1.5em");
+  expect(declaration(".mobileNavLabel", "line-height", viewport)).toBe("1.5");
   expect(declaration(".mobileNavLabel", "white-space", viewport)).toBe("nowrap");
 }
 

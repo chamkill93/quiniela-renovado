@@ -287,7 +287,7 @@ ul, ol { margin-block: 0; padding-inline-start: 1.2rem; }
 .mobileNav { display: none; }
 
 @media (min-width: 1280px) {
-  .q-site-footer { grid-template-columns: auto minmax(0, 1fr) auto; gap: 1.25rem; }
+  .q-site-footer { grid-template-columns: auto minmax(0, 1fr) auto; gap: 1.25rem; padding-top: 1.625rem; }
   .q-site-footer__links { grid-column: 2; grid-row: 1; justify-content: flex-end; gap: 1.15rem; }
   .q-site-footer > .q-age-mark { grid-column: 3; }
 }
@@ -416,11 +416,11 @@ ul, ol { margin-block: 0; padding-inline-start: 1.2rem; }
   .mobileNavLabel {
     display: block;
     width: 100%;
-    min-height: 1.2em;
+    min-height: 1.5em;
     min-width: 0;
     overflow: hidden;
     letter-spacing: -.015em;
-    line-height: 1.2;
+    line-height: 1.5;
     text-align: center;
     text-overflow: clip;
     white-space: nowrap;
