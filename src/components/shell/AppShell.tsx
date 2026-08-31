@@ -51,7 +51,7 @@ export const defaultShellNavItems: ShellNavItem[] = [
   { href: "/", label: "Inicio", icon: "home", section: "play", mobile: true },
   {
     href: "/quinielas",
-    label: "Quinielas",
+    label: "Quiniela",
     icon: "head",
     section: "play",
     match: mobilePlayMatches,

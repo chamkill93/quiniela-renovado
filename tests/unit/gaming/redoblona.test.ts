@@ -80,13 +80,13 @@ describe("Redoblona domain rule", () => {
     expect(validateRedoblonaSelection({ ...baseSelection, ...change })).toHaveProperty(field);
   });
 
-  it("maps Cabeza 1 plus hasta 7 to initial position 1 and second positions 2 through 8", () => {
+  it("maps Cabeza 1 plus postura 7 to initial position 1 and second positions 2 through 8", () => {
     expect(getRedoblonaEvaluationRanges(baseSelection)).toEqual({
       initial: { min: 1, max: 1 },
       redoblona: { min: 2, max: 8 },
     });
     expect(summarizeRedoblonaSelection(baseSelection)).toBe(
-      "35 Cabeza + 72 hasta 7",
+      "35 Cabeza + 72 postura 7",
     );
   });
 

@@ -613,18 +613,6 @@
   color: #efbd3d;
 }
 
-.resultBall[data-position="3"] {
-  color: #d9955d;
-}
-
-.resultBall[data-tone="silver"] {
-  --result-number-y: 55%;
-}
-
-.resultBall[data-tone="bronze"] {
-  --result-number-y: 55%;
-}
-
 .resultBall[data-pending="true"] {
   opacity: 0.72;
 }
@@ -685,10 +673,6 @@
 
 :global([data-theme="light"]) .resultBall[data-position="1"] {
   color: #a36d00;
-}
-
-:global([data-theme="light"]) .resultBall[data-position="3"] {
-  color: #9a542d;
 }
 
 .latestResultsArrow {

@@ -1,9 +1,13 @@
 .button {
-  position: absolute;
-  top: 0;
-  left: 50%;
+  position: relative;
+  top: auto;
+  left: auto;
   z-index: 1;
   display: grid;
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+  justify-self: center;
   width: 52px;
   height: 44px;
   place-items: center;
@@ -12,7 +16,7 @@
   padding: 0;
   color: var(--q-red);
   filter: drop-shadow(0 5px 9px rgb(227 6 19 / 24%));
-  transform: translate(-50%, -50%);
+  transform: none;
   transform-origin: center;
   transition:
     filter 180ms var(--q-ease-standard),
@@ -41,7 +45,7 @@
 }
 
 .button:active {
-  transform: translate(-50%, -50%) scale(.95);
+  transform: scale(.95);
 }
 
 :global([data-theme="light"]) .button {
@@ -51,11 +55,11 @@
 @media (min-width: 768px) and (hover: hover) and (pointer: fine) {
   .button:hover {
     filter: drop-shadow(0 8px 12px rgb(227 6 19 / 34%));
-    transform: translate(-50%, calc(-50% - 3px));
+    transform: translateY(-3px);
   }
 
   .button:hover:active {
-    transform: translate(-50%, calc(-50% - 3px)) scale(.95);
+    transform: translateY(-3px) scale(.95);
   }
 
   :global([data-theme="light"]) .button:hover {
@@ -65,16 +69,19 @@
 
 @media (max-width: 767px) {
   .button {
-    top: -22px;
     right: auto;
-    left: 50%;
     width: 42px;
     height: 38px;
-    transform: translateX(-50%);
+    transform: none;
+  }
+
+  .icon {
+    width: 36px;
+    height: 32px;
   }
 
   .button:active {
-    transform: translateX(-50%) scale(.95);
+    transform: scale(.95);
   }
 }
 

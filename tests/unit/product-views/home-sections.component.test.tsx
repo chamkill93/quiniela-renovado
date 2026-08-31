@@ -126,10 +126,9 @@ describe("HomeSections latest draw results", () => {
   }
 
   function expectPositionRanks(balls: readonly HTMLElement[]) {
-    const tonesByPosition: Record<number, string> = { 1: "gold", 2: "silver", 3: "bronze" };
     for (const ball of balls) {
       const position = Number(ball.getAttribute("data-position"));
-      const expectedTone = tonesByPosition[position] ?? "red";
+      const expectedTone = position === 1 ? "gold" : "red";
       const image = ball.querySelector("img");
       expect(ball.getAttribute("data-tone")).toBe(expectedTone);
       expect(decodeURIComponent(image?.getAttribute("src") ?? ""))
@@ -213,14 +212,14 @@ describe("HomeSections latest draw results", () => {
     expect(disconnectMock).not.toHaveBeenCalled();
   });
 
-  it("uses gold, silver and bronze assets for the podium and one red asset for positions 4 through 14", () => {
+  it("highlights only the first posture and gives positions 2 through 14 the same red asset", () => {
     mountResults();
     const balls = expectBalls(latestDrawValues);
 
     expectPositionRanks(balls);
-    expect(balls.slice(0, 3).map((ball) => ball.getAttribute("data-tone")))
-      .toEqual(["gold", "silver", "bronze"]);
-    expect(new Set(balls.slice(3).map((ball) => ball.querySelector("img")?.getAttribute("src"))).size)
+    expect(balls[0].getAttribute("data-tone")).toBe("gold");
+    expect(balls.slice(1).every((ball) => ball.getAttribute("data-tone") === "red")).toBe(true);
+    expect(new Set(balls.slice(1).map((ball) => ball.querySelector("img")?.getAttribute("src"))).size)
       .toBe(1);
     expect(within(resultsList()).queryByTestId("home-result-rank")).toBeNull();
   });

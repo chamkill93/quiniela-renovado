@@ -19,7 +19,7 @@ function formatOccurredAt(value: string | null) {
 }
 
 function postureRank(position: number) {
-  return position === 1 ? "gold" : position === 2 ? "silver" : position === 3 ? "bronze" : undefined;
+  return position === 1 ? "gold" : undefined;
 }
 
 function DrawPostures({ draw, id }: { draw: DailyDraw; id: string }) {
@@ -48,7 +48,7 @@ function DrawPostures({ draw, id }: { draw: DailyDraw; id: string }) {
             <li className={resultStyles.postureCard} data-head={position === 1 ? "true" : undefined} data-pending={value === null ? "true" : undefined} data-position={position} data-rank={rank} data-testid="draw-posture" key={position}>
               <span className={resultStyles.posturePosition}>{position}ª postura</span>
               <span aria-hidden="true" className={resultStyles.rankSlot}>
-                {rank ? (
+                {rank === "gold" ? (
                   <svg aria-hidden="true" className={resultStyles.rankIcon} data-rank={rank} data-testid="draw-posture-rank" focusable="false" viewBox="0 0 24 24">
                     <path d="m3 7 4.5 3L12 3l4.5 7L21 7l-2 13H5L3 7Z" fill="currentColor" stroke="currentColor" strokeLinejoin="round" />
                     <path d="M6.5 16.5h11M9 12l3-5 3 5" fill="none" stroke="var(--q-panel)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />

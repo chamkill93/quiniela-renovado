@@ -73,11 +73,7 @@
 }
 .postureCard { --posture-accent: var(--q-text); display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; min-height: 142px; padding: 12px 6px; border: 1px solid var(--q-line); border-radius: 12px; background: var(--q-panel-2); text-align: center; scroll-snap-align: start; }
 .postureCard[data-rank="gold"] { --posture-accent: #f4c55c; }
-.postureCard[data-rank="silver"] { --posture-accent: #c4d0e0; }
-.postureCard[data-rank="bronze"] { --posture-accent: #d69a6d; }
 :global([data-theme="light"]) .postureCard[data-rank="gold"] { --posture-accent: #805b08; }
-:global([data-theme="light"]) .postureCard[data-rank="silver"] { --posture-accent: #59667a; }
-:global([data-theme="light"]) .postureCard[data-rank="bronze"] { --posture-accent: #975226; }
 .postureCard[data-rank] { border-color: color-mix(in srgb, var(--posture-accent) 60%, var(--q-line)); background: color-mix(in srgb, var(--posture-accent) 8%, var(--q-panel-2)); }
 .posturePosition { color: var(--q-muted-strong); font-size: .65rem; font-weight: 650; line-height: 1.4; }
 .rankSlot { display: grid; place-items: center; height: 25px; color: var(--posture-accent); }

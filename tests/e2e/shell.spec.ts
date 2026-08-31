@@ -288,9 +288,12 @@ test("positions the footer back-to-top button responsively and supports click an
 
   const metrics = await button.evaluate((element) => {
     const buttonBox = element.getBoundingClientRect();
+    const iconBox = element.querySelector("svg")!.getBoundingClientRect();
     const footer = element.closest("footer")!;
     const footerBox = footer.getBoundingClientRect();
-    const ageMarkBox = footer.querySelector<HTMLElement>(".q-age-mark")!.getBoundingClientRect();
+    const ageMark = footer.querySelector<HTMLElement>(".q-age-mark")!;
+    const ageMarkBox = ageMark.getBoundingClientRect();
+    const brandBox = footer.querySelector<HTMLElement>(".q-site-footer__brand")!.getBoundingClientRect();
     const footerLinkBoxes = Array.from(
       footer.querySelectorAll<HTMLElement>(".q-site-footer__links a"),
       (link) => link.getBoundingClientRect(),
@@ -308,47 +311,73 @@ test("positions the footer back-to-top button responsively and supports click an
     );
 
     return {
+      ageMarkColor: getComputedStyle(ageMark).color,
       ageMarkOverlap: overlaps(buttonBox, ageMarkBox),
+      ageMarkLeft: ageMarkBox.left,
+      ageMarkVerticalCenter: ageMarkBox.top + ageMarkBox.height / 2,
       bottomNavigationOverlap: Boolean(
         mobileNavigationVisible
         && mobileNavigationBox
         && overlaps(buttonBox, mobileNavigationBox),
       ),
+      brandOverlap: overlaps(buttonBox, brandBox),
+      brandRight: brandBox.right,
+      brandVerticalCenter: brandBox.top + brandBox.height / 2,
       footerLinkOverlap: footerLinkBoxes.some((linkBox) => overlaps(buttonBox, linkBox)),
       buttonBottom: buttonBox.bottom,
       buttonCenter: buttonBox.left + buttonBox.width / 2,
       buttonHeight: buttonBox.height,
       buttonRight: buttonBox.right,
       buttonTop: buttonBox.top,
+      buttonVerticalCenter: buttonBox.top + buttonBox.height / 2,
       buttonWidth: buttonBox.width,
       color: getComputedStyle(element).color,
       footerCenter: footerBox.left + footerBox.width / 2,
       footerRight: footerBox.right,
       footerTop: footerBox.top,
       horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      iconHeight: iconBox.height,
+      iconWidth: iconBox.width,
+      theme: document.documentElement.dataset.theme,
     };
   });
 
   expect(metrics.color).toBe("rgb(227, 6, 19)");
+  expect(metrics.ageMarkColor).toBe(
+    metrics.theme === "light" ? "rgb(0, 0, 0)" : "rgb(255, 255, 255)",
+  );
   expect(metrics.horizontalOverflow).toBe(false);
   expect(metrics.bottomNavigationOverlap).toBe(false);
   expect(metrics.ageMarkOverlap).toBe(false);
+  expect(metrics.brandOverlap).toBe(false);
   expect(metrics.footerLinkOverlap).toBe(false);
 
   if (viewport.width >= 768) {
+    expect(metrics.iconWidth).toBeCloseTo(52, 0);
+    expect(metrics.iconHeight).toBeCloseTo(44, 0);
     expect(metrics.buttonWidth).toBeCloseTo(52, 0);
     expect(metrics.buttonHeight).toBeCloseTo(44, 0);
     expect(Math.abs(metrics.buttonCenter - metrics.footerCenter)).toBeLessThanOrEqual(1);
-    expect(metrics.footerTop - metrics.buttonTop).toBeGreaterThanOrEqual(20);
-    expect(metrics.footerTop - metrics.buttonTop).toBeLessThanOrEqual(24);
-    expect(Math.abs((metrics.buttonTop + metrics.buttonBottom) / 2 - metrics.footerTop))
+    expect(metrics.buttonTop).toBeGreaterThanOrEqual(metrics.footerTop);
+    expect(metrics.brandRight).toBeLessThan(metrics.buttonCenter);
+    expect(metrics.ageMarkLeft).toBeGreaterThan(metrics.buttonCenter);
+    expect(Math.abs(metrics.buttonVerticalCenter - metrics.brandVerticalCenter))
+      .toBeLessThanOrEqual(1);
+    expect(Math.abs(metrics.buttonVerticalCenter - metrics.ageMarkVerticalCenter))
       .toBeLessThanOrEqual(1);
   } else {
+    expect(metrics.iconWidth).toBeCloseTo(36, 0);
+    expect(metrics.iconHeight).toBeCloseTo(32, 0);
     expect(metrics.buttonWidth).toBeCloseTo(42, 0);
     expect(metrics.buttonHeight).toBeCloseTo(38, 0);
     expect(Math.abs(metrics.buttonCenter - metrics.footerCenter)).toBeLessThanOrEqual(1);
-    expect(metrics.footerTop - metrics.buttonTop).toBeGreaterThanOrEqual(20);
-    expect(metrics.footerTop - metrics.buttonTop).toBeLessThanOrEqual(24);
+    expect(metrics.buttonTop).toBeGreaterThanOrEqual(metrics.footerTop);
+    expect(metrics.brandRight).toBeLessThan(metrics.buttonCenter);
+    expect(metrics.ageMarkLeft).toBeGreaterThan(metrics.buttonCenter);
+    expect(Math.abs(metrics.buttonVerticalCenter - metrics.brandVerticalCenter))
+      .toBeLessThanOrEqual(1);
+    expect(Math.abs(metrics.buttonVerticalCenter - metrics.ageMarkVerticalCenter))
+      .toBeLessThanOrEqual(1);
   }
 
   async function moveToPageBottom() {
@@ -632,13 +661,13 @@ test("keeps the floating mobile navigation capsule usable across narrow viewport
   await expect(navigation.getByRole("link", { name: "Jugar", exact: true })).toHaveAttribute("data-active", "true");
 });
 
-test("shows six compact Quinielas cards with Sapy’aite and green Mega Loto", async ({
+test("shows six compact Quiniela cards with Sapy’aite and green Mega Loto", async ({
   page,
 }, testInfo) => {
   await page.goto("/quinielas", { waitUntil: "domcontentloaded" });
 
   await expect(
-    page.getByRole("heading", { level: 1, name: "Quinielas" }),
+    page.getByRole("heading", { level: 1, name: "Quiniela" }),
   ).toBeVisible();
 
   const grid = page.getByTestId(E2E_SELECTORS.traditionalGamesGrid);
@@ -655,6 +684,13 @@ test("shows six compact Quinielas cards with Sapy’aite and green Mega Loto", a
 
   const allCards = grid.getByRole("link");
   await expect(allCards).toHaveCount(6);
+  const titleSizes = await allCards.evaluateAll((elements) => elements.map((element) => (
+    Number.parseFloat(getComputedStyle(element.querySelector("strong")!).fontSize)
+  )));
+  const expectedTitleSize = page.viewportSize()!.width <= 520 ? 15.76 : 18;
+  for (const titleSize of titleSizes) {
+    expect(titleSize).toBeCloseTo(expectedTitleSize, 1);
+  }
   await expect(grid.getByTestId("mega-loto-card")).toHaveAttribute("data-tone", "green");
   const megaDescription = grid.getByTestId("mega-loto-card").locator("p");
   await expect(megaDescription).toHaveText("Elegí 6 números del 1 al 40 y ganá el Megapozo.");
@@ -701,7 +737,7 @@ test("shows six compact Quinielas cards with Sapy’aite and green Mega Loto", a
   await page.screenshot({ path: testInfo.outputPath("quinielas-responsive.png"), fullPage: true });
 });
 
-test("opens Reglas from mobile navigation while Jugar still opens Quinielas", async ({ page }) => {
+test("opens Reglas from mobile navigation while Jugar still opens Quiniela", async ({ page }) => {
   test.skip(page.viewportSize()!.width >= 980, "Mobile navigation is hidden on desktop");
   await page.goto("/", { waitUntil: "domcontentloaded" });
   const navigation = page.getByRole("navigation", { name: "Navegación móvil", exact: true });
@@ -723,7 +759,7 @@ test("opens Reglas from mobile navigation while Jugar still opens Quinielas", as
 
   await navigation.getByRole("link", { name: "Jugar", exact: true }).click();
   await expect(page).toHaveURL(/\/quinielas$/);
-  await expect(page.getByRole("heading", { name: "Quinielas", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Quiniela", level: 1 })).toBeVisible();
   await expect(rules).not.toHaveAttribute("aria-current", "page");
 });
 
@@ -878,12 +914,7 @@ test("renders the latest draw as fourteen responsive balls in position order", a
   const pagination = section.getByTestId("home-results-pagination");
   const segments = pagination.getByTestId("home-results-pagination-segment");
   const positions = Array.from({ length: 14 }, (_, index) => String(index + 1));
-  const expectedTones = positions.map((position) => {
-    if (position === "1") return "gold";
-    if (position === "2") return "silver";
-    if (position === "3") return "bronze";
-    return "red";
-  });
+  const expectedTones = positions.map((position) => position === "1" ? "gold" : "red");
 
   await expect(section.getByRole("heading", { level: 2, name: "Último sorteo publicado", exact: true })).toBeVisible();
   await expect(section.getByText("Resultados de muestra", { exact: true })).toHaveCount(0);
@@ -1196,19 +1227,25 @@ test("groups results by date into four responsive colored draws", async ({ page 
     await expect(postures.first().getByText("A la cabeza", { exact: true })).toBeVisible();
     await expect(postures.first().getByTestId("draw-posture-number")).toHaveText(headNumbers[index]);
     const crowns = carousel.getByTestId("draw-posture-rank");
-    await expect(crowns).toHaveCount(3);
+    await expect(crowns).toHaveCount(1);
     await carousel.scrollIntoViewIfNeeded();
-    for (const [rankIndex, rank] of ["gold", "silver", "bronze"].entries()) {
-      const crown = postures.nth(rankIndex).getByTestId("draw-posture-rank");
-      await expect(crown).toHaveAttribute("data-rank", rank);
-      await expect(crown).toHaveAttribute("aria-hidden", "true");
-      await crown.scrollIntoViewIfNeeded();
-      await expect(crown).toBeInViewport();
-    }
+    await expect(postures.first()).toHaveAttribute("data-rank", "gold");
+    await expect(postures.nth(1)).not.toHaveAttribute("data-rank", /.+/);
+    await expect(postures.nth(2)).not.toHaveAttribute("data-rank", /.+/);
+    const crown = postures.first().getByTestId("draw-posture-rank");
+    await expect(crown).toHaveAttribute("data-rank", "gold");
+    await expect(crown).toHaveAttribute("aria-hidden", "true");
+    await crown.scrollIntoViewIfNeeded();
+    await expect(crown).toBeInViewport();
+    await expect(postures.nth(1).getByTestId("draw-posture-rank")).toHaveCount(0);
+    await expect(postures.nth(2).getByTestId("draw-posture-rank")).toHaveCount(0);
     await carousel.press("Home");
     await expect.poll(() => carousel.evaluate((element) => element.scrollLeft)).toBeLessThanOrEqual(1);
-    const crownColors = await crowns.evaluateAll((elements) => elements.map((element) => getComputedStyle(element).color));
-    expect(new Set(crownColors).size).toBe(3);
+    const postureNumberColors = await postures.getByTestId("draw-posture-number").evaluateAll((elements) => (
+      elements.slice(0, 4).map((element) => getComputedStyle(element).color)
+    ));
+    expect(postureNumberColors[0]).not.toBe(postureNumberColors[1]);
+    expect(new Set(postureNumberColors.slice(1)).size).toBe(1);
     const postureRows = await postures.evaluateAll((elements) => elements.map((element) => Math.round(element.getBoundingClientRect().top)));
     expect(new Set(postureRows).size).toBe(1);
     await expect(panel.getByRole("heading")).toHaveText([`Posturas de ${label}`]);

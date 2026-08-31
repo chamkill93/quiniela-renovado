@@ -244,7 +244,7 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
     return (
       <main className={`${styles.page} ${styles.pageStack} ${styles.instantPage}`}>
         <div className={styles.instantBackRow}>
-          <Link className={styles.textLink} href="/quinielas">← Volver a Quinielas</Link>
+          <Link className={styles.textLink} href="/quinielas">← Volver a Quiniela</Link>
         </div>
         {state}
       </main>
@@ -255,7 +255,7 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
     return (
       <main className={`${styles.page} ${styles.pageStack} ${styles.instantPage}`}>
         <div className={styles.instantBackRow}>
-          <Link className={styles.textLink} href="/quinielas">← Volver a Quinielas</Link>
+          <Link className={styles.textLink} href="/quinielas">← Volver a Quiniela</Link>
         </div>
         <div className={styles.emptyState} data-testid="disabled-instant-game">
           <div>
@@ -273,7 +273,7 @@ export function InstantGameClient({ game }: { game: ProductGame<InstantGameId> }
   return (
     <main className={`${styles.page} ${styles.pageStack} ${styles.instantPage}`}>
       <div className={styles.instantBackRow}>
-        <Link className={styles.textLink} href="/quinielas">← Volver a Quinielas</Link>
+        <Link className={styles.textLink} href="/quinielas">← Volver a Quiniela</Link>
       </div>
       <section
         className={styles.instantGameShell}

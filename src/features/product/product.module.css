@@ -523,6 +523,7 @@
   grid-column: 2;
   grid-row: 1;
   align-self: end;
+  font-size: calc(1rem + 2px);
 }
 
 .gameGrid[data-family="traditional"] .gameCard p {
@@ -2230,6 +2231,7 @@
   .gameGrid[data-family="traditional"] .gameCard { min-height: 176px; display: flex; gap: 0; }
   .gameGrid[data-family="traditional"] .gameVisual { min-height: 76px; margin: -5px -5px 9px; }
   .gameGrid[data-family="traditional"] .gameEmblem { width: 72px; height: 72px; }
+  .gameGrid[data-family="traditional"] .gameCard strong { font-size: calc(.86rem + 2px); }
   .gameGrid[data-family="traditional"] .gameCard p { min-height: 0; margin-top: 6px; }
   .gameGrid[data-family="traditional"] .gameCardFooter { display: none; }
   .gameGrid[data-family="instant"] .gameCard { min-height: 148px; padding: 6px; border-radius: 13px; }

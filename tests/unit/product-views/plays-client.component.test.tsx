@@ -118,6 +118,15 @@ function renderPlays({
   return user;
 }
 
+function receiptRow(container: HTMLElement, label: string) {
+  const term = within(container).getByText(label, { selector: "dt" });
+  const row = term.closest("div");
+  if (!(row instanceof HTMLElement)) {
+    throw new Error(`No se encontró la fila ${label} del comprobante.`);
+  }
+  return row;
+}
+
 beforeAll(() => {
   window.requestAnimationFrame = (callback: FrameRequestCallback) => {
     callback(performance.now());
@@ -152,6 +161,9 @@ describe("comprobantes en Mis Jugadas", () => {
     expect(within(dialog).getAllByText("007")).toHaveLength(2);
     expect(within(dialog).getByText("Gs. 5.000")).toBeTruthy();
     expect(within(dialog).getByText("Gs. 3.500.000")).toBeTruthy();
+    const winningRow = receiptRow(dialog, "Monto a ganar");
+    expect(winningRow.textContent).toContain("Ganado");
+    expect(winningRow.textContent).toContain("Gs. 3.500.000");
     expect(within(dialog).getByText("QL-REAL-001")).toBeTruthy();
   });
 
@@ -176,12 +188,16 @@ describe("comprobantes en Mis Jugadas", () => {
     await user.click(await screen.findByRole("button", { name: "Ver mi comprobante" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Jugada registrada" });
-    const receipt = within(within(dialog).getByRole("article", { name: "Comprobante QL-REAL-002" }));
+    const receiptElement = within(dialog).getByRole("article", { name: "Comprobante QL-REAL-002" });
+    const receipt = within(receiptElement);
     expect(receipt.getByText("Quiniela actualizada")).toBeTruthy();
     expect(receipt.getByText("007 · 042")).toBeTruthy();
     expect(receipt.getByText("042 · 007")).toBeTruthy();
     expect(receipt.getByText("Gs. 7.500")).toBeTruthy();
     expect(receipt.getByText("Gs. 98.000")).toBeTruthy();
+    const winningRow = receiptRow(receiptElement, "Monto a ganar");
+    expect(winningRow.textContent).toContain("Ganado");
+    expect(winningRow.textContent).toContain("Gs. 98.000");
     expect(receipt.getByText("Ganadora")).toBeTruthy();
     expect(receipt.getByText("draw-confirmado-20260826")).toBeTruthy();
     expect(receipt.getByText("QL-REAL-002")).toBeTruthy();
@@ -216,7 +232,7 @@ describe("comprobantes en Mis Jugadas", () => {
     };
     const user = renderPlays({ visiblePlays: [redoblonaPlay], visibleTickets: [redoblonaTicket] });
     await user.click(await screen.findByRole("button", { name: "Ver mi comprobante" }));
-    expect(within(screen.getByRole("dialog", { name: "Jugada registrada" })).getByText("35 Cabeza + 72 hasta 7")).toBeTruthy();
+    expect(within(screen.getByRole("dialog", { name: "Jugada registrada" })).getByText("35 Cabeza + 72 postura 7")).toBeTruthy();
   });
 
   it("formatea sin ambigüedad una selección histórica de Redoblona", async () => {
@@ -239,7 +255,96 @@ describe("comprobantes en Mis Jugadas", () => {
     };
     const user = renderPlays({ visiblePlays: [legacyPlay], visibleTickets: [legacyTicket] });
     await user.click(await screen.findByRole("button", { name: "Ver mi comprobante" }));
-    expect(within(screen.getByRole("dialog", { name: "Jugada registrada" })).getByText("035 Cabeza + 72 hasta 7")).toBeTruthy();
+    expect(within(screen.getByRole("dialog", { name: "Jugada registrada" })).getByText("035 Cabeza + 72 postura 7")).toBeTruthy();
+  });
+
+  it.each(["invert", "invertida"])("muestra con puntos la selección de %s y conserva el cero inicial", async (gameId) => {
+    const invertPlay: MockPlay = {
+      ...plays[1],
+      id: `play-${gameId}`,
+      ticketId: `ticket-${gameId}`,
+      gameId,
+      gameName: "Invertida",
+      selection: { number: "012", position: 4 },
+    };
+    const invertTicket: MockTicket = {
+      ...tickets[1],
+      id: `ticket-${gameId}`,
+      code: `QL-${gameId.toUpperCase()}`,
+      playId: invertPlay.id,
+      gameId,
+      gameName: "Invertida",
+      selection: invertPlay.selection,
+    };
+    const user = renderPlays({ visiblePlays: [invertPlay], visibleTickets: [invertTicket] });
+
+    await user.click(await screen.findByRole("button", { name: "Ver mi comprobante" }));
+
+    const receipt = within(screen.getByRole("dialog", { name: "Jugada registrada" }))
+      .getByRole("article", { name: `Comprobante ${invertTicket.code}` });
+    expect(receiptRow(receipt, "Selección").textContent).toContain("0.1.2 · Postura 4");
+  });
+
+  it.each([
+    ["early", "Tempranero"],
+    ["morning", "Matutino"],
+    ["evening", "Vespertino"],
+    ["night", "Nocturno"],
+  ])("localiza el sorteo %s como %s", async (drawId, expectedLabel) => {
+    const localizedPlay: MockPlay = {
+      ...plays[1],
+      id: `play-${drawId}`,
+      ticketId: `ticket-${drawId}`,
+      drawId,
+    };
+    const localizedTicket: MockTicket = {
+      ...tickets[1],
+      id: `ticket-${drawId}`,
+      code: `QL-${drawId.toUpperCase()}`,
+      playId: localizedPlay.id,
+      drawId,
+    };
+    const user = renderPlays({ visiblePlays: [localizedPlay], visibleTickets: [localizedTicket] });
+
+    await user.click(await screen.findByRole("button", { name: "Ver mi comprobante" }));
+
+    const receipt = within(screen.getByRole("dialog", { name: "Jugada registrada" }))
+      .getByRole("article", { name: `Comprobante ${localizedTicket.code}` });
+    const drawRow = receiptRow(receipt, "Sorteo");
+    expect(drawRow.textContent).toContain(expectedLabel);
+    expect(drawRow.textContent).not.toContain(drawId);
+  });
+
+  it.each([
+    ["PENDING", "Pendiente"],
+    ["LOST", "Perdido"],
+    ["REFUNDED", "Reintegrado"],
+  ])("prioriza el estado %s del ticket en Monto a ganar", async (ticketStatus, expectedLabel) => {
+    const statusPlay: MockPlay = {
+      ...plays[1],
+      id: `play-status-${ticketStatus.toLowerCase()}`,
+      ticketId: `ticket-status-${ticketStatus.toLowerCase()}`,
+      status: "WON",
+      prize: 900_000,
+    };
+    const statusTicket: MockTicket = {
+      ...tickets[1],
+      id: statusPlay.ticketId!,
+      code: `QL-STATUS-${ticketStatus}`,
+      playId: statusPlay.id,
+      status: ticketStatus,
+      prize: 0,
+    };
+    const user = renderPlays({ visiblePlays: [statusPlay], visibleTickets: [statusTicket] });
+
+    await user.click(await screen.findByRole("button", { name: "Ver mi comprobante" }));
+
+    const receipt = within(screen.getByRole("dialog", { name: "Jugada registrada" }))
+      .getByRole("article", { name: `Comprobante ${statusTicket.code}` });
+    const outcomeRow = receiptRow(receipt, "Monto a ganar");
+    expect(outcomeRow.textContent).toContain(expectedLabel);
+    expect(outcomeRow.textContent).not.toContain("Gs. 0");
+    expect(outcomeRow.textContent).not.toContain("Gs. 900.000");
   });
 
   it("conserva valores largos y datos de una jugada pendiente sin inventar resultados", async () => {
@@ -262,14 +367,18 @@ describe("comprobantes en Mis Jugadas", () => {
     await user.click(await screen.findByRole("button", { name: "Ver mi comprobante" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Jugada registrada" });
-    const receipt = within(within(dialog).getByRole("article", { name: `Comprobante ${longCode}` }));
+    const receiptElement = within(dialog).getByRole("article", { name: `Comprobante ${longCode}` });
+    const receipt = within(receiptElement);
     expect(receipt.getByText(gameName)).toBeTruthy();
     expect(receipt.getByText(selectedNumbers.join(" · "))).toBeTruthy();
     expect(receipt.getByText(longDrawId)).toBeTruthy();
     expect(receipt.getByText(longCode)).toBeTruthy();
     expect(receipt.getByText("En proceso")).toBeTruthy();
     expect(receipt.getByText("Gs. 2.000")).toBeTruthy();
-    expect(receipt.getByText("Gs. 0")).toBeTruthy();
+    const pendingRow = receiptRow(receiptElement, "Monto a ganar");
+    expect(pendingRow.textContent).toContain("Pendiente");
+    expect(pendingRow.textContent).not.toContain("Gs. 0");
+    expect(receipt.queryByText("Gs. 0")).toBeNull();
     expect(receipt.queryByText("Resultado")).toBeNull();
     const playDate = new Intl.DateTimeFormat("es-PY", {
       dateStyle: "short",

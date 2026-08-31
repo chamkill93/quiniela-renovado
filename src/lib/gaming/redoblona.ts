@@ -171,9 +171,9 @@ function positionLabel(position: number): string {
 export function summarizeRedoblonaSelection(selection: RedoblonaSelection): string {
   assertValidSelection(selection);
   if (selection.initialUntil === 1) {
-    return `${selection.initialNumber} Cabeza + ${selection.redoblonaNumber} hasta ${selection.redoblonaUntil}`;
+    return `${selection.initialNumber} Cabeza + ${selection.redoblonaNumber} postura ${selection.redoblonaUntil}`;
   }
-  return `${selection.initialNumber} hasta ${selection.initialUntil} + ${selection.redoblonaNumber} hasta ${selection.redoblonaUntil}`;
+  return `${selection.initialNumber} postura ${selection.initialUntil} + ${selection.redoblonaNumber} postura ${selection.redoblonaUntil}`;
 }
 
 function evaluationSummary(

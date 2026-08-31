@@ -96,7 +96,7 @@ export function QuinielaCatalogClient() {
       <SectionHeader
         description="Elegí tu juego y tocá la tarjeta para empezar."
         eyebrow="Elegí cómo querés jugar"
-        title="Quinielas"
+        title="Quiniela"
       />
       {!catalog
         ? unavailableCatalogState({ loading, unauthorized, error, onRetry: () => void refresh() })

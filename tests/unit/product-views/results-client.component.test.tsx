@@ -61,7 +61,7 @@ describe("ResultsClient daily grid", () => {
     expect(within(day).queryByText("999")).toBeNull();
     expect(screen.queryByRole("heading", { name: "Sapy’aite" })).toBeNull();
   });
-  it("opens one carousel of 14 ordered postures with ranked crowns, preserving zeroes and repeated numbers", () => {
+  it("opens one carousel of 14 ordered postures with one highlighted head crown, preserving zeroes and repeated numbers", () => {
     const drawNumbers = orderedPostureValues.map((value, index) => ({ position: index + 1, value })).reverse();
     useProductMock.mockReturnValue({
       ...base,
@@ -87,9 +87,10 @@ describe("ResultsClient daily grid", () => {
     expect(postures.slice(1).every((posture) => !posture.hasAttribute("data-head"))).toBe(true);
     expect(within(postures[0]).getByText("A la cabeza")).toBeTruthy();
     expect(within(postures[0]).getByTestId("draw-posture-number").textContent).toBe(within(card).getByTestId("daily-draw-number").textContent);
-    expect(postures.slice(0, 3).map((posture) => within(posture).getByTestId("draw-posture-rank").getAttribute("data-rank")))
-      .toEqual(["gold", "silver", "bronze"]);
-    expect(within(carousel).getAllByTestId("draw-posture-rank")).toHaveLength(3);
+    expect(postures.slice(0, 3).map((posture) => posture.getAttribute("data-rank"))).toEqual(["gold", null, null]);
+    expect(within(postures[0]).getByTestId("draw-posture-rank").getAttribute("data-rank")).toBe("gold");
+    expect(within(carousel).getAllByTestId("draw-posture-rank")).toHaveLength(1);
+    expect(postures.slice(1, 3).every((posture) => within(posture).queryByTestId("draw-posture-rank") === null)).toBe(true);
     expect(within(carousel).queryByRole("img")).toBeNull();
     expect(within(panel).getByRole("button", { name: "Posturas anteriores de Tempranero" }).getAttribute("aria-controls")).toBe(carousel.id);
     expect(within(panel).getByRole("button", { name: "Posturas siguientes de Tempranero" }).getAttribute("aria-controls")).toBe(carousel.id);
@@ -132,8 +133,9 @@ describe("ResultsClient daily grid", () => {
       index === 1 ? "006" : index === 13 ? "099" : "—"
     )));
     expect(within(carousel).getAllByLabelText("Postura sin informar")).toHaveLength(12);
-    expect(within(carousel).getAllByTestId("draw-posture-rank").map((rank) => rank.getAttribute("data-rank"))).toEqual(["silver"]);
-    expect(within(within(carousel).getAllByRole("listitem")[0]).queryByTestId("draw-posture-rank")).toBeNull();
+    const postures = within(carousel).getAllByRole("listitem");
+    expect(postures[1].getAttribute("data-rank")).toBeNull();
+    expect(within(carousel).queryByTestId("draw-posture-rank")).toBeNull();
     expect(screen.queryByRole("list", { name: "Números sin postura informada" })).toBeNull();
   });
   it.each([

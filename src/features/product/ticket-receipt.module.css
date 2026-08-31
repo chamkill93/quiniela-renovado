@@ -157,9 +157,26 @@
 }
 
 .receiptTotals [data-emphasis="prize"] dd {
-  color: #16812f;
   font-size: 1rem;
   font-weight: 950;
+}
+
+.receiptTotals [data-outcome="won"] dd {
+  color: #16812f;
+}
+
+.receiptTotals [data-outcome="lost"] dd {
+  color: #b42318;
+}
+
+.receiptTotals [data-outcome="pending"] dd,
+.receiptTotals [data-outcome="refunded"] dd {
+  color: #6b6964;
+}
+
+.prizeAmount {
+  display: block;
+  margin-top: 0.05rem;
 }
 
 .codeRow {

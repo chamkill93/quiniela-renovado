@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/Icon";
 import { Modal } from "@/components/ui/Modal";
+import { formatInvertNumber } from "@/lib/gaming/invert";
 import type { DrawDefinition, TraditionalGameDefinition } from "@/lib/gaming/types";
 import { summarizeRedoblonaSelection, validateRedoblonaSelection, type RedoblonaSelection } from "@/lib/gaming/redoblona";
 import { getTraditionalStakeTotals, isTraditionalStakeAmount, TRADITIONAL_MAX_STAKE_PER_DRAW } from "@/lib/gaming/traditional-stake";
@@ -360,29 +361,16 @@ function TraditionalBetForm({ game }: { game: ProductGame<TraditionalGameId> }) 
     setShowSuccess(true);
   }
 
-  function newPlay() {
-    setAccepted(null);
-    setShowSuccess(false);
-    saveReview(null);
-    setReviewOpen(false);
-    setError(null);
-    setPaymentInfo(null);
-    setTouched({});
-    setDraft(createTraditionalDraft(game.id));
-    setAmount(0);
-    setRandomAnnouncement("");
-  }
-
   return (
     <main className={styles.page} data-game={game.id}>
       <div className={styles.breadcrumb}>
-        <Link href="/quinielas"><Icon name="arrowLeft" size={16} />Quinielas</Link>
+        <Link href="/quinielas"><Icon name="arrowLeft" size={16} />Quiniela</Link>
         <Link className={styles.rulesLink} href="/reglas"><Icon name="rules" size={16} />Cómo jugar</Link>
       </div>
       <header className={styles.pageHeader}>
-        <div className={styles.titleGroup}><GameIcon gameId={game.id} className={styles.heroIcon} /><div className={styles.titleCopy}><h1>{displayName}</h1>{game.id === "redoblona" ? <p>Acertá dos números y combiná sus alcances.</p> : null}</div></div>
+        <div className={styles.titleGroup}><GameIcon gameId={game.id} className={styles.heroIcon} /><div className={styles.titleCopy}><h1>{displayName}</h1>{game.id === "redoblona" ? <p>Acertá dos números y combiná sus posturas.</p> : null}</div></div>
       </header>
-      {game.id === "redoblona" ? <details className={styles.howItWorks}><summary>¿Cómo funciona?</summary><p>Elegís dos números de 2 cifras. Ambos deben aparecer en posiciones distintas dentro de sus alcances. Con Cabeza, la Redoblona se busca desde la 2.ª posición.</p></details> : null}
+      {game.id === "redoblona" ? <details className={styles.howItWorks}><summary>¿Cómo funciona?</summary><p>Elegís dos números de 2 cifras. Ambos deben aparecer en posiciones distintas dentro de sus posturas. Con Cabeza, la Redoblona se busca desde la 2.ª posición.</p></details> : null}
       {loading ? <div className={styles.notice} role="status">Cargando sorteos y saldo…</div> : null}
       {!loading && catalog && !remoteGame ? <div className={styles.errorNotice} role="alert">Este juego no está disponible en este momento. <Link href="/quinielas">Ver otras modalidades</Link></div> : null}
       {gatewayError ? <div className={styles.errorNotice} role="alert"><p>{gatewayError}</p><button type="button" className={styles.textButton} onClick={() => void refresh()}>Reintentar conexión</button></div> : null}
@@ -442,7 +430,7 @@ function TraditionalBetForm({ game }: { game: ProductGame<TraditionalGameId> }) 
                 onRedoblonaBlur={() => setTouched((current) => ({ ...current, redoblonaNumber: true }))}
                 onRedoblonaUntil={(value) => updateDraft("redoblonaUntil", value)}
               /> : <div className={styles.numberPanel}>
-                <div className={styles.singleNumber}><NumberField id="traditional-number" label="Número de tres cifras" hideLabel accessibleLabel="Número de tres cifras" digits={3} value={draft.number} hint={game.id === "invert" ? "Del 001 al 999, con tres cifras distintas" : undefined} error={touched.number ? draftErrors.number : undefined} onChange={(value) => updateDraft("number", value)} onBlur={() => setTouched((current) => ({ ...current, number: true }))} /></div>
+                <div className={styles.singleNumber}>{game.id === "invert" ? <InvertNumberField id="traditional-number" value={draft.number} error={touched.number ? draftErrors.number : undefined} onChange={(value) => updateDraft("number", value)} onBlur={() => setTouched((current) => ({ ...current, number: true }))} /> : <NumberField id="traditional-number" label="Número de tres cifras" hideLabel accessibleLabel="Número de tres cifras" digits={3} value={draft.number} error={touched.number ? draftErrors.number : undefined} onChange={(value) => updateDraft("number", value)} onBlur={() => setTouched((current) => ({ ...current, number: true }))} />}</div>
                 {game.id !== "head" && remoteGame && positionRange ? <PositionField definition={remoteGame} value={draft.position} onChange={(value) => updateDraft("position", value)} error={draftErrors.position} /> : <div className={styles.positionNote}><Icon name="head" size={17} /><span>A la <strong>1.ª posición</strong></span></div>}
               </div>}
               <div className={styles.randomAction}>
@@ -477,7 +465,7 @@ function TraditionalBetForm({ game }: { game: ProductGame<TraditionalGameId> }) 
           <div className={styles.total}><span>{accepted ? "Pago confirmado" : "Total a pagar"}</span><strong data-testid="traditional-total">{formatGs(accepted ? acceptedAmount : total)}</strong>
             {!accepted ? game.id === "redoblona" ? <RedoblonaLiveSummary draft={draft} /> : <small>{selectedDraws.length + (selectedDraws.length === 1 ? " sorteo × " : " sorteos × ") + formatGs(effectiveAmount)}</small> : null}
           </div>
-          {accepted ? <button className={styles.payButton} onClick={newPlay} type="button">Nueva jugada<Icon name="plus" size={18} /></button> :
+          {accepted ? <Link className={styles.payButton} href="/quinielas">JUGAR<Icon name="chevronRight" size={18} /></Link> :
             <button className={styles.payButton} type="submit" disabled={pending || reviewOpen || (!review && !canReview)}><span>{review ? "Revisar pendientes" : "Revisar y pagar"}</span><Icon name="chevronRight" size={18} /></button>}
         </div>
       </form>
@@ -499,7 +487,7 @@ function TraditionalBetForm({ game }: { game: ProductGame<TraditionalGameId> }) 
             </li>)}
           </ul>
           <dl className={styles.summaryDetails}>
-            {game.id === "redoblona" ? <div><dt>Alcances</dt><dd>{formatRedoblonaScopes(review.draft)}</dd></div> : <div><dt>Posición</dt><dd>{getTraditionalPositionLabel(game.id, review.draft.position)}</dd></div>}
+            {game.id === "redoblona" ? <div><dt>Posturas</dt><dd>{formatRedoblonaScopes(review.draft)}</dd></div> : <div><dt>Posición</dt><dd>{getTraditionalPositionLabel(game.id, review.draft.position)}</dd></div>}
             <div><dt>Por sorteo</dt><dd>{formatGs(review.entries[0]?.command.input.amount ?? 0)}</dd></div>
             <div><dt>{paidEntries.length ? "Total seleccionado" : "Total a pagar"}</dt><dd className={styles.confirmTotal}>{formatGs(reviewTotal)}</dd></div>
             {paidEntries.length ? <><div><dt>Ya registrado</dt><dd>{formatGs(paidTotal)}</dd></div><div><dt>Pendiente de confirmar</dt><dd>{formatGs(remainingTotal)}</dd></div></> : null}
@@ -521,7 +509,7 @@ function TraditionalBetForm({ game }: { game: ProductGame<TraditionalGameId> }) 
         </div> : null}
       </Modal>
       <Modal open={showSuccess && Boolean(accepted)} onOpenChange={setShowSuccess} title={acceptedCount > 1 ? "Jugadas registradas" : "Jugada registrada"} description="Podés consultar cada comprobante en Mis jugadas." size="sm"
-        footer={<div className={styles.modalActions}><button className={styles.editButton} onClick={newPlay} type="button">Nueva jugada</button><Link className={styles.payButton} href="/mis-jugadas">Ver en Mis jugadas<Icon name="chevronRight" size={17} /></Link></div>}>
+        footer={<div className={styles.modalActions}><Link className={styles.editButton} href="/quinielas">JUGAR</Link><Link className={styles.payButton} href="/mis-jugadas">Ver en Mis jugadas<Icon name="chevronRight" size={17} /></Link></div>}>
         {accepted ? <div className={styles.successBody}><span className={styles.successMark}><Icon name="check" size={32} /></span>
           <p>{acceptedReplayed ? "Pagos confirmados. Las jugadas ya registradas no se volvieron a cobrar." : acceptedCount > 1 ? acceptedCount + " sorteos pagados con tu saldo" : "Pago confirmado con tu saldo"}</p>
           {accepted.skipped ? <p>{accepted.skipped + (accepted.skipped === 1 ? " sorteo pendiente no se cobró." : " sorteos pendientes no se cobraron.")}</p> : null}
@@ -547,6 +535,24 @@ function NumberField({ id, label, hideLabel = false, accessibleLabel, digits, va
   </div>;
 }
 
+function InvertNumberField({ id, value, error, onChange, onBlur }: {
+  id: string;
+  value: string;
+  error?: string;
+  onChange: (value: string) => void;
+  onBlur: () => void;
+}) {
+  const description = id + "-hint" + (error ? " " + id + "-error" : "");
+  return <div className={styles.numberField}>
+    <label htmlFor={id} className="q-sr-only">Número de tres cifras</label>
+    <input id={id} aria-label="Número de tres cifras" className={`${styles.numberInput} ${styles.invertNumberInput}`} type="text" inputMode="numeric" autoComplete="off" spellCheck={false} maxLength={5} placeholder="1.2.3" value={formatInvertNumber(value)} aria-invalid={Boolean(error)} aria-describedby={description}
+      onChange={(event) => onChange(event.target.value.replace(/\D/g, "").slice(0, 3))}
+      onBlur={(event) => { onChange(normalizeTraditionalNumber(event.target.value, 3)); onBlur(); }} />
+    <span className="q-sr-only" id={id + "-hint"}>Del 001 al 999, con tres cifras distintas. Se muestra con puntos, por ejemplo 1.2.3.</span>
+    {error ? <span id={id + "-error"} className={styles.fieldError}>{error}</span> : null}
+  </div>;
+}
+
 type RedoblonaRanges = NonNullable<ReturnType<typeof getRedoblonaRanges>>;
 
 function redoblonaSelectionFromDraft(draft: TraditionalDraft): RedoblonaSelection {
@@ -562,11 +568,11 @@ function formatRedoblonaSummary(draft: TraditionalDraft) {
   const selection = redoblonaSelectionFromDraft(draft);
   return Object.keys(validateRedoblonaSelection(selection)).length === 0
     ? summarizeRedoblonaSelection(selection)
-    : `${selection.initialNumber || "— —"} ${draft.initialUntil === 1 ? "Cabeza" : `hasta ${draft.initialUntil}`} + ${selection.redoblonaNumber || "— —"} hasta ${draft.redoblonaUntil}`;
+    : `${selection.initialNumber || "— —"} ${draft.initialUntil === 1 ? "Cabeza" : `postura ${draft.initialUntil}`} + ${selection.redoblonaNumber || "— —"} postura ${draft.redoblonaUntil}`;
 }
 
 function formatRedoblonaScopes(draft: TraditionalDraft) {
-  return `${draft.initialUntil === 1 ? "Cabeza" : `Inicial hasta ${draft.initialUntil}`} · Redoblona hasta ${draft.redoblonaUntil}`;
+  return `${draft.initialUntil === 1 ? "Cabeza" : `Inicial postura ${draft.initialUntil}`} · Redoblona postura ${draft.redoblonaUntil}`;
 }
 
 function TwoDigitField({ id, label, accessibleLabel, value, error, onChange, onBlur }: {
@@ -604,10 +610,10 @@ function RedoblonaUntilField({ id, label, value, min, max, initial = false, onCh
 }) {
   const positions = Array.from({ length: Math.max(0, max - min + 1) }, (_, index) => index + min);
   return <div className={styles.redoblonaUntilField}>
-    <label htmlFor={id}>Hasta qué postura</label>
+    <label htmlFor={id}>Postura</label>
     <select id={id} aria-label={label} value={positions.includes(value) ? value : ""} aria-invalid={Boolean(error)} aria-describedby={error ? id + "-error" : undefined} onChange={(event) => onChange(Number(event.target.value))}>
       {!positions.includes(value) ? <option value="" disabled>Elegir</option> : null}
-      {positions.map((position) => <option key={position} value={position}>{initial && position === 1 ? "Cabeza · 1" : `Hasta ${position}`}</option>)}
+      {positions.map((position) => <option key={position} value={position}>{initial && position === 1 ? "Cabeza · 1" : `Postura ${position}`}</option>)}
     </select>
     {error ? <span id={id + "-error"} className={styles.fieldError}>{error}</span> : null}
   </div>;
@@ -629,15 +635,15 @@ function RedoblonaFields({ draft, ranges, errors, onInitialNumber, onInitialBlur
       <header><span aria-hidden="true">1</span><div><h3 id="initial-part-title">Apuesta inicial</h3><p>Busca el primer número en este alcance.</p></div></header>
       <div className={styles.redoblonaControls}>
         <TwoDigitField id="redoblona-initial-number" label="Número" accessibleLabel="Número de apuesta inicial" value={draft.initialNumber} error={errors.initialNumber} onChange={onInitialNumber} onBlur={onInitialBlur} />
-        <RedoblonaUntilField id="redoblona-initial-until" label="Alcance de apuesta inicial" value={draft.initialUntil} min={ranges.initialUntil.min} max={ranges.initialUntil.max} initial onChange={onInitialUntil} error={errors.initialUntil} />
+        <RedoblonaUntilField id="redoblona-initial-until" label="Postura de apuesta inicial" value={draft.initialUntil} min={ranges.initialUntil.min} max={ranges.initialUntil.max} initial onChange={onInitialUntil} error={errors.initialUntil} />
       </div>
     </section>
     <div className={styles.redoblonaConnector} aria-hidden="true"><span>+</span></div>
     <section className={styles.redoblonaPart} role="group" aria-labelledby="redoblona-part-title">
-      <header><span aria-hidden="true">2</span><div><h3 id="redoblona-part-title">Redoblona</h3><p>{draft.initialUntil === 1 ? `Busca desde la 2.ª hasta la ${draft.redoblonaUntil + 1}.ª.` : "Busca el segundo número en otra posición."}</p></div></header>
+      <header><span aria-hidden="true">2</span><div><h3 id="redoblona-part-title">Redoblona</h3><p>{draft.initialUntil === 1 ? `Busca en las posturas 2.ª a ${draft.redoblonaUntil + 1}.ª.` : "Busca el segundo número en otra posición."}</p></div></header>
       <div className={styles.redoblonaControls}>
         <TwoDigitField id="redoblona-second-number" label="Número" accessibleLabel="Número de Redoblona" value={draft.redoblonaNumber} error={errors.redoblonaNumber} onChange={onRedoblonaNumber} onBlur={onRedoblonaBlur} />
-        <RedoblonaUntilField id="redoblona-until" label="Alcance de Redoblona" value={draft.redoblonaUntil} min={Math.max(ranges.redoblonaUntil.min, draft.initialUntil)} max={ranges.redoblonaUntil.max} onChange={onRedoblonaUntil} error={errors.redoblonaUntil} />
+        <RedoblonaUntilField id="redoblona-until" label="Postura de Redoblona" value={draft.redoblonaUntil} min={Math.max(ranges.redoblonaUntil.min, draft.initialUntil)} max={ranges.redoblonaUntil.max} onChange={onRedoblonaUntil} error={errors.redoblonaUntil} />
       </div>
     </section>
   </div>;
@@ -667,14 +673,15 @@ function SelectionPreview({ gameId, draft }: { gameId: TraditionalGameId; draft:
   if (gameId === "redoblona") {
     const selection = redoblonaSelectionFromDraft(draft);
     return <div className={styles.selectionPreview} aria-label={formatRedoblonaSummary(draft)}>
-      <div><span>Apuesta inicial</span><strong>{selection.initialNumber || "— —"}</strong><small>{draft.initialUntil === 1 ? "Cabeza" : `Hasta ${draft.initialUntil}`}</small></div>
+      <div><span>Apuesta inicial</span><strong>{selection.initialNumber || "— —"}</strong><small>{draft.initialUntil === 1 ? "Cabeza" : `Postura ${draft.initialUntil}`}</small></div>
       <span className={styles.previewPlus} aria-hidden="true">+</span>
-      <div><span>Redoblona</span><strong>{selection.redoblonaNumber || "— —"}</strong><small>Hasta {draft.redoblonaUntil}</small></div>
+      <div><span>Redoblona</span><strong>{selection.redoblonaNumber || "— —"}</strong><small>Postura {draft.redoblonaUntil}</small></div>
       <p className={styles.selectionSentence}>{formatRedoblonaSummary(draft)}</p>
     </div>;
   }
   const first = normalizeTraditionalNumber(draft.number, 3);
-  return <div className={styles.selectionPreview} aria-label="Número seleccionado"><div><span>Tu número</span><strong>{first || "— — —"}</strong></div></div>;
+  const displayed = gameId === "invert" ? formatInvertNumber(first) : first;
+  return <div className={styles.selectionPreview} aria-label="Número seleccionado"><div><span>Tu número</span><strong>{displayed || (gameId === "invert" ? "—.—.—" : "— — —")}</strong></div></div>;
 }
 
 function ShuffleIcon() {

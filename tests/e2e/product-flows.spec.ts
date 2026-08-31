@@ -533,14 +533,17 @@ test("completes Home with scheduled draws, fourteen result balls and the officia
     await expect(card).toHaveAccessibleName(`${position}.ª postura: número ${value}`);
   }
 
-  for (const [index, tone] of ["gold", "silver", "bronze"].entries()) {
+  await expect(resultCards.first()).toHaveAttribute("data-tone", "gold");
+  expect(decodeURIComponent(await resultCards.first().locator("img").getAttribute("src") ?? ""))
+    .toContain("/assets/results/balls/ball-gold.webp");
+  await expect(resultCards.first().locator("img")).toHaveAttribute("alt", "");
+  await expect(resultsSection.locator('[data-testid="home-result-card"][data-tone="red"]')).toHaveCount(13);
+  for (const index of [1, 2, 3]) {
     const card = resultCards.nth(index);
-    await expect(card).toHaveAttribute("data-tone", tone);
+    await expect(card).toHaveAttribute("data-tone", "red");
     expect(decodeURIComponent(await card.locator("img").getAttribute("src") ?? ""))
-      .toContain(`/assets/results/balls/ball-${tone}.webp`);
-    await expect(card.locator("img")).toHaveAttribute("alt", "");
+      .toContain("/assets/results/balls/ball-red.webp");
   }
-  await expect(resultsSection.locator('[data-testid="home-result-card"][data-tone="red"]')).toHaveCount(11);
   await expect(resultCards.getByTestId("home-result-rank")).toHaveCount(0);
 
   await expect(resultsSection.getByRole("tab")).toHaveCount(0);
@@ -823,12 +826,12 @@ test("keeps a compact footer with all legal links together across the menus", as
   }
 });
 
-test("groups Sapy’aite and green Mega Loto in Quinielas and redirects legacy links", async ({
+test("groups Sapy’aite and green Mega Loto in Quiniela and redirects legacy links", async ({
   page,
 }) => {
   await page.goto("/quinielas", { waitUntil: "domcontentloaded" });
   await expect(
-    page.getByRole("heading", { level: 1, name: "Quinielas" }),
+    page.getByRole("heading", { level: 1, name: "Quiniela" }),
   ).toBeVisible();
 
   const grid = page.getByTestId(E2E_SELECTORS.traditionalGamesGrid);
@@ -856,7 +859,7 @@ test("groups Sapy’aite and green Mega Loto in Quinielas and redirects legacy l
   await page.goto("/instantaneas/sapyaite", { waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL(/\/quinielas\/sapyaite$/);
   await expect(page.getByRole("textbox", { name: "Número exacto" })).toBeVisible();
-  await page.getByRole("link", { name: "← Volver a Quinielas" }).click();
+  await page.getByRole("link", { name: "← Volver a Quiniela" }).click();
   await expect(page).toHaveURL(/\/quinielas$/);
 
   await page.goto("/reglas", { waitUntil: "domcontentloaded" });
@@ -1040,11 +1043,19 @@ for (const gameId of ["head", "prizes", "invert", "redoblona"] as const) {
     await expect(page.getByTestId("traditional-total")).toHaveText(money(0));
     await expect(reviewButton).toBeDisabled();
     await page.getByRole("button", { name: "Números aleatorios", exact: true }).click();
+    let invertDisplay = "";
     if (gameId === "redoblona") {
       await expect(page.getByLabel("Número de apuesta inicial", { exact: true })).toHaveValue(/^\d{2}$/);
       await expect(page.getByLabel("Número de Redoblona", { exact: true })).toHaveValue(/^\d{2}$/);
-      await expect(page.getByRole("combobox", { name: "Alcance de apuesta inicial", exact: true })).toHaveValue("1");
-      await page.getByRole("combobox", { name: "Alcance de Redoblona", exact: true }).selectOption("10");
+      await expect(page.getByRole("combobox", { name: "Postura de apuesta inicial", exact: true })).toHaveValue("1");
+      await page.getByRole("combobox", { name: "Postura de Redoblona", exact: true }).selectOption("10");
+    } else if (gameId === "invert") {
+      const invertInput = page.getByLabel("Número de tres cifras", { exact: true });
+      await expect(invertInput).toHaveValue(/^\d\.\d\.\d$/);
+      invertDisplay = await invertInput.inputValue();
+      expect(new Set(invertDisplay.replace(/\D/g, "")).size).toBe(3);
+      await expect(page.getByRole("heading", { level: 2, name: "Número", exact: true })).toBeVisible();
+      await expect(page.locator('label[for="traditional-number"]')).toHaveClass(/q-sr-only/);
     } else {
       await expect(page.getByLabel("Número de tres cifras", { exact: true })).toHaveValue(/^(?!000)\d{3}$/);
       await expect(page.getByRole("heading", { level: 2, name: "Número", exact: true })).toBeVisible();
@@ -1062,6 +1073,7 @@ for (const gameId of ["head", "prizes", "invert", "redoblona"] as const) {
     await reviewButton.click();
     const reviewDialog = page.getByRole("dialog", { name: "Confirmá tu jugada", exact: true });
     await expect(reviewDialog).toBeVisible();
+    if (gameId === "invert") await expect(reviewDialog.getByText(invertDisplay, { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Borrar importe", exact: true })).toBeDisabled();
     await expect(reviewDialog).toContainText("Se descontará Gs. 1.500 de tu saldo al confirmar.");
     expect(paymentRequests).toBe(0);
@@ -1080,6 +1092,9 @@ for (const gameId of ["head", "prizes", "invert", "redoblona"] as const) {
     const payment = await response.json() as PlacePlayResponse;
     expect(payment.play.gameId).toBe(gameId);
     expect(payment.play.amount).toBe(1_500);
+    if (gameId === "invert") {
+      expect((payment.play.selection as { number: string }).number).toBe(invertDisplay.replace(/\D/g, ""));
+    }
     expect(payment.session.balance).toBe(initial.session.balance - 1_500);
     expect(paymentRequests).toBe(1);
     const success = page.getByRole("dialog", { name: "Jugada registrada", exact: true });
@@ -1093,6 +1108,17 @@ for (const gameId of ["head", "prizes", "invert", "redoblona"] as const) {
 }
 
 test("traditional checkout accepts 40,000 across four draws and a separate identical play", async ({ page }) => {
+  async function selectEveryDraw() {
+    const draws = page.getByRole("checkbox");
+    await expect(draws).toHaveCount(4);
+    for (let index = 0; index < 4; index += 1) {
+      const draw = draws.nth(index);
+      await draw.check();
+      await expect(draw).toBeChecked();
+    }
+    await expect(page.getByRole("checkbox", { checked: true })).toHaveCount(4);
+  }
+
   const initial = await bootstrap(page);
   await prepareTraditionalCheckout(page, initial.catalog);
   const submissions: TraditionalPlayRequest[] = [];
@@ -1104,11 +1130,10 @@ test("traditional checkout accepts 40,000 across four draws and a separate ident
   await page.goto("/quinielas/redoblona", { waitUntil: "domcontentloaded" });
   const stake = page.getByTestId("traditional-stake");
   await expect(stake).toHaveText("Gs. 0");
-  await expect(page.getByRole("checkbox")).toHaveCount(4);
-  for (const draw of await page.getByRole("checkbox").all()) await draw.check();
+  await selectEveryDraw();
   await page.getByRole("button", { name: "Números aleatorios", exact: true }).click();
-  await page.getByRole("combobox", { name: "Alcance de apuesta inicial", exact: true }).selectOption("8");
-  await page.getByRole("combobox", { name: "Alcance de Redoblona", exact: true }).selectOption("10");
+  await page.getByRole("combobox", { name: "Postura de apuesta inicial", exact: true }).selectOption("8");
+  await page.getByRole("combobox", { name: "Postura de Redoblona", exact: true }).selectOption("10");
   const selection = {
     initialNumber: await page.getByLabel("Número de apuesta inicial", { exact: true }).inputValue(),
     initialUntil: 8,
@@ -1148,13 +1173,16 @@ test("traditional checkout accepts 40,000 across four draws and a separate ident
       .toHaveText("₲ " + new Intl.NumberFormat("es-PY").format(after.session.balance));
     if (batch === 1) {
       expect(new Set(submissions.map((input) => input.drawId))).toEqual(new Set(["early", "morning", "evening", "night"]));
-      await success.getByRole("button", { name: "Nueva jugada", exact: true }).click();
-      await expect(success).toBeHidden();
-      await expect(page.getByRole("checkbox", { checked: true })).toHaveCount(4);
+      const playAgain = success.getByRole("link", { name: "JUGAR", exact: true });
+      await expect(playAgain).toHaveAttribute("href", "/quinielas");
+      await playAgain.click();
+      await expect(page).toHaveURL(/\/quinielas$/);
+      await page.goto("/quinielas/redoblona", { waitUntil: "domcontentloaded" });
+      await selectEveryDraw();
       await page.getByLabel("Número de apuesta inicial", { exact: true }).fill(selection.initialNumber);
       await page.getByLabel("Número de Redoblona", { exact: true }).fill(selection.redoblonaNumber);
-      await page.getByRole("combobox", { name: "Alcance de apuesta inicial", exact: true }).selectOption(String(selection.initialUntil));
-      await page.getByRole("combobox", { name: "Alcance de Redoblona", exact: true }).selectOption(String(selection.redoblonaUntil));
+      await page.getByRole("combobox", { name: "Postura de apuesta inicial", exact: true }).selectOption(String(selection.initialUntil));
+      await page.getByRole("combobox", { name: "Postura de Redoblona", exact: true }).selectOption(String(selection.redoblonaUntil));
     }
   }
   await success.getByRole("link", { name: "Ver en Mis jugadas", exact: true }).click();
@@ -1276,6 +1304,17 @@ test("traditional checkout fits a single phone screen and keeps payment above na
         expect(headingBounds!.height).toBeGreaterThan(10);
         expect(headingBounds!.width).toBeGreaterThan(40);
 
+        if (gameId === "head") {
+          const fixedPosition = page.getByText("1.ª posición", { exact: true });
+          await expect(fixedPosition).toBeVisible();
+          const emphasis = await fixedPosition.evaluate((element) => {
+            const style = getComputedStyle(element);
+            return { fontSize: Number.parseFloat(style.fontSize), fontWeight: Number.parseInt(style.fontWeight, 10) };
+          });
+          expect(emphasis.fontSize).toBeGreaterThanOrEqual(14);
+          expect(emphasis.fontWeight).toBeGreaterThanOrEqual(800);
+        }
+
         await expect(page.getByTestId("traditional-stake")).toHaveText("Gs. 0");
         await expect(page.getByTestId("traditional-total")).toHaveText("Gs. 0");
         await expect(page.getByRole("button", { name: "Revisar y pagar", exact: true })).toBeDisabled();
@@ -1354,7 +1393,7 @@ test("publishes only Sapy’aite and rejects disabled instant games", async ({
 
   await page.goto("/instantaneas", { waitUntil: "domcontentloaded" });
   await expect(
-    page.getByRole("heading", { level: 1, name: "Quinielas" }),
+    page.getByRole("heading", { level: 1, name: "Quiniela" }),
   ).toBeVisible();
   await expect(
     page

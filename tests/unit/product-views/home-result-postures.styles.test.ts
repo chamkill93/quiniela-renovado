@@ -196,13 +196,13 @@ describe("Home latest-result balls stylesheet", () => {
       '.resultBall[data-tone="silver"]',
       "--result-number-y",
       1440,
-    )).toBe("55%");
+    )).toBeUndefined();
     expect(exactDeclaration(
       stylesheet,
       '.resultBall[data-tone="bronze"]',
       "--result-number-y",
       1440,
-    )).toBe("55%");
+    )).toBeUndefined();
   });
 
   it("renders every result in its final state without an entrance animation", () => {
@@ -239,19 +239,15 @@ describe("Home latest-result balls stylesheet", () => {
     )).toBe("1");
   });
 
-  it("inherits premium posture-label colors for the gold, neutral and bronze podium", () => {
+  it("highlights only the first posture label and keeps positions 2 through 14 neutral", () => {
     expect(declaration(stylesheet, "resultBallPosture", "color", 390)).toBe("currentColor");
     expect(declaration(stylesheet, "resultBallPosture", "white-space", 390)).toBe("nowrap");
     expect(declaration(stylesheet, "resultBallPosture", "text-overflow", 390)).toBe("ellipsis");
     expect(stylesheetText).not.toMatch(/\.resultBallRank\b/);
 
     const palettes = {
-      dark: ["#efbd3d", "var(--q-muted-strong)", "#d9955d"],
-      light: [
-        "#a36d00",
-        "color-mix(in srgb, var(--q-muted-strong) 90%, #313842)",
-        "#9a542d",
-      ],
+      dark: ["#efbd3d", "var(--q-muted-strong)"],
+      light: ["#a36d00", "color-mix(in srgb, var(--q-muted-strong) 90%, #313842)"],
     } as const;
     for (const theme of ["dark", "light"] as const) {
       const baseSelector = theme === "dark"
@@ -260,14 +256,17 @@ describe("Home latest-result balls stylesheet", () => {
       const firstSelector = theme === "dark"
         ? '.resultBall[data-position="1"]'
         : ':global([data-theme="light"]) .resultBall[data-position="1"]';
-      const thirdSelector = theme === "dark"
-        ? '.resultBall[data-position="3"]'
-        : ':global([data-theme="light"]) .resultBall[data-position="3"]';
       expect([
         exactDeclaration(stylesheet, firstSelector, "color", 390, "no-preference", theme),
         exactDeclaration(stylesheet, baseSelector, "color", 390, "no-preference", theme),
-        exactDeclaration(stylesheet, thirdSelector, "color", 390, "no-preference", theme),
       ]).toEqual(palettes[theme]);
+      for (const position of [2, 3]) {
+        const selector = theme === "dark"
+          ? `.resultBall[data-position="${position}"]`
+          : `:global([data-theme="light"]) .resultBall[data-position="${position}"]`;
+        expect(exactDeclaration(stylesheet, selector, "color", 390, "no-preference", theme))
+          .toBeUndefined();
+      }
     }
   });
 

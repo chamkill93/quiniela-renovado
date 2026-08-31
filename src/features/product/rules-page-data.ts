@@ -83,24 +83,24 @@ export const TRADITIONAL_RULES = [
   },
   {
     id: "redoblona", family: "traditional", title: "Redoblona",
-    copy: "Combiná dos números de dos cifras y elegí hasta dónde participa cada uno.",
+    copy: "Combiná dos números de dos cifras y elegí la postura de cada uno.",
     facts: [
       { label: "Selección", value: "2 cifras + 2 cifras" },
-      { label: "Alcances", value: "Inicial 1–14 · Redoblona 7–14" },
+      { label: "Posturas", value: "Inicial 1–14 · Redoblona 7–14" },
     ],
     instructions: [
       "Ingresá dos números de 00 a 99; pueden ser iguales o diferentes.",
       "Definí el alcance inicial entre Cabeza y 14, y el alcance de Redoblona entre 7 y 14.",
       "El alcance de Redoblona debe ser igual o mayor al inicial. Elegí uno o varios sorteos y un único importe por sorteo.",
-      "Revisá ambos números, sus alcances y el total. Confirmá antes del cierre y conservá el comprobante.",
+      "Revisá ambos números, sus posturas y el total. Confirmá antes del cierre y conservá el comprobante.",
     ],
     conditions: [
       "Las dos últimas cifras de los resultados se comparan con cada número elegido. Se necesitan dos aciertos en posiciones diferentes del mismo sorteo.",
-      "Si la inicial es Cabeza, esa aparición se excluye: Redoblona hasta 7 busca el segundo acierto de la posición 2 a la 8.",
-      "Con una inicial superior a Cabeza no se agrega otra posición; ambos aciertos se buscan dentro de los alcances contratados sin reutilizar una aparición.",
+      "Si la inicial es Cabeza, esa aparición se excluye: Redoblona postura 7 busca el segundo acierto de la posición 2 a la 8.",
+      "Con una inicial superior a Cabeza no se agrega otra posición; ambos aciertos se buscan dentro de las posturas contratadas sin reutilizar una aparición.",
       "El orden y los ceros importan: 05 no es lo mismo que 50. Acertar solo uno de los números no completa la jugada.",
     ],
-    example: "35 Cabeza + 72 hasta 7 gana si la posición 1 termina en 35 y otra posición entre la 2 y la 8 termina en 72.",
+    example: "35 Cabeza + 72 postura 7 gana si la posición 1 termina en 35 y otra posición entre la 2 y la 8 termina en 72.",
     href: "/quinielas/redoblona",
   },
 ] as const satisfies readonly RuleGameCard[];

@@ -18,8 +18,6 @@ const RESULT_PAGE_COUNT = 4;
 
 const BALL_ART = {
   gold: "/assets/results/balls/ball-gold.webp",
-  silver: "/assets/results/balls/ball-silver.webp",
-  bronze: "/assets/results/balls/ball-bronze.webp",
   red: "/assets/results/balls/ball-red.webp",
 } as const;
 
@@ -37,10 +35,7 @@ interface DragState {
 }
 
 function toneForPosition(position: number): BallTone {
-  if (position === 1) return "gold";
-  if (position === 2) return "silver";
-  if (position === 3) return "bronze";
-  return "red";
+  return position === 1 ? "gold" : "red";
 }
 
 function formattedResult(value: string | null) {
@@ -70,7 +65,7 @@ function ResultBall({ result }: { result: HomeResultPositionView }) {
           className={styles.resultBallImage}
           draggable={false}
           height={384}
-          priority={result.position <= 3}
+          priority={result.position === 1}
           src={BALL_ART[tone]}
           unoptimized
           width={384}

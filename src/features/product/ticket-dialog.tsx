@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 import { Logo, Modal } from "@/components/ui";
+import { DAILY_DRAW_SLOTS } from "@/lib/gaming/daily-draw-schedule";
+import { formatInvertNumber } from "@/lib/gaming/invert";
 import type { MockPlay, MockTicket } from "@/lib/product/api-types";
 import { summarizeRedoblonaSelection, validateRedoblonaSelection, type RedoblonaSelection } from "@/lib/gaming/redoblona";
 import { formatGs } from "@/lib/product/catalog";
@@ -11,7 +13,11 @@ import productStyles from "./product.module.css";
 import styles from "./ticket-receipt.module.css";
 
 function describeSelection(selection: unknown, gameId?: string) {
-  if (typeof selection === "string" || typeof selection === "number") return String(selection);
+  const isInvert = ["invert", "invertida"].includes(gameId?.trim().toLowerCase() ?? "");
+  if (typeof selection === "string" || typeof selection === "number") {
+    const value = String(selection);
+    return isInvert && /^\d{3}$/.test(value) ? formatInvertNumber(value) : value;
+  }
   if (Array.isArray(selection)) return selection.join(" · ");
   if (selection && typeof selection === "object") {
     const record = selection as Record<string, unknown>;
@@ -26,8 +32,17 @@ function describeSelection(selection: unknown, gameId?: string) {
         return summarizeRedoblonaSelection(candidate);
       }
       if (typeof record.head === "string" && typeof record.redoblona === "string" && typeof record.position === "number" && Number.isInteger(record.position)) {
-        return `${record.head} Cabeza + ${record.redoblona} hasta ${record.position}`;
+        return `${record.head} Cabeza + ${record.redoblona} postura ${record.position}`;
       }
+    }
+    if (
+      isInvert
+      && typeof record.number === "string"
+      && /^\d{3}$/.test(record.number)
+      && typeof record.position === "number"
+      && Number.isSafeInteger(record.position)
+    ) {
+      return `${formatInvertNumber(record.number)} · Postura ${record.position}`;
     }
     if (Array.isArray(record.numbers)) return record.numbers.join(" · ");
     return Object.values(record).map(String).join(" · ");
@@ -70,6 +85,45 @@ function ticketStatusLabel(status: string) {
   }
 }
 
+function formatReceiptDraw(drawId: string) {
+  const source = drawId.trim();
+  const normalized = source.toLowerCase();
+  const tokens = normalized.split(/[^a-z0-9]+/).filter(Boolean);
+  const slot = DAILY_DRAW_SLOTS.find((candidate) =>
+    normalized === candidate.id || normalized === candidate.slug ||
+    tokens.includes(candidate.id) || tokens.includes(candidate.slug),
+  );
+  return slot?.label ?? source;
+}
+
+type ReceiptOutcome = "pending" | "won" | "lost" | "refunded";
+
+function receiptOutcome(status: string): ReceiptOutcome {
+  switch (status.trim().toUpperCase()) {
+    case "WON":
+      return "won";
+    case "LOST":
+      return "lost";
+    case "REFUNDED":
+      return "refunded";
+    default:
+      return "pending";
+  }
+}
+
+function receiptOutcomeLabel(outcome: ReceiptOutcome) {
+  switch (outcome) {
+    case "won":
+      return "Ganado";
+    case "lost":
+      return "Perdido";
+    case "refunded":
+      return "Reintegrado";
+    default:
+      return "Pendiente";
+  }
+}
+
 export function TicketDialog({
   ticket,
   play,
@@ -84,6 +138,8 @@ export function TicketDialog({
   const currency = ticket.currency ?? "PYG";
   const amount = ticket.amount;
   const prize = ticket.prize ?? play.prize;
+  const outcome = receiptOutcome(status);
+  const drawId = ticket.drawId ?? play.drawId;
   const resultNumbers = ticket.resultNumbers?.length
     ? ticket.resultNumbers
     : play.resultNumbers?.length
@@ -121,15 +177,21 @@ export function TicketDialog({
               {resultNumbers.length ? (
                 <div className={styles.receiptFact}><dt>Resultado</dt><dd>{resultNumbers.join(" · ")}</dd></div>
               ) : null}
-              {ticket.drawId ?? play.drawId ? (
-                <div className={styles.receiptFact}><dt>Sorteo</dt><dd>{ticket.drawId ?? play.drawId}</dd></div>
+              {drawId ? (
+                <div className={styles.receiptFact}><dt>Sorteo</dt><dd>{formatReceiptDraw(drawId)}</dd></div>
               ) : null}
               <div className={styles.receiptFact}><dt>Fecha</dt><dd>{formatReceiptDate(issuedAt)}</dd></div>
             </dl>
 
             <dl className={styles.receiptTotals}>
               <div className={styles.receiptFact}><dt>Monto</dt><dd>{formatMoney(amount, currency)}</dd></div>
-              <div className={styles.receiptFact} data-emphasis="prize"><dt>Premio</dt><dd>{formatMoney(prize, currency)}</dd></div>
+              <div className={styles.receiptFact} data-emphasis="prize" data-outcome={outcome}>
+                <dt>Monto a ganar</dt>
+                <dd>
+                  <span>{receiptOutcomeLabel(outcome)}</span>
+                  {outcome === "won" && prize > 0 ? <span className={styles.prizeAmount}>{formatMoney(prize, currency)}</span> : null}
+                </dd>
+              </div>
             </dl>
           </div>
 

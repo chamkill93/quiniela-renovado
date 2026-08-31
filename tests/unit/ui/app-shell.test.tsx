@@ -105,10 +105,10 @@ describe("AppShell navigation", () => {
     expect(play.getAttribute("data-active")).toBe(String(playIsActive));
   });
 
-  it("preserves both Quinielas and Reglas in the desktop sidebar", () => {
+  it("preserves both Quiniela and Reglas in the desktop sidebar", () => {
     render(<AppShell currentPath="/quinielas/sapyaite"><main>Sapy’aite</main></AppShell>);
     const navigation = within(screen.getByRole("navigation", { name: "Navegación principal" }));
-    const quinielas = navigation.getByRole("link", { name: "Quinielas" });
+    const quinielas = navigation.getByRole("link", { name: "Quiniela" });
     expect(quinielas.getAttribute("href")).toBe("/quinielas");
     expect(quinielas.getAttribute("aria-current")).toBe("page");
     expect(navigation.getByRole("link", { name: "Reglas" }).getAttribute("href")).toBe("/reglas");

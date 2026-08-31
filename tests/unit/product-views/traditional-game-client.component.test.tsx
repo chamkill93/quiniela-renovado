@@ -220,10 +220,11 @@ describe("TraditionalGameClient selection", () => {
         expect(head.labels?.[0]?.textContent).toBe("Número de tres cifras");
         expect(head.labels?.[0]?.classList.contains("q-sr-only")).toBe(true);
       }
-      expect(head.value).toMatch(gameId === "redoblona" ? /^\d{2}$/ : /^\d{3}$/);
-      expect(Number(head.value)).toBeGreaterThanOrEqual(gameId === "redoblona" ? 0 : 1);
-      expect(Number(head.value)).toBeLessThanOrEqual(gameId === "redoblona" ? 99 : 999);
-      if (gameId === "invert") expect(new Set(head.value).size).toBe(3);
+      expect(head.value).toMatch(gameId === "redoblona" ? /^\d{2}$/ : gameId === "invert" ? /^\d\.\d\.\d$/ : /^\d{3}$/);
+      const rawHead = head.value.replace(/\D/g, "");
+      expect(Number(rawHead)).toBeGreaterThanOrEqual(gameId === "redoblona" ? 0 : 1);
+      expect(Number(rawHead)).toBeLessThanOrEqual(gameId === "redoblona" ? 99 : 999);
+      if (gameId === "invert") expect(new Set(rawHead).size).toBe(3);
       if (gameId === "redoblona") {
         const second = numberInput("Número de Redoblona");
         expect(second.value).toMatch(/^\d{2}$/);
@@ -341,10 +342,10 @@ describe("TraditionalGameClient selection", () => {
 
     const input = numberInput();
     expect(document.getElementById("traditional-number-hint")?.textContent)
-      .toBe("Del 001 al 999, con tres cifras distintas");
+      .toBe("Del 001 al 999, con tres cifras distintas. Se muestra con puntos, por ejemplo 1.2.3.");
     enterNumber("112");
 
-    expect(input.value).toBe("112");
+    expect(input.value).toBe("1.1.2");
     expect(input.getAttribute("aria-invalid")).toBe("true");
     expect(screen.getByText("Elegí un número del 001 al 999 con tres cifras distintas.")).toBeTruthy();
     expect(reviewButton().disabled).toBe(true);
@@ -352,11 +353,23 @@ describe("TraditionalGameClient selection", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
 
     enterNumber("123");
+    expect(input.value).toBe("1.2.3");
     expect(input.getAttribute("aria-invalid")).toBe("false");
     expect(screen.queryByText("Elegí un número del 001 al 999 con tres cifras distintas.")).toBeNull();
     expect(reviewButton().disabled).toBe(false);
+    fireEvent.click(reviewButton());
+    expect(within(reviewDialog()).getByText("1.2.3")).toBeTruthy();
     expect(request).not.toHaveBeenCalled();
     expectUnchangedAccount();
+  });
+
+  it("highlights the fixed first position only in A la Cabeza", async () => {
+    renderGame("head");
+    await waitUntilReady();
+
+    const fixedPosition = screen.getByText("1.ª posición", { selector: "strong" });
+    expect(fixedPosition.parentElement?.textContent).toBe("A la 1.ª posición");
+    expect(screen.queryByRole("combobox", { name: "Hasta la posición" })).toBeNull();
   });
 
   it("requires two canonical Redoblona numbers and accepts 00 twice", async () => {
@@ -371,7 +384,7 @@ describe("TraditionalGameClient selection", () => {
 
     enterNumber("0", "Número de apuesta inicial");
     expect(reviewButton().disabled).toBe(false);
-    expect(screen.getByRole("status", { name: "Resumen de Redoblona" }).textContent).toContain("00 Cabeza + 00 hasta 7");
+    expect(screen.getByRole("status", { name: "Resumen de Redoblona" }).textContent).toContain("00 Cabeza + 00 postura 7");
     expectUnchangedAccount();
   });
 
@@ -397,8 +410,8 @@ describe("TraditionalGameClient selection", () => {
   it("keeps both Redoblona scopes valid, raises the second scope and reviews a natural summary", async () => {
     renderGame("redoblona");
     await waitUntilReady();
-    const initialScope = screen.getByRole("combobox", { name: "Alcance de apuesta inicial" }) as HTMLSelectElement;
-    const redoblonaScope = screen.getByRole("combobox", { name: "Alcance de Redoblona" }) as HTMLSelectElement;
+    const initialScope = screen.getByRole("combobox", { name: "Postura de apuesta inicial" }) as HTMLSelectElement;
+    const redoblonaScope = screen.getByRole("combobox", { name: "Postura de Redoblona" }) as HTMLSelectElement;
     expect(initialScope.value).toBe("1");
     expect(redoblonaScope.value).toBe("7");
     enterNumber("35", "Número de apuesta inicial");
@@ -406,15 +419,15 @@ describe("TraditionalGameClient selection", () => {
     fireEvent.change(initialScope, { target: { value: "8" } });
     expect(initialScope.value).toBe("8");
     expect(redoblonaScope.value).toBe("8");
-    expect(within(redoblonaScope).queryByRole("option", { name: "Hasta 7" })).toBeNull();
+    expect(within(redoblonaScope).queryByRole("option", { name: "Postura 7" })).toBeNull();
     fireEvent.change(redoblonaScope, { target: { value: "10" } });
     fireEvent.click(chipButton(500));
 
     const liveSummary = screen.getByRole("status", { name: "Resumen de Redoblona" });
-    expect(liveSummary.textContent).toContain("35 hasta 8 + 72 hasta 10");
+    expect(liveSummary.textContent).toContain("35 postura 8 + 72 postura 10");
     fireEvent.click(reviewButton());
-    expect(within(reviewDialog()).getByLabelText("35 hasta 8 + 72 hasta 10")).toBeTruthy();
-    expect(within(reviewDialog()).getByText("Alcances").parentElement?.textContent).toContain("Inicial hasta 8 · Redoblona hasta 10");
+    expect(within(reviewDialog()).getByLabelText("35 postura 8 + 72 postura 10")).toBeTruthy();
+    expect(within(reviewDialog()).getByText("Posturas").parentElement?.textContent).toContain("Inicial postura 8 · Redoblona postura 10");
     expectUnchangedAccount();
   });
 
@@ -668,15 +681,15 @@ describe("TraditionalGameClient payment", () => {
     expect((screen.getByRole("button", { name: "Quitar cerrados" }) as HTMLButtonElement).disabled).toBe(true);
     expect(request).toHaveBeenCalledOnce();
 
-    fireEvent.click(within(success).getByRole("button", { name: "Nueva jugada" }));
-    expect(screen.queryByRole("dialog", { name: "Jugada registrada" })).toBeNull();
-    expect(numberInput().value).toBe("");
-    expect(numberInput().matches(":disabled")).toBe(false);
-    expect(stakeAmount().textContent).toBe(formatGs(0));
-    expect(amountFields().matches(":disabled")).toBe(false);
-    expect(screen.getByTestId("traditional-total").textContent).toBe(formatGs(0));
-    expect(reviewButton().disabled).toBe(true);
-    fireEvent.click(reviewButton());
+    const newPlayLinks = screen.getAllByRole("link", { name: "JUGAR" });
+    expect(newPlayLinks).toHaveLength(2);
+    expect(newPlayLinks.every((link) => link.getAttribute("href") === "/quinielas")).toBe(true);
+    expect(numberInput().value).toBe("123");
+    expect(numberInput().matches(":disabled")).toBe(true);
+    expect(stakeAmount().textContent).toBe(formatGs(500));
+    expect(amountFields().matches(":disabled")).toBe(true);
+    expect(screen.getByTestId("traditional-total").textContent).toBe(formatGs(500));
+    expect(screen.queryByRole("button", { name: "Revisar y pagar" })).toBeNull();
     expect(request).toHaveBeenCalledOnce();
   });
 
@@ -1067,12 +1080,12 @@ describe("TraditionalGameClient multiple draws", () => {
     expect(screen.getByTestId("provider-play-count").textContent).toBe("1");
     expect(screen.getByTestId("provider-balance").textContent).toBe("24500");
 
-    fireEvent.click(within(success).getByRole("button", { name: "Nueva jugada" }));
-    expect(numberInput().value).toBe("");
-    expect(numberInput().matches(":disabled")).toBe(false);
-    expect(stakeAmount().textContent).toBe(formatGs(0));
-    expect(screen.getByTestId("traditional-total").textContent).toBe(formatGs(0));
-    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(within(success).getByRole("link", { name: "JUGAR" }).getAttribute("href")).toBe("/quinielas");
+    expect(numberInput().value).toBe("123");
+    expect(numberInput().matches(":disabled")).toBe(true);
+    expect(stakeAmount().textContent).toBe(formatGs(500));
+    expect(screen.getByTestId("traditional-total").textContent).toBe(formatGs(500));
+    expect(screen.getByRole("dialog", { name: "Jugada registrada" })).toBeTruthy();
     expect(request).toHaveBeenCalledTimes(2);
   });
 

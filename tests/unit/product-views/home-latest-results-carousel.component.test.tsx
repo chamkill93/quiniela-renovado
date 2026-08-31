@@ -196,7 +196,7 @@ function mountCarousel({
 }
 
 describe("HomeLatestResultsCarousel", () => {
-  it("renders fourteen ordered HTML results with the premium tone assets and visual labels", () => {
+  it("renders fourteen ordered HTML results with only the first posture highlighted", () => {
     const { track, previous, next } = mountCarousel();
     flushFrames();
 
@@ -214,12 +214,10 @@ describe("HomeLatestResultsCarousel", () => {
     expect(cards.map((card) => within(card).getByTestId("home-result-value").textContent))
       .toEqual(["085", "044", "007", ...values.slice(3)]);
 
-    const expectedTones = ["gold", "silver", "bronze", ...Array<string>(11).fill("red")];
+    const expectedTones = ["gold", ...Array<string>(13).fill("red")];
     const expectedAssets = [
       "/assets/results/balls/ball-gold.webp",
-      "/assets/results/balls/ball-silver.webp",
-      "/assets/results/balls/ball-bronze.webp",
-      ...Array<string>(11).fill("/assets/results/balls/ball-red.webp"),
+      ...Array<string>(13).fill("/assets/results/balls/ball-red.webp"),
     ];
     for (const [index, card] of cards.entries()) {
       const position = index + 1;
@@ -247,6 +245,8 @@ describe("HomeLatestResultsCarousel", () => {
       expect(image!.getAttribute("sizes")).toBeNull();
       expect(image!.getAttribute("srcset")).toBeNull();
     }
+    expect(cards[1].getAttribute("data-tone")).toBe(cards[3].getAttribute("data-tone"));
+    expect(cards[2].getAttribute("data-tone")).toBe(cards[3].getAttribute("data-tone"));
 
     const segments = screen.getAllByTestId("home-results-pagination-segment");
     expect(segments).toHaveLength(4);
