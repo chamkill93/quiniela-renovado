@@ -141,7 +141,7 @@ La matriz visual cubre dark y light en:
 
 `320×568`, `360×800`, `390×844`, `430×932`, `768×1024`, `1024×768`, `1366×768`, `1440×900` y `1920×1080`.
 
-Los flujos E2E validan los seis conectores tradicionales, Sapy’aite como única Instantánea habilitada, el rechazo de juegos omitidos por el catálogo, comprobantes consultados desde Mis Jugadas, saldo autoritativo, recarga, idempotencia, historiales, login/logout, registro preview no persistente, sesión expirada y error de red con reintento.
+Los flujos E2E validan los seis conectores tradicionales, los nueve juegos instantáneos habilitados en el proveedor de prueba, comprobantes consultados desde Mis Jugadas, saldo autoritativo, recarga, idempotencia, historiales, login/logout, registro preview no persistente, sesión expirada y error de red con reintento.
 
 Playwright instala Chromium en CI. En una estación nueva, ejecutá una vez `npx playwright install chromium`; también podés usar Chrome con `PLAYWRIGHT_CHANNEL=chrome`.
 

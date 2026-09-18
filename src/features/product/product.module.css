@@ -302,6 +302,16 @@
   gap: 6px;
 }
 
+.instantCatalogCategory {
+  grid-column: 1 / -1;
+}
+
+.instantCatalogGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
 .catalogCategoryTitle {
   margin: 0;
   color: var(--q-muted-strong);
@@ -2218,6 +2228,7 @@
 }
 
 @media (max-width: 520px) {
+  .instantCatalogGrid { gap: 8px; }
   .homePage { padding-top: 12px; }
   .sectionHeader { display: grid; }
   .gameGrid[data-family="instant"] { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }

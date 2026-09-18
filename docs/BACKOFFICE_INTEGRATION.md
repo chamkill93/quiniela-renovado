@@ -67,8 +67,9 @@ compatibilidad para un proveedor que lo requiera fuera de esa composición.
   `src/lib/gaming/types.ts`.
 - Disponibilidad: un juego está habilitado únicamente cuando aparece en el
   arreglo correspondiente del catálogo. No existe un campo `enabled`; el
-  backoffice debe omitir los juegos desactivados. El proveedor actual publica
-  solo `sapyaite` dentro de `catalog.instant`.
+  backoffice debe omitir los juegos desactivados. El proveedor de prueba publica
+  los nueve juegos instantáneos dentro de `catalog.instant`; un backoffice
+  externo puede publicar únicamente los que tenga habilitados.
 - Resultado y premio: siempre llegan en la respuesta autoritativa; los
   rodillos solo animan esos números.
 

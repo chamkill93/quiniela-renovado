@@ -44,4 +44,15 @@ describe("Quiniela catalog category subtitles", () => {
     expect(screen.getByRole("region", { name: "Lotos" })).toBeTruthy();
     expect(within(screen.getByTestId("traditional-games-grid")).getAllByRole("link")).toHaveLength(5);
   });
+
+  it("shows every instant game published by the provider", () => {
+    useProductMock.mockReturnValue({ ...product, catalog: buildGamingCatalog() });
+    render(<QuinielaCatalogClient />);
+
+    const instant = screen.getByRole("region", { name: "Instantáneas" });
+    expect(within(instant).getAllByTestId("instant-game-card")).toHaveLength(9);
+    for (const id of ["poa", "pyae", "petei", "mokoi", "mbohapy", "poa5", "poa10", "racha5"]) {
+      expect(instant.querySelector(`a[href="/instantaneas/${id}"]`)).not.toBeNull();
+    }
+  });
 });

@@ -242,6 +242,14 @@ const BASE_INSTANT_GAMES = [
 /** Juegos que el proveedor actual publica en el catálogo operativo. */
 export const DEFAULT_ENABLED_INSTANT_GAME_IDS = [
   "sapyaite",
+  "poa",
+  "pyae",
+  "petei",
+  "mokoi",
+  "mbohapy",
+  "poa5",
+  "poa10",
+  "racha5",
 ] as const satisfies readonly InstantGameId[];
 
 export function buildMockDraws(now = new Date()): readonly DrawDefinition[] {

@@ -183,11 +183,11 @@ export function mapCatalogGames(
   });
 }
 
-/** Group the public catalog without changing game contracts or enabled status. */
+/** Group every game published in the public catalog. */
 export function mapQuinielaCatalogGames(catalog: GamingCatalog): CatalogGameView[] {
   return [
     ...mapCatalogGames(catalog, "traditional"),
-    ...mapCatalogGames(catalog, "instant").filter((game) => game.id === "sapyaite"),
+    ...mapCatalogGames(catalog, "instant"),
   ];
 }
 

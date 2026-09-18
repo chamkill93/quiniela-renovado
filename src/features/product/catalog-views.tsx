@@ -90,6 +90,8 @@ export function CatalogPageClient({
 export function QuinielaCatalogClient() {
   const { catalog, loading, error, unauthorized, refresh } = useProduct();
   const games = catalog ? mapQuinielaCatalogGames(catalog) : [];
+  const traditionalGames = games.filter((game) => catalog?.traditional.some((traditional) => traditional.id === game.id));
+  const instantGames = games.filter((game) => catalog?.instant.some((instant) => instant.id === game.id));
 
   return (
     <main className={styles.page}>
@@ -106,16 +108,7 @@ export function QuinielaCatalogClient() {
         data-family="traditional"
         data-testid="traditional-games-grid"
       >
-        {games.map((game, index) => game.id === "sapyaite" ? (
-          <section
-            aria-labelledby="catalog-instant-title"
-            className={styles.catalogCategory}
-            key={game.id}
-          >
-            <h2 className={styles.catalogCategoryTitle} id="catalog-instant-title">Instantáneas</h2>
-            <CatalogGameCard eager={index < 3} game={game} testId="instant-game-card" />
-          </section>
-        ) : (
+        {traditionalGames.map((game, index) => (
           <CatalogGameCard
             eager={index < 3}
             game={game}
@@ -123,6 +116,16 @@ export function QuinielaCatalogClient() {
             testId="traditional-game-card"
           />
         ))}
+        {instantGames.length > 0 ? (
+          <section aria-labelledby="catalog-instant-title" className={`${styles.catalogCategory} ${styles.instantCatalogCategory}`}>
+            <h2 className={styles.catalogCategoryTitle} id="catalog-instant-title">Instantáneas</h2>
+            <div className={styles.instantCatalogGrid}>
+              {instantGames.map((game) => (
+                <CatalogGameCard eager={false} game={game} key={game.id} testId="instant-game-card" />
+              ))}
+            </div>
+          </section>
+        ) : null}
         <section aria-labelledby="catalog-lotos-title" className={styles.catalogCategory}>
           <h2 className={styles.catalogCategoryTitle} id="catalog-lotos-title">Lotos</h2>
           <MegaLotoCatalogCard />

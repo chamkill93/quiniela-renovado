@@ -1385,11 +1385,13 @@ test("accepts all six traditional games and exposes server-backed balance and Mi
   await expect(displayedBalance).toHaveText(`₲${formattedBalance}`);
 });
 
-test("publishes only Sapy’aite and rejects disabled instant games", async ({
+test("publishes and accepts all nine instant games", async ({
   page,
 }) => {
   const initial = await bootstrap(page);
-  expect(initial.catalog.instant.map((game) => game.id)).toEqual(["sapyaite"]);
+  expect(initial.catalog.instant.map((game) => game.id)).toEqual([
+    "sapyaite", "poa", "pyae", "petei", "mokoi", "mbohapy", "poa5", "poa10", "racha5",
+  ]);
 
   await page.goto("/instantaneas", { waitUntil: "domcontentloaded" });
   await expect(
@@ -1399,7 +1401,7 @@ test("publishes only Sapy’aite and rejects disabled instant games", async ({
     page
       .getByTestId(E2E_SELECTORS.traditionalGamesGrid)
       .getByTestId(E2E_SELECTORS.instantGameCard),
-  ).toHaveCount(1);
+  ).toHaveCount(9);
 
   const activePlay = await postPlay(
     page,
@@ -1409,32 +1411,33 @@ test("publishes only Sapy’aite and rejects disabled instant games", async ({
   );
   expect(activePlay.body.play.gameId).toBe("sapyaite");
   expect(activePlay.body.play.selection).toBe("007");
-  const afterActivePlay = await bootstrap(page);
+  const selections: InstantPlayRequest[] = [
+    { gameId: "poa", amount: 500, selection: "001-099" },
+    { gameId: "pyae", amount: 500, selection: "MENOR" },
+    { gameId: "petei", amount: 500, selection: "7" },
+    { gameId: "mokoi", amount: 500, selection: "07" },
+    { gameId: "mbohapy", amount: 500, selection: "007" },
+    { gameId: "poa5", amount: 500, selection: { numbers: ["001", "002", "003"] } },
+    { gameId: "poa10", amount: 500, selection: { numbers: ["001", "002", "003"] } },
+    { gameId: "racha5", amount: 500, selection: "PAR" },
+  ];
+  for (const input of selections) {
+    const play = await postPlay(
+      page,
+      "/api/mock/instant",
+      input,
+      `e2e-active-${input.gameId}-001`,
+    );
+    expect(play.body.play.gameId).toBe(input.gameId);
+  }
 
-  const disabledResponse = await page.request.post("/api/mock/instant", {
-    data: { gameId: "poa", amount: 500, selection: "001-099" },
-    headers: {
-      "Idempotency-Key": "e2e-disabled-poa-001",
-      "X-Account-Session": afterActivePlay.session.id,
-    },
-  });
-  expect(disabledResponse.status()).toBe(404);
-  const disabledBody = await disabledResponse.json();
-  expect(disabledBody).toMatchObject({
-    error: { code: "GAME_NOT_FOUND" },
-  });
-
-  const afterDisabledPlay = await bootstrap(page);
-  expect(afterDisabledPlay.session.balance).toBe(afterActivePlay.session.balance);
-  expect(afterDisabledPlay.plays).toHaveLength(afterActivePlay.plays.length);
+  const afterPlays = await bootstrap(page);
+  expect(afterPlays.plays).toHaveLength(9);
 
   await page.goto("/instantaneas/poa", { waitUntil: "domcontentloaded" });
-  await expect(page.getByTestId("disabled-instant-game")).toBeVisible();
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Juego no disponible" }),
-  ).toBeVisible();
-  await expect(page.getByLabel("Rodillos numéricos")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Jugar", exact: true })).toHaveCount(0);
+  await expect(page.getByTestId("disabled-instant-game")).toHaveCount(0);
+  await expect(page.getByLabel("Rodillos numéricos")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Jugar", exact: true })).toBeVisible();
 });
 
 test("keeps the reel active and opens the receipt only from Mis Jugadas", async ({

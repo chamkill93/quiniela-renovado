@@ -68,10 +68,11 @@ describe("mappers de vistas conectadas", () => {
     });
   });
 
-  it("agrupa las cuatro quinielas y Sapy’aite sin habilitar otros juegos", () => {
+  it("agrupa las cuatro quinielas y todos los juegos instantáneos publicados", () => {
     const games = mapQuinielaCatalogGames(remoteCatalog());
     expect(games.map((game) => game.id)).toEqual([
-      "head", "prizes", "invert", "redoblona", "sapyaite",
+      "head", "prizes", "invert", "redoblona", "sapyaite", "poa", "pyae",
+      "petei", "mokoi", "mbohapy", "poa5", "poa10", "racha5",
     ]);
     expect(games[4]).toMatchObject({
       name: "Nombre entregado por API",
@@ -85,7 +86,7 @@ describe("mappers de vistas conectadas", () => {
       ...catalog,
       instant: catalog.instant.filter((game) => game.id !== "sapyaite"),
     });
-    expect(games).toHaveLength(4);
+    expect(games).toHaveLength(12);
     expect(games.some((game) => game.id === "sapyaite")).toBe(false);
     expect(mapQuinielaCatalogGames({ ...catalog, instant: [], traditional: [] })).toEqual([]);
   });
