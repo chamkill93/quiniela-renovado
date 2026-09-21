@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { zendeskWidgetKey } from "./src/lib/zendesk-config";
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 
@@ -65,13 +66,24 @@ const frameSources = new Set([
   .filter((origin): origin is string => Boolean(origin))
   .forEach((origin) => frameSources.add(origin));
 
+// Zendesk Messaging's documented custom CSP sources, enabled only with a widget key.
+const zendeskEnabled = Boolean(zendeskWidgetKey);
+const zendeskSources = zendeskEnabled
+  ? " https://*.zdassets.com https://*.zendesk.com https://*.smooch.io https://*.sentry.io https://*.twilio.com"
+  : "";
+if (zendeskEnabled) {
+  connectSources.push(...zendeskSources.trim().split(" "), "wss://*.zendesk.com", "wss://api.smooch.io", "wss://voice-js.roaming.twilio.com");
+  frameSources.add("https://*.zendesk.com");
+  frameSources.add("https://*.smooch.io");
+}
+
 const contentSecurityPolicy = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""}${zendeskSources}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
-  "font-src 'self' data:",
-  "media-src 'self' data: blob:",
+  `img-src 'self' data: blob:${zendeskEnabled ? " https://static.zdassets.com https://*.zendesk.com https://media.smooch.io https://*.zdusercontent.com https://www.gravatar.com" : ""}`,
+  `font-src 'self' data:${zendeskEnabled ? " https://static.zdassets.com" : ""}`,
+  `media-src 'self' data: blob:${zendeskEnabled ? " https://static.zdassets.com" : ""}`,
   `frame-src ${[...frameSources].join(" ")}`,
   `connect-src ${connectSources.join(" ")}`,
   "worker-src 'self' blob:",

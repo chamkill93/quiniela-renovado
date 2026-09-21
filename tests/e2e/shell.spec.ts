@@ -66,9 +66,9 @@ test("renders the accessible product shell without horizontal overflow", async (
   await expect(soundToggle).toHaveRole("button");
   await expect(soundToggle).toHaveAccessibleName(/sonido|audio/i);
   await expect(soundToggle).toHaveAttribute("aria-pressed", /^(true|false)$/);
-  await expect(supportButton).toHaveRole("link");
+  await expect(supportButton).toHaveRole("button");
   await expect(supportButton).toHaveAccessibleName("Abrir soporte");
-  await expect(supportButton).toHaveAttribute("href", "/ayuda");
+  await expect(supportButton).toHaveAttribute("aria-haspopup", "dialog");
   expect(await soundToggle.evaluate((sound) => (
     sound.closest(".q-preference-controls")?.nextElementSibling?.matches(
       '[data-testid="support-button"]',

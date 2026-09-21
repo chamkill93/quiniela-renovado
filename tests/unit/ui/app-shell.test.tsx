@@ -39,10 +39,10 @@ describe("AppShell navigation", () => {
     const support = topbar.getByTestId("support-button");
     const preferenceControls = sound.closest(".q-preference-controls");
     const utilities = support.closest(".q-topbar__utilities");
-    expect(support.tagName).toBe("A");
-    expect(support.getAttribute("href")).toBe("/ayuda");
+    expect(support.tagName).toBe("BUTTON");
+    expect(support.getAttribute("aria-haspopup")).toBe("dialog");
     expect(support.getAttribute("aria-label")).toBe("Abrir soporte");
-    expect(support.getAttribute("title")).toBe("Soporte");
+    expect(support.getAttribute("title")).toBe("Call center · quinie.LA");
     expect(preferenceControls).not.toBeNull();
     expect(utilities).not.toBeNull();
     expect(balance.nextElementSibling).toBe(utilities);

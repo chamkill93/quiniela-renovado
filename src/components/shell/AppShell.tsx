@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { SupportLauncher } from "./SupportLauncher";
 import {
   BackToTopButton,
   Icon,
@@ -342,15 +343,7 @@ function AppShellFrame({
             <div className="q-topbar__utilities">
               {topbarActions}
               <ThemeSoundControls />
-              <Link
-                aria-label="Abrir soporte"
-                className="q-icon-button q-support-button"
-                data-testid="support-button"
-                href="/ayuda"
-                title="Soporte"
-              >
-                <Icon name="support" size={19} />
-              </Link>
+              <SupportLauncher />
             </div>
             <Link className="q-user-chip" href="/cuenta" aria-label={`Abrir cuenta de ${userName}`}>
               <span className="q-user-chip__avatar" aria-hidden="true">{initialsFor(userName)}</span>
