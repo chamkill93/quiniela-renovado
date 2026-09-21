@@ -50,7 +50,9 @@ export function SupportLauncher() {
       theme: {
         primary: "#e30613", onPrimary: "#ffffff", action: "#d80622", onAction: "#ffffff",
         background: "#ffffff", onBackground: "#20232b", message: "#e30613", onMessage: "#ffffff",
-        businessMessage: "#f3f4f6", onBusinessMessage: "#20232b", onSecondaryAction: "#5b606c",
+        businessMessage: "#fff1f3", onBusinessMessage: "#20232b", onSecondaryAction: "#d80622",
+        notify: "#e30613", onNotify: "#ffffff",
+        conversationListBackground: "#ffffff", onConversationListBackground: "#20232b",
       },
       common: { hideHeader: true, contentScale: 100 },
       messageLog: { hideHeader: true, avatar: { hidden: true }, businessMessage: { bubbleMaxWidth: 88 } },
@@ -116,7 +118,7 @@ export function SupportLauncher() {
                 <Icon name="close" size={19} />
               </button>
             </header>
-            <div className={styles.intro}><Icon name="support" size={18} /><span>Contanos cómo podemos ayudarte.</span></div>
+            <div className={styles.intro}><Icon name="support" size={18} /><span>Bienvenido al soporte de Quinie.la</span></div>
             <div className={styles.body}>
               <div id="quinie-support-messenger" className={styles.messenger} />
               {status !== "ready" ? <div className={styles.feedback} role="status">
