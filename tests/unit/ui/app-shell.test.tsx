@@ -122,7 +122,8 @@ describe("AppShell navigation", () => {
     expect(footer.getByRole("button", { name: "Volver al inicio" })).toBeTruthy();
     expect(footer.queryByText("Volver al inicio")).toBeNull();
     expect(footer.queryByText("Quiniela online · Paraguay")).toBeNull();
-    expect(footer.getAllByRole("link")).toHaveLength(5);
+    expect(footer.getAllByRole("link")).toHaveLength(4);
+    expect(footer.queryByRole("link", { name: "Centro de ayuda" })).toBeNull();
     expect(footer.getByRole("link", { name: "Juego responsable" }).getAttribute("href"))
       .toBe("/legal/juego-responsable");
     expect(within(screen.getByRole("main")).getByText("Quiniela online · Paraguay")).toBeTruthy();

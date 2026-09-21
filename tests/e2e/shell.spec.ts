@@ -212,7 +212,7 @@ test("renders the accessible product shell without horizontal overflow", async (
   const footer = page.locator(".q-site-footer");
   const footerNavigation = footer.getByRole("navigation", { name: "Información y ayuda" });
   const footerLinks = footer.getByRole("link");
-  await expect(footerLinks).toHaveCount(5);
+  await expect(footerLinks).toHaveCount(4);
   // Different OS fallback fonts have wider labels; keep the complete links visible.
   for (const fontFamily of ["", "Verdana, sans-serif"]) {
     await footerNavigation.evaluate((element, font) => {
@@ -231,9 +231,9 @@ test("renders the accessible product shell without horizontal overflow", async (
     const footerRows = new Set(linkLayout.map((link) => link.top)).size;
     expect(footerRows).toBe(page.viewportSize()!.width < 360 ? 2 : 1);
     if (page.viewportSize()!.width < 360) {
-      expect(new Set(linkLayout.slice(0, 3).map((link) => link.top)).size).toBe(1);
-      expect(new Set(linkLayout.slice(3).map((link) => link.top)).size).toBe(1);
-      expect(linkLayout[3].top).toBeGreaterThan(linkLayout[0].top);
+      expect(new Set(linkLayout.slice(0, 2).map((link) => link.top)).size).toBe(1);
+      expect(new Set(linkLayout.slice(2).map((link) => link.top)).size).toBe(1);
+      expect(linkLayout[2].top).toBeGreaterThan(linkLayout[0].top);
     }
     for (const link of linkLayout) {
       expect(link.height).toBeGreaterThanOrEqual(44);

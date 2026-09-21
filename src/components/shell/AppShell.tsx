@@ -362,7 +362,6 @@ function AppShellFrame({
             <Logo size="sm" />
           </div>
           <nav className="q-site-footer__links" aria-label="Información y ayuda">
-            <Link href="/ayuda" aria-label="Centro de ayuda"><span className="q-site-footer__help-prefix">Centro de&nbsp;</span>Ayuda</Link>
             <Link href="/reglas">Reglas</Link>
             <Link href="/legal/juego-responsable">Juego responsable</Link>
             <Link href="/legal/terminos">Términos</Link>

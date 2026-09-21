@@ -260,7 +260,7 @@ describe("mobile navigation floating-pill stylesheet", () => {
         .toBe("repeat(12,minmax(0,1fr))");
       expect(declaration(".q-site-footer__links a", "width", viewport)).toBe("100%");
       expect(declaration(".q-site-footer__links a:nth-child(1)", "grid-column", viewport))
-        .toBe("span 3");
+        .toBe("span 6");
       expect(declaration(".q-site-footer__links a:nth-child(3)", "grid-column", viewport))
         .toBe("span 6");
     } else {
