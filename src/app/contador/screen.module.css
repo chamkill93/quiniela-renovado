@@ -1,0 +1,112 @@
+.page {
+  --red: #e6243c;
+  position: relative;
+  isolation: isolate;
+  min-height: 100svh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 30% minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+  background: #faf8f6;
+  color: #202127;
+  padding: clamp(24px, 4vh, 48px) clamp(24px, 4vw, 80px) clamp(28px, 5vh, 64px);
+}
+.art {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: linear-gradient(90deg, #fff0 20%, #faf8f6e8 43%, #faf8f6f5 75%),
+    url('/assets/contador/background/quinie-contador-bg-1920x1080.webp') left center / cover no-repeat;
+}
+.art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, #faf8f6cc, transparent 20%, transparent 88%, #faf8f677);
+}
+.mascot { position: absolute; left: 0; bottom: 0; width: 32%; max-height: 86%; object-fit: contain; }
+.brand { grid-column: 2; text-align: center; padding-bottom: 20px; }
+.brand :global(.q-logo__plate) { width: clamp(180px, 13vw, 250px); }
+.content { grid-column: 2; align-self: center; width: 100%; max-width: 1240px; margin-inline: auto; text-align: center; }
+.intro { margin-bottom: clamp(24px, 4vh, 48px); }
+.eyebrow { display: flex; align-items: center; justify-content: center; gap: 10px; color: #68646a; font-size: clamp(10px, .83vw, 15px); letter-spacing: .16em; font-weight: 700; }
+.eyebrow span { width: 6px; height: 6px; border-radius: 50%; background: var(--red); }
+.title { font-size: clamp(38px, 4.2vw, 80px); font-weight: 900; line-height: 1.06; letter-spacing: -.055em; margin: 18px 0 14px; text-wrap: balance; }
+.subtitle { color: #656169; font-size: clamp(16px, 1.45vw, 26px); }
+.timer { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(12px, 1.3vw, 24px); }
+.card { position: relative; display: flex; flex-direction: column; justify-content: center; gap: 16px; padding: clamp(24px, 3.6vh, 42px) 8px; background: #fffffff5; border: 1px solid #fff; border-radius: 24px; box-shadow: 0 16px 45px #5c29290b, 0 3px 6px #5c292904; }
+.card::after { content: ''; width: 26px; height: 3px; border-radius: 3px; background: #e6243c33; margin: 2px auto 0; }
+.digit { color: var(--red); font-size: clamp(64px, 7.4vw, 142px); font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.065em; line-height: .95; animation: tick .24s ease-out; }
+.label { color: #5c5860; font-size: clamp(10px, .85vw, 16px); font-weight: 700; letter-spacing: .14em; }
+.message { margin: clamp(26px, 4vh, 48px) 0; }
+.message h2 { font-size: clamp(24px, 2.2vw, 40px); font-weight: 800; letter-spacing: -.04em; }
+.message p { color: #736c74; font-size: clamp(12px, 1vw, 18px); margin-top: 8px; }
+.stages { display: flex; justify-content: center; align-items: center; gap: 0; color: #706872; font-size: clamp(11px, .85vw, 15px); }
+.stages > span { display: inline-flex; align-items: center; gap: 8px; padding: 4px clamp(12px, 1.8vw, 32px); }
+.stages > span + span { border-left: 1px solid #dcd5d8; }
+.stages .active { color: #c01c31; font-weight: 700; }
+.active img { animation: pulse 3s ease-in-out infinite; }
+.confetti { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.confetti i { position: absolute; left: var(--x); top: -20px; width: 6px; height: 12px; border-radius: 1px; background: #e6243c; opacity: .28; animation: fall var(--duration) var(--delay) linear infinite; }
+.confetti i:nth-child(3n) { background: #c5a58a; width: 5px; height: 5px; border-radius: 50%; }
+.confetti i:nth-child(n+9) { display: none; }
+.burst i:nth-child(n) { display: block; opacity: .65; animation-duration: 5s; }
+.celebration { padding: 30px 20px; border: 1px solid #fff; background: #ffffffc9; border-radius: 32px; box-shadow: 0 20px 80px #8a1e3010; animation: enter .8s ease-out; }
+.launchedLogo :global(.q-logo__plate) { width: clamp(240px, 25vw, 450px); margin: 0 auto 22px; }
+.celebration p { color: var(--red); font-size: clamp(25px, 2.6vw, 48px); font-weight: 800; letter-spacing: -.04em; }
+.celebration > span { display: block; margin-top: 8px; color: #736c74; }
+.launched .title { font-size: clamp(36px, 3.5vw, 65px); }
+.sound { position: absolute; bottom: 16px; right: 16px; border-radius: 50%; width: 44px; height: 44px; background: #fff; box-shadow: 0 4px 20px #0001; }
+@keyframes tick { from { transform: translateY(3px); opacity: .72; } to { transform: translateY(0); opacity: 1; } }
+@keyframes pulse { 50% { opacity: .5; transform: translateY(-2px); } }
+@keyframes enter { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fall { to { transform: translate3d(40px, 110vh, 0) rotate(var(--rotation)); } }
+@media (min-width: 901px) and (max-height: 700px) {
+  .page { padding-block: 18px; }
+  .brand { padding-bottom: 12px; }
+  .brand :global(.q-logo__plate) { width: 150px; }
+  .intro, .message { margin-block: 16px; }
+  .card { padding-block: 20px; }
+  .title { font-size: 40px; }
+}
+@media (max-width: 900px) {
+  .page { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; padding: 22px 22px 28px; }
+  .brand { grid-column: 1; grid-row: 1; padding-bottom: 0; }
+  .brand :global(.q-logo__plate) { width: 155px; }
+  .art { position: relative; grid-column: 1; grid-row: 2; inset: auto; height: clamp(160px, 25vh, 260px); margin: 8px -22px 0; background: url('/assets/contador/background/quinie-contador-bg-mobile.webp') center 29% / 420px auto no-repeat; }
+  .art::after { background: linear-gradient(0deg, #faf8f6, #faf8f600 30%, #faf8f600 85%, #faf8f6), linear-gradient(90deg, #faf8f6, #faf8f600 25%, #faf8f600 75%, #faf8f6); }
+  .mascot { inset: 0; width: 100%; height: 100%; max-height: none; }
+  .content { grid-column: 1; grid-row: 3; max-width: 640px; align-self: start; }
+  .intro { margin: 4px 0 22px; }
+  .eyebrow { font-size: 10px; letter-spacing: .1em; }
+  .title { font-size: clamp(34px, 6vw, 54px); margin-block: 12px 8px; }
+  .subtitle { font-size: 15px; }
+  .digit { font-size: clamp(56px, 10vw, 90px); }
+  .card { gap: 12px; padding: 22px 6px; border-radius: 18px; }
+  .message { margin: 24px 0; }
+  .stages > span { padding-inline: 12px; gap: 5px; }
+  .stages img { width: 15px; height: 15px; }
+}
+@media (max-width: 480px) {
+  .page { padding-inline: 18px; }
+  .art { height: 155px; margin-inline: -18px; background-size: 320px auto; background-position: center 26%; }
+  .timer { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .digit { font-size: 64px; }
+  .card { padding: 18px 8px 14px; gap: 8px; }
+  .card::after { display: none; }
+  .label { font-size: 10px; }
+  .eyebrow { font-size: 9px; }
+  .title { font-size: 34px; }
+  .subtitle { font-size: 13px; }
+  .message p { max-width: 270px; margin-inline: auto; line-height: 1.5; }
+  .stages { flex-wrap: wrap; gap: 10px 0; font-size: 10px; }
+  .stages > span { padding-inline: 8px; }
+  .stages img { width: 12px; height: 12px; }
+  .launched .title { font-size: 32px; }
+  .launchedLogo :global(.q-logo__plate) { width: 210px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page *, .page *::before, .page *::after { animation: none !important; transition: none !important; }
+  .confetti { display: none; }
+}

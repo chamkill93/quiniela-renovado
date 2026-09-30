@@ -1,7 +1,7 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { DevAccessGate } from "@/features/access/dev-access-gate";
 import { ProductFrame } from "@/features/product/product-frame";
 import {
@@ -29,6 +29,10 @@ export const viewport: Viewport = {
 const themeBootstrap = `(()=>{try{const stored=localStorage.getItem("quinie_theme");document.documentElement.dataset.theme=stored==="light"?"light":"dark"}catch{document.documentElement.dataset.theme="dark"}})();`;
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // This header is overwritten by the proxy from the actual request pathname.
+  if ((await headers()).get("x-quinie-contador") === "1") {
+    return <html lang="es-PY" data-theme="light"><body>{children}</body></html>;
+  }
   const devAccessRequired = isDevAccessRequired();
   const hasDevAccess = devAccessRequired
     ? hasValidDevAccessCookie(
