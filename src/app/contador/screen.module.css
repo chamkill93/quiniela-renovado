@@ -166,6 +166,11 @@
   .socialLinks a { gap: 6px; min-height: 45px; }
   .socialLinks strong { font-size: 11px; }
 }
+@media (max-width: 360px) and (max-height: 640px) {
+  .art { width: 64px; height: 64px; }
+  .message p { font-size: 10px; max-width: none; }
+  .socials { margin-top: 8px; }
+}
 @media (max-width: 900px) and (max-height: 500px) and (orientation: landscape) {
   .page { grid-template-columns: 18% minmax(0, 1fr); grid-template-rows: 1fr; gap: 20px; padding: 12px 18px; }
   .brand { grid-column: 1; grid-row: 1; align-self: start; }
