@@ -10,14 +10,15 @@
   overflow: hidden;
   background: #faf8f6;
   color: #202127;
+  line-height: 1.35;
   padding: clamp(24px, 4vh, 48px) clamp(24px, 4vw, 80px) clamp(28px, 5vh, 64px);
 }
 .art {
   position: absolute;
   inset: 0;
   z-index: -2;
-  background: linear-gradient(90deg, #fff0 20%, #faf8f6e8 43%, #faf8f6f5 75%),
-    url('/assets/contador/background/quinie-contador-bg-1920x1080.webp') left center / cover no-repeat;
+  background: linear-gradient(90deg, #fff0 27%, #faf8f6e8 48%, #faf8f6f5 75%),
+    url('/assets/contador/background/quinie-contador-lanzamiento.webp') left center / cover no-repeat;
 }
 .art::after {
   content: '';
@@ -38,12 +39,12 @@
 .card { position: relative; display: flex; flex-direction: column; justify-content: center; gap: 16px; padding: clamp(24px, 3.6vh, 42px) 8px; background: #fffffff5; border: 1px solid #fff; border-radius: 24px; box-shadow: 0 16px 45px #5c29290b, 0 3px 6px #5c292904; }
 .card::after { content: ''; width: 26px; height: 3px; border-radius: 3px; background: #e6243c33; margin: 2px auto 0; }
 .digit { color: var(--red); font-size: clamp(64px, 7.4vw, 142px); font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.065em; line-height: .95; animation: tick .24s ease-out; }
-.label { color: #5c5860; font-size: clamp(10px, .85vw, 16px); font-weight: 700; letter-spacing: .14em; }
+.label { color: #5c5860; font-size: clamp(10px, .85vw, 16px); line-height: 1.2; font-weight: 700; letter-spacing: .14em; }
 .message { margin: clamp(26px, 4vh, 48px) 0; }
 .message h2 { font-size: clamp(24px, 2.2vw, 40px); font-weight: 800; letter-spacing: -.04em; }
 .message p { color: #736c74; font-size: clamp(12px, 1vw, 18px); margin-top: 8px; }
 .stages { display: flex; justify-content: center; align-items: center; gap: 0; color: #706872; font-size: clamp(11px, .85vw, 15px); }
-.stages > span { display: inline-flex; align-items: center; gap: 8px; padding: 4px clamp(12px, 1.8vw, 32px); }
+.stages > span { display: inline-flex; align-items: center; gap: 8px; padding: 4px clamp(12px, 1.8vw, 32px); white-space: nowrap; }
 .stages > span + span { border-left: 1px solid #dcd5d8; }
 .stages .active { color: #c01c31; font-weight: 700; }
 .active img { animation: pulse 3s ease-in-out infinite; }
@@ -64,25 +65,28 @@
 .socialLinks a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 48px; padding: 8px 18px; border: 1px solid #e8dfe1; border-radius: 12px; background: #ffffffb3; transition: background .2s, border-color .2s; }
 .socialLinks a:hover { background: #fff; border-color: #e6243c; }
 .socialLinks a:focus-visible { outline: 2px solid #e6243c; outline-offset: 3px; }
-.socialLinks span { color: #736c74; font-size: 10px; }
-.socialLinks strong { color: #be2035; font-size: 13px; font-weight: 700; }
+.socialLinks span { color: #736c74; font-size: 10px; line-height: 1.2; }
+.socialLinks strong { color: #be2035; font-size: 13px; line-height: 1.2; font-weight: 700; white-space: nowrap; }
+.socialLinks svg { width: 19px; height: 19px; color: #be2035; flex: 0 0 auto; }
 @keyframes tick { from { transform: translateY(3px); opacity: .72; } to { transform: translateY(0); opacity: 1; } }
 @keyframes pulse { 50% { opacity: .5; transform: translateY(-2px); } }
 @keyframes enter { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fall { to { transform: translate3d(40px, 110vh, 0) rotate(var(--rotation)); } }
-@media (min-width: 901px) and (max-height: 700px) {
+@media (min-width: 901px) and (max-height: 850px) {
   .page { padding-block: 18px; }
   .brand { padding-bottom: 12px; }
   .brand :global(.q-logo__plate) { width: 150px; }
   .intro, .message { margin-block: 16px; }
   .card { padding-block: 20px; }
   .title { font-size: 40px; }
+  .digit { font-size: clamp(64px, 7vw, 110px); }
+  .socials { margin-top: 14px; }
 }
 @media (max-width: 900px) {
   .page { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; padding: 22px 22px 28px; }
   .brand { grid-column: 1; grid-row: 1; padding-bottom: 0; }
   .brand :global(.q-logo__plate) { width: 155px; }
-  .art { position: relative; grid-column: 1; grid-row: 2; inset: auto; height: clamp(160px, 25vh, 260px); margin: 8px -22px 0; background: url('/assets/contador/background/quinie-contador-bg-mobile.webp') center 29% / 420px auto no-repeat; }
+  .art { position: relative; grid-column: 1; grid-row: 2; inset: auto; background: url('/assets/contador/background/quinie-contador-lanzamiento.webp') left center / auto 100% no-repeat; }
   .art::after { background: linear-gradient(0deg, #faf8f6, #faf8f600 30%, #faf8f600 85%, #faf8f6), linear-gradient(90deg, #faf8f6, #faf8f600 25%, #faf8f600 75%, #faf8f6); }
   .mascot { inset: 0; width: 100%; height: 100%; max-height: none; }
   .content { grid-column: 1; grid-row: 3; max-width: 640px; align-self: start; }
@@ -98,7 +102,6 @@
 }
 @media (max-width: 480px) {
   .page { padding-inline: 18px; }
-  .art { height: 155px; margin-inline: -18px; background-size: 320px auto; background-position: center 26%; }
   .timer { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .digit { font-size: 64px; }
   .card { padding: 18px 8px 14px; gap: 8px; }
@@ -121,4 +124,89 @@
 @media (prefers-reduced-motion: reduce) {
   .page *, .page *::before, .page *::after { animation: none !important; transition: none !important; }
   .confetti { display: none; }
+}
+/* The supplied landscape is framed from the left to preserve the whole mascot. */
+@media (max-width: 900px) {
+  .page { padding-block: 14px; }
+  .brand :global(.q-logo__plate) { width: 128px; }
+  .art { width: 150px; height: 150px; margin: 8px auto; border-radius: 22px; overflow: hidden; background-size: auto 100%; background-position: left center; box-shadow: 0 5px 20px #65243210; }
+  .art::after { background: linear-gradient(90deg, transparent 55%, #faf8f6); }
+  .intro { margin: 2px 0 14px; }
+  .title { margin: 10px 0 6px; font-size: 30px; }
+  .message { margin: 16px 0; }
+  .socials { margin-top: 14px; }
+  .socials > p { margin-bottom: 7px; }
+  .socialLinks a { padding-block: 7px; }
+}
+@media (max-width: 480px) {
+  .page { padding-inline: 12px; }
+  .timer { gap: 9px; }
+  .card { padding: 13px 6px 11px; gap: 6px; }
+  .digit { font-size: clamp(42px, 7.1vh, 60px); }
+  .message h2 { font-size: 22px; }
+  .message p { font-size: 11px; }
+  .socialLinks a { padding-inline: 6px; min-width: 0; flex-basis: 88px; }
+  .socialLinks svg { width: 17px; height: 17px; }
+}
+@media (max-width: 900px) and (max-height: 720px) {
+  .page { padding-block: 9px; }
+  .brand :global(.q-logo__plate) { width: 100px; }
+  .art { width: 85px; height: 85px; margin-block: 5px; }
+  .title { font-size: 26px; margin-block: 6px 4px; }
+  .intro { margin-bottom: 10px; }
+  .message { margin-block: 10px; }
+  .message p { margin-top: 4px; }
+  .socials { margin-top: 10px; }
+  .stages { flex-wrap: nowrap; font-size: 9px; gap: 0; }
+  .stages > span { padding-inline: 4px; gap: 4px; }
+  .stages img { width: 11px; height: 11px; }
+}
+@media (max-width: 360px) {
+  .socialLinks span { display: none; }
+  .socialLinks a { gap: 6px; min-height: 45px; }
+  .socialLinks strong { font-size: 11px; }
+}
+@media (max-width: 900px) and (max-height: 500px) and (orientation: landscape) {
+  .page { grid-template-columns: 18% minmax(0, 1fr); grid-template-rows: 1fr; gap: 20px; padding: 12px 18px; }
+  .brand { grid-column: 1; grid-row: 1; align-self: start; }
+  .art { grid-column: 1; grid-row: 1; align-self: center; }
+  .content { grid-column: 2; grid-row: 1; align-self: center; }
+  .timer { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .card { padding: 12px 6px; gap: 8px; }
+  .digit { font-size: 50px; }
+  .card::after { display: none; }
+  .title { font-size: 26px; }
+  .subtitle { font-size: 13px; }
+  .message { margin-block: 10px; }
+  .message h2 { font-size: 20px; }
+  .message p { margin-top: 3px; }
+  .socials { margin-top: 8px; }
+  .socialLinks a { min-height: 44px; padding: 6px 12px; }
+  .socialLinks span { display: none; }
+  .socialLinks svg { width: 15px; height: 15px; }
+  .celebration { padding: 14px; }
+  .launchedLogo :global(.q-logo__plate) { width: 160px; margin-bottom: 10px; }
+  .launched .title { font-size: 26px; }
+}
+@media (max-width: 480px) and (max-height: 500px) {
+  .page { padding-block: 6px; }
+  .brand :global(.q-logo__plate) { width: 80px; }
+  .art { width: 44px; height: 44px; margin-block: 3px; }
+  .title { font-size: 22px; }
+  .eyebrow { font-size: 8px; }
+  .subtitle { font-size: 11px; }
+  .intro { margin-bottom: 8px; }
+  .card { padding-block: 8px; gap: 4px; }
+  .digit { font-size: 36px; }
+  .label { font-size: 9px; }
+  .message { margin-block: 8px; }
+  .message h2 { font-size: 18px; }
+  .message p { margin-top: 3px; max-width: none; font-size: 10px; }
+  .socials { margin-top: 6px; }
+  .socials > p { margin-bottom: 4px; font-size: 10px; }
+  .socialLinks span { display: none; }
+  .socialLinks a { min-height: 42px; gap: 4px; padding-block: 5px; }
+  .celebration { padding: 12px; }
+  .launchedLogo :global(.q-logo__plate) { width: 140px; margin-bottom: 10px; }
+  .launched .title { font-size: 23px; }
 }

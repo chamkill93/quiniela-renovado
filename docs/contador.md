@@ -16,8 +16,10 @@ Cuatro tarjetas pasan automáticamente a celebración sin redirección. El confe
 durante diez segundos y luego vuelve a ocho partículas. Animaciones desactivadas con
 `prefers-reduced-motion`. No se carga Zendesk ni se hacen peticiones externas.
 
-Recursos: dos fondos WebP y tres íconos del ZIP suministrado. La mascota forma parte
-de esos fondos. El logo oficial se reutiliza mediante Logo. Las carpetas mascot y audio
+Recursos: el fondo actualizado suministrado en fa5123af-ea29-4c57-9baf-f50d70159e66.png
+se optimiza como quinie-contador-lanzamiento.webp sin modificar su contenido. La mascota
+forma parte de ese fondo. Se usan tres íconos del ZIP e íconos SVG de las redes.
+El logo oficial se reutiliza mediante Logo. Las carpetas mascot y audio
 documentan los archivos opcionales admitidos. No se agregaron sonidos de terceros.
 
 Archivos creados:
@@ -31,6 +33,7 @@ Archivos creados:
 - docs/contador.md
 - public/assets/contador/background/quinie-contador-bg-1920x1080.webp
 - public/assets/contador/background/quinie-contador-bg-mobile.webp
+- public/assets/contador/background/quinie-contador-lanzamiento.webp
 - public/assets/contador/decorations/confetti-red.svg
 - public/assets/contador/icons/gear.svg
 - public/assets/contador/icons/check.svg

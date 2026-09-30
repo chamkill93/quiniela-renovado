@@ -87,12 +87,15 @@ export function CountdownScreen({ initialNow, mascot, audio }: {
           <p>Seguinos en redes</p>
           <div className={styles.socialLinks}>
             <a href="https://www.instagram.com/quinie.la_py/" target="_blank" rel="noopener noreferrer">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
               <span>Instagram</span><strong>@quinie.la_py</strong>
             </a>
             <a href="https://www.facebook.com/profile.php?id=61588186543333" target="_blank" rel="noopener noreferrer">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14 22v-9h3l.5-4H14V7c0-1.2.4-2 2-2h2V1.4A25 25 0 0 0 15 1c-3 0-5 1.8-5 5v3H7v4h3v9z"/></svg>
               <span>Facebook</span><strong>Quinie.LA</strong>
             </a>
             <a href="https://www.quinie.la/" target="_blank" rel="noopener noreferrer">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18M5 6.5h14M5 17.5h14"/></svg>
               <span>Nuestra página oficial</span><strong>quinie.la</strong>
             </a>
           </div>
