@@ -121,6 +121,9 @@ const nextConfig: NextConfig = {
   agentRules: false,
   reactStrictMode: true,
   poweredByHeader: false,
+  experimental: {
+    cpus: 2,
+  },
   async headers() {
     return [
       {

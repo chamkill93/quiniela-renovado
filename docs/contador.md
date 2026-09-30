@@ -22,6 +22,10 @@ forma parte de ese fondo. Se usan tres íconos del ZIP e íconos SVG de las rede
 El logo oficial se reutiliza mediante Logo. Las carpetas mascot y audio
 documentan los archivos opcionales admitidos. No se agregaron sonidos de terceros.
 
+Despliegue en Hostinger: `npm run build` usa Webpack para evitar los builds de
+Turbopack que quedaron detenidos en el hosting compartido. `experimental.cpus: 2`
+limita a dos los workers de generación de páginas durante la compilación.
+
 Archivos creados:
 - src/app/contador/page.tsx
 - src/app/contador/screen.tsx
