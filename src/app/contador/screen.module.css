@@ -58,6 +58,14 @@
 .celebration > span { display: block; margin-top: 8px; color: #736c74; }
 .launched .title { font-size: clamp(36px, 3.5vw, 65px); }
 .sound { position: absolute; bottom: 16px; right: 16px; border-radius: 50%; width: 44px; height: 44px; background: #fff; box-shadow: 0 4px 20px #0001; }
+.socials { margin-top: clamp(18px, 2.5vh, 28px); }
+.socials > p { color: #736c74; font-size: 11px; font-weight: 600; margin-bottom: 10px; }
+.socialLinks { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.socialLinks a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 48px; padding: 8px 18px; border: 1px solid #e8dfe1; border-radius: 12px; background: #ffffffb3; transition: background .2s, border-color .2s; }
+.socialLinks a:hover { background: #fff; border-color: #e6243c; }
+.socialLinks a:focus-visible { outline: 2px solid #e6243c; outline-offset: 3px; }
+.socialLinks span { color: #736c74; font-size: 10px; }
+.socialLinks strong { color: #be2035; font-size: 13px; font-weight: 700; }
 @keyframes tick { from { transform: translateY(3px); opacity: .72; } to { transform: translateY(0); opacity: 1; } }
 @keyframes pulse { 50% { opacity: .5; transform: translateY(-2px); } }
 @keyframes enter { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
@@ -105,6 +113,10 @@
   .stages img { width: 12px; height: 12px; }
   .launched .title { font-size: 32px; }
   .launchedLogo :global(.q-logo__plate) { width: 210px; }
+  .socialLinks { gap: 7px; }
+  .socialLinks a { padding: 8px 10px; flex: 1 1 95px; }
+  .socialLinks strong { font-size: 12px; }
+  .socialLinks span { font-size: 9px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .page *, .page *::before, .page *::after { animation: none !important; transition: none !important; }

@@ -83,6 +83,20 @@ export function CountdownScreen({ initialNow, mascot, audio }: {
             {index === 2 && launched ? "En producción" : label}
           </span>)}
         </div>
+        <div className={styles.socials}>
+          <p>Seguinos en redes</p>
+          <div className={styles.socialLinks}>
+            <a href="https://www.instagram.com/quinie.la_py/" target="_blank" rel="noopener noreferrer">
+              <span>Instagram</span><strong>@quinie.la_py</strong>
+            </a>
+            <a href="https://www.facebook.com/profile.php?id=61588186543333" target="_blank" rel="noopener noreferrer">
+              <span>Facebook</span><strong>Quinie.LA</strong>
+            </a>
+            <a href="https://www.quinie.la/" target="_blank" rel="noopener noreferrer">
+              <span>Nuestra página oficial</span><strong>quinie.la</strong>
+            </a>
+          </div>
+        </div>
       </section>
       {audio && <>
         <audio ref={audioRef} src={audio} loop preload="none" />
