@@ -16,6 +16,10 @@ test("blocks deep links until the DEV code is accepted for the browser session",
     }),
   ).toBeVisible();
   await expect(page.getByTestId("app-shell")).toHaveCount(0);
+  expect((await context.request.get("/api/mock/bootstrap")).status()).toBe(401);
+  expect((await context.request.get("/api/health")).status()).toBe(401);
+  expect((await context.request.get("/contador")).status()).toBe(200);
+  expect((await context.request.post("/api/dev-access", { data: { code: "Admin123#" } })).status()).toBe(401);
   await expect(page.getByLabel("Código de acceso")).toHaveAttribute("type", "password");
   expect(await page.content()).not.toContain(DEFAULT_DEV_ACCESS_CODE);
   expect((await context.cookies()).some(({ name }) => name === "quinie_mock_session")).toBe(false);

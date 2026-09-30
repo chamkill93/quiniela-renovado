@@ -1,20 +1,21 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 export const DEV_ACCESS_COOKIE_NAME = "quinie_dev_access";
-export const DEFAULT_DEV_ACCESS_CODE = "Admin123#";
+export const DEFAULT_DEV_ACCESS_CODE = "admin123#";
 
-const DEV_ACCESS_TOKEN_VERSION = "quinie-dev-access:v1";
+const DEV_ACCESS_TOKEN_VERSION = "quinie-dev-access:v2";
 
 /**
- * The review gate fails closed: only the exact server-side value `false`
- * publishes the site without requiring the DEV cookie.
+ * The review gate is mandatory. Public routing is explicitly limited in proxy.ts.
  */
 export function isDevAccessRequired() {
-  return process.env.DEV_ACCESS_REQUIRED !== "false";
+  return true;
 }
 
 function configuredAccessCode() {
-  return process.env.DEV_ACCESS_CODE || DEFAULT_DEV_ACCESS_CODE;
+  const code = process.env.DEV_ACCESS_CODE;
+  // Migrate the former deployment default; custom secrets remain configurable.
+  return !code || code === "Admin123#" ? DEFAULT_DEV_ACCESS_CODE : code;
 }
 
 function configuredCookieSecret() {
@@ -35,7 +36,7 @@ export function isValidDevAccessCode(candidate: unknown) {
 
 export function createDevAccessCookieValue() {
   return createHmac("sha256", configuredCookieSecret())
-    .update(DEV_ACCESS_TOKEN_VERSION, "utf8")
+    .update(`${DEV_ACCESS_TOKEN_VERSION}:${configuredAccessCode()}`, "utf8")
     .digest("base64url");
 }
 

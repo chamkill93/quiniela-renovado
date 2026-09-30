@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
+import { createHmac } from "node:crypto";
 
 import { POST } from "@/app/api/dev-access/route";
 import {
@@ -32,31 +33,41 @@ afterEach(() => {
 });
 
 describe("DEV access", () => {
-  it("keeps the gate enabled unless the deployment explicitly publishes the site", () => {
+  it("rejects old deployment cookies and migrates the old default password", () => {
+    process.env.DEV_ACCESS_CODE = "Admin123#";
+    process.env.DEV_ACCESS_COOKIE_SECRET = "independent-secret";
+    const oldToken = createHmac("sha256", "independent-secret").update("quinie-dev-access:v1").digest("base64url");
+    expect(hasValidDevAccessCookie(oldToken)).toBe(false);
+    expect(isValidDevAccessCode("Admin123#")).toBe(false);
+    expect(isValidDevAccessCode("admin123#")).toBe(true);
+    const currentToken = createDevAccessCookieValue();
+    process.env.DEV_ACCESS_CODE = "rotated-password";
+    expect(hasValidDevAccessCookie(currentToken)).toBe(false);
+  });
+  it("keeps the gate mandatory even with an obsolete deployment flag", () => {
     expect(isDevAccessRequired()).toBe(true);
 
     process.env.DEV_ACCESS_REQUIRED = "FALSE";
     expect(isDevAccessRequired()).toBe(true);
 
     process.env.DEV_ACCESS_REQUIRED = "false";
-    expect(isDevAccessRequired()).toBe(false);
+    expect(isDevAccessRequired()).toBe(true);
   });
 
-  it("closes the DEV access endpoint when the site is public", async () => {
+  it("keeps login available with an obsolete public-site flag", async () => {
     process.env.DEV_ACCESS_REQUIRED = "false";
 
     const response = await POST(
       accessRequest(JSON.stringify({ code: DEFAULT_DEV_ACCESS_CODE })),
     );
 
-    expect(response.status).toBe(404);
-    await expect(response.json()).resolves.toEqual({ message: "No encontrado." });
-    expect(response.cookies.get(DEV_ACCESS_COOKIE_NAME)).toBeUndefined();
+    expect(response.status).toBe(200);
+    expect(response.cookies.get(DEV_ACCESS_COOKIE_NAME)).toBeDefined();
   });
 
   it("uses the requested default code and compares it exactly", () => {
     expect(isValidDevAccessCode(DEFAULT_DEV_ACCESS_CODE)).toBe(true);
-    expect(isValidDevAccessCode("admin123#")).toBe(false);
+    expect(isValidDevAccessCode("Admin123#")).toBe(false);
     expect(isValidDevAccessCode(`${DEFAULT_DEV_ACCESS_CODE} `)).toBe(false);
   });
 
@@ -79,7 +90,7 @@ describe("DEV access", () => {
     expect(response.headers.get("cache-control")).toBe("no-store");
   });
 
-  it("accepts Admin123# and stores an HttpOnly session cookie", async () => {
+  it("accepts the new code and stores an HttpOnly session cookie", async () => {
     const response = await POST(
       accessRequest(JSON.stringify({ code: DEFAULT_DEV_ACCESS_CODE })),
     );

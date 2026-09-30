@@ -118,7 +118,7 @@ export default defineConfig({
     command: process.env.CI
       ? `npm run start -- --port ${E2E_SERVER_PORT}`
       : `npm run dev -- --hostname 127.0.0.1 --port ${E2E_SERVER_PORT}`,
-    url: `${E2E_BASE_URL}/api/health`,
+    url: `${E2E_BASE_URL}/contador`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

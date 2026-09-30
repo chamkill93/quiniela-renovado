@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 
 import { isMockApiAvailable } from "@/lib/product/mock-api-guard";
 import { proxy } from "@/proxy";
+import { createDevAccessCookieValue, DEV_ACCESS_COOKIE_NAME } from "@/lib/dev-access";
 
 describe("mock API access policy", () => {
   it.each([
@@ -65,7 +66,7 @@ describe("mock API proxy", () => {
       vi.stubEnv("NEXT_PUBLIC_PRODUCT_GATEWAY_MODE", "backoffice");
 
       const response = proxy(
-        new NextRequest("https://quinie.example/api/mock/" + path),
+        new NextRequest("https://quinie.example/api/mock/" + path, { headers: { cookie: `${DEV_ACCESS_COOKIE_NAME}=${createDevAccessCookieValue()}` } }),
       );
 
       expect(response.status).toBe(404);
@@ -81,7 +82,7 @@ describe("mock API proxy", () => {
     vi.stubEnv("NEXT_PUBLIC_PRODUCT_GATEWAY_MODE", " PREVIEW ");
 
     const response = proxy(
-      new NextRequest("https://quinie.example/api/mock/results"),
+      new NextRequest("https://quinie.example/api/mock/results", { headers: { cookie: `${DEV_ACCESS_COOKIE_NAME}=${createDevAccessCookieValue()}` } }),
     );
 
     expect(response.status).toBe(200);

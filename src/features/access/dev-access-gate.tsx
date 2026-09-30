@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 
 import { Button, Icon, Logo } from "@/components/ui";
 
@@ -31,8 +30,7 @@ function EyeIcon({ visible }: { visible: boolean }) {
   );
 }
 
-export function DevAccessGate() {
-  const router = useRouter();
+export function DevAccessGate({ onAccessGranted = () => window.location.reload() }: { onAccessGranted?: () => void } = {}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [code, setCode] = useState("");
   const [showCode, setShowCode] = useState(false);
@@ -66,7 +64,8 @@ export function DevAccessGate() {
         return;
       }
 
-      router.refresh();
+      // A full document reload discards the anonymous rewritten router tree.
+      onAccessGranted();
     } catch {
       setError("No pudimos conectar con la página. Intentá nuevamente.");
     } finally {

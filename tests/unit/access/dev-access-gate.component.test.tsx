@@ -65,16 +65,16 @@ describe("DEV access gate", () => {
     expect(refresh).not.toHaveBeenCalled();
   });
 
-  it("refreshes the server layout after a successful validation", async () => {
+  it("reloads the document after a successful validation", async () => {
     const user = userEvent.setup();
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ ok: true }),
     });
     vi.stubGlobal("fetch", fetchMock);
-    render(<DevAccessGate />);
+    render(<DevAccessGate onAccessGranted={refresh} />);
 
-    await user.type(screen.getByLabelText("Código de acceso"), "Admin123#");
+    await user.type(screen.getByLabelText("Código de acceso"), "admin123#");
     await user.click(screen.getByRole("button", { name: "Entrar a la página" }));
 
     await waitFor(() => expect(refresh).toHaveBeenCalledOnce());
@@ -82,7 +82,7 @@ describe("DEV access gate", () => {
       "/api/dev-access",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ code: "Admin123#" }),
+        body: JSON.stringify({ code: "admin123#" }),
       }),
     );
   });
