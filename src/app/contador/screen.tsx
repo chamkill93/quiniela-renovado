@@ -53,7 +53,7 @@ export function CountdownScreen({ initialNow, mascot, audio }: {
       <div className={styles.brand}><Logo size="lg" surface="light" /></div>
       <section className={styles.content} aria-labelledby="launch-title">
         <div className={styles.intro}>
-          <p className={styles.eyebrow}><span /> 01 OCTUBRE 2026 · 00:00 PARAGUAY</p>
+          <p className={styles.eyebrow}><span /> 02 OCTUBRE 2026 · 00:00 PARAGUAY</p>
           <h1 id="launch-title" className={styles.title} aria-live="polite">
             {launched ? "¡YA ESTAMOS EN PRODUCCIÓN!" : "¡MUY PRONTO!"}
           </h1>

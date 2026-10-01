@@ -1,5 +1,5 @@
 /** Midnight in Paraguay, regardless of the browser's configured timezone. */
-export const LAUNCH_AT = Date.parse("2026-10-01T00:00:00-03:00");
+export const LAUNCH_AT = Date.parse("2026-10-02T00:00:00-03:00");
 export const LAUNCH_TIME_ZONE = "America/Asuncion";
 
 export function getCountdown(now: number) {
