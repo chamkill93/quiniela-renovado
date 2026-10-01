@@ -12,6 +12,11 @@ El proxy sobrescribe una cabecera interna a partir de la ruta real. El layout om
 el acceso de desarrollo, proveedores, menú y pie solamente para esta pantalla.
 Se conserva la protección existente de `/api/mock/*`.
 
+La sirena de cinco segundos suena una vez por cada hora transcurrida desde que el
+visitante activa el control. El primer sonido ocurre después de la primera hora;
+si la pestaña queda inactiva, se reproduce al volver cuando ya pasó una hora.
+El clic de activación habilita el audio según las políticas del navegador.
+
 Cuatro tarjetas pasan automáticamente a celebración sin redirección. El confeti aumenta
 durante diez segundos y luego vuelve a ocho partículas. Animaciones desactivadas con
 `prefers-reduced-motion`. No se carga Zendesk ni se hacen peticiones externas.

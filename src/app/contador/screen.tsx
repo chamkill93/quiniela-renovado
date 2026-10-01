@@ -8,22 +8,44 @@ import styles from "./screen.module.css";
 
 const labels = ["DÍAS", "HORAS", "MINUTOS", "SEGUNDOS"];
 const stages = [["gear", "Últimos ajustes"], ["check", "Pruebas finales"], ["rocket", "A producción"]];
+const HOURLY_SIREN_INTERVAL = 60 * 60 * 1000;
 
-export function CountdownScreen({ initialNow, mascot, audio }: {
-  initialNow: number; mascot?: string; audio?: string;
+export function CountdownScreen({ initialNow, mascot, audio, siren }: {
+  initialNow: number; mascot?: string; audio?: string; siren?: string;
 }) {
   const [now, setNow] = useState(initialNow);
   const [sound, setSound] = useState(false);
+  const [hourlySirenEnabled, setHourlySirenEnabled] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const sirenRef = useRef<HTMLAudioElement>(null);
+  const hourlySirenEnabledRef = useRef(false);
+  const lastHourlySirenAt = useRef(initialNow);
   useEffect(() => {
     const update = () => setNow(Date.now());
+    const checkHourlySiren = () => {
+      if (!hourlySirenEnabledRef.current || Date.now() - lastHourlySirenAt.current < HOURLY_SIREN_INTERVAL) return;
+      lastHourlySirenAt.current = Date.now();
+      const player = sirenRef.current;
+      if (!player) return;
+      player.currentTime = 0;
+      void player.play().catch(() => {
+        hourlySirenEnabledRef.current = false;
+        setHourlySirenEnabled(false);
+      });
+    };
     const timer = window.setInterval(update, 250);
+    const sirenTimer = window.setInterval(checkHourlySiren, 60_000);
     document.addEventListener("visibilitychange", update);
+    document.addEventListener("visibilitychange", checkHourlySiren);
     window.addEventListener("pageshow", update);
+    window.addEventListener("pageshow", checkHourlySiren);
     return () => {
       window.clearInterval(timer);
+      window.clearInterval(sirenTimer);
       document.removeEventListener("visibilitychange", update);
+      document.removeEventListener("visibilitychange", checkHourlySiren);
       window.removeEventListener("pageshow", update);
+      window.removeEventListener("pageshow", checkHourlySiren);
     };
   }, []);
   const { launched, values } = getCountdown(now);
@@ -36,6 +58,17 @@ export function CountdownScreen({ initialNow, mascot, audio }: {
     else {
       try { await player.play(); setSound(true); }
       catch { setSound(false); }
+    }
+  }
+
+  function toggleHourlySiren() {
+    const nextEnabled = !hourlySirenEnabledRef.current;
+    hourlySirenEnabledRef.current = nextEnabled;
+    lastHourlySirenAt.current = Date.now();
+    setHourlySirenEnabled(nextEnabled);
+    if (!nextEnabled && sirenRef.current) {
+      sirenRef.current.pause();
+      sirenRef.current.currentTime = 0;
     }
   }
 
@@ -106,6 +139,14 @@ export function CountdownScreen({ initialNow, mascot, audio }: {
         <button className={styles.sound} type="button" onClick={toggleAudio} aria-pressed={sound}
           aria-label={sound ? "Desactivar ambiente de celebración" : "Activar ambiente de celebración"}>
           {sound ? "🔊" : "🔇"}
+        </button>
+      </>}
+      {siren && <>
+        <audio ref={sirenRef} src={siren} preload="auto" />
+        <button className={styles.hourlySiren} type="button" onClick={toggleHourlySiren} aria-pressed={hourlySirenEnabled}
+          aria-label={hourlySirenEnabled ? "Desactivar sirena cada hora" : "Activar sirena cada hora"}>
+          <span aria-hidden="true">{hourlySirenEnabled ? "🔔" : "🔕"}</span>
+          {hourlySirenEnabled ? "Sirena horaria activada" : "Activar sirena horaria"}
         </button>
       </>}
     </main>

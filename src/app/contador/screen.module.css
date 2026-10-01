@@ -58,7 +58,11 @@
 .celebration p { color: var(--red); font-size: clamp(25px, 2.6vw, 48px); font-weight: 800; letter-spacing: -.04em; }
 .celebration > span { display: block; margin-top: 8px; color: #736c74; }
 .launched .title { font-size: clamp(36px, 3.5vw, 65px); }
-.sound { position: absolute; bottom: 16px; right: 16px; border-radius: 50%; width: 44px; height: 44px; background: #fff; box-shadow: 0 4px 20px #0001; }
+.sound { position: fixed; z-index: 2; bottom: 76px; right: 16px; border-radius: 50%; width: 44px; height: 44px; background: #fff; box-shadow: 0 4px 20px #0001; }
+.hourlySiren { position: fixed; z-index: 2; right: 16px; bottom: 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; padding: 0 16px; border: 0; border-radius: 999px; background: #be2035; color: #fff; box-shadow: 0 5px 22px #6d182633; font-size: 13px; font-weight: 700; cursor: pointer; }
+.hourlySiren:hover { background: #a9182c; }
+.hourlySiren:focus-visible { outline: 3px solid #202127; outline-offset: 3px; }
+.hourlySiren span { font-size: 16px; }
 .socials { margin-top: clamp(18px, 2.5vh, 28px); }
 .socials > p { color: #736c74; font-size: 11px; font-weight: 600; margin-bottom: 10px; }
 .socialLinks { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
@@ -147,6 +151,7 @@
   .message p { font-size: 11px; }
   .socialLinks a { padding-inline: 6px; min-width: 0; flex-basis: 88px; }
   .socialLinks svg { width: 17px; height: 17px; }
+  .hourlySiren { right: 10px; bottom: 10px; min-height: 42px; padding-inline: 12px; font-size: 12px; }
 }
 @media (max-width: 900px) and (max-height: 720px) {
   .page { padding-block: 9px; }

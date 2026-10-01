@@ -15,9 +15,10 @@ export default function CountdownPage() {
   const available = (file: string) => existsSync(path.join(process.cwd(), "public", file));
   const mascot = "/assets/contador/mascot/quinie-mascot.png";
   const audio = "/assets/contador/audio/celebracion.mp3";
+  const siren = "/assets/contador/audio/sirena-quinie.wav";
   // A dynamic server request supplies the hydration snapshot; the client never reads time during render.
   // eslint-disable-next-line react-hooks/purity
   const initialNow = Date.now();
   return <CountdownScreen initialNow={initialNow} mascot={available(mascot) ? mascot : undefined}
-    audio={available(audio) ? audio : undefined} />;
+    audio={available(audio) ? audio : undefined} siren={available(siren) ? siren : undefined} />;
 }

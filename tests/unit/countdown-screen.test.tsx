@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { CountdownScreen } from "@/app/contador/screen";
 import { LAUNCH_AT } from "@/lib/countdown";
 
-afterEach(() => { cleanup(); vi.useRealTimers(); });
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 it("automatically replaces the timer at midnight and keeps celebration visible", () => {
   vi.useFakeTimers();
@@ -19,4 +19,37 @@ it("automatically replaces the timer at midnight and keeps celebration visible",
   act(() => { vi.advanceTimersByTime(11000); });
   expect(screen.getByText("¡Felicitaciones equipo!")).toBeTruthy();
   expect(document.body.textContent).not.toMatch(/online/i);
+});
+
+it("plays the approved siren once per elapsed hour after activation", () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-10-01T12:00:00-03:00"));
+  vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
+  vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => {});
+  render(<CountdownScreen initialNow={Date.now()} siren="/assets/contador/audio/sirena-quinie.wav" />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Activar sirena cada hora" }));
+  expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+  act(() => {
+    vi.setSystemTime(Date.now() + 60 * 60 * 1000 - 1);
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+  act(() => {
+    vi.setSystemTime(Date.now() + 1);
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1);
+
+  act(() => {
+    vi.setSystemTime(Date.now() + 60 * 60 * 1000);
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(2);
+  fireEvent.click(screen.getByRole("button", { name: "Desactivar sirena cada hora" }));
+  act(() => {
+    vi.setSystemTime(Date.now() + 60 * 60 * 1000);
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(2);
 });
