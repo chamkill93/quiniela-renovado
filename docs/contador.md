@@ -3,7 +3,7 @@
 Ruta directa: `/contador`. No se enlaza desde menús ni se incluye en un sitemap.
 Metadata y cabecera HTTP impiden indexación. Es una URL no anunciada, no un control de acceso.
 
-Fecha: `2026-10-02T00:00:00-03:00`, medianoche en America/Asuncion.
+Fecha: `2026-10-02T01:00:00-03:00`, 1:00 AM en America/Asuncion.
 Se calcula contra un instante absoluto, independientemente de la zona del dispositivo.
 El reloj del dispositivo debe estar sincronizado. Se recalcula al volver a la pestaña.
 El servidor proporciona el primer valor para evitar diferencias de hidratación.

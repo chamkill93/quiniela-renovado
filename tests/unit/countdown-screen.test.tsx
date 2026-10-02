@@ -6,7 +6,7 @@ import { LAUNCH_AT } from "@/lib/countdown";
 
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
-it("automatically replaces the timer at midnight and keeps celebration visible", () => {
+it("automatically replaces the timer at 1 AM and keeps celebration visible", () => {
   vi.useFakeTimers();
   vi.setSystemTime(LAUNCH_AT - 1000);
   render(<CountdownScreen initialNow={Date.now()} />);
