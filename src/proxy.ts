@@ -8,7 +8,7 @@ export function proxy(request: NextRequest) {
   headers.delete("x-quinie-route-surface");
   headers.set("x-quinie-contador", request.nextUrl.pathname === "/contador" ? "1" : "0");
   const path = request.nextUrl.pathname;
-  const publicResource = path === "/contador" || path === "/api/dev-access"
+  const publicResource = path === "/contador" || path === "/api/dev-access" || path === "/api/contador-version"
     || path.startsWith("/_next/static/") || path.startsWith("/_next/webpack-hmr")
     // Static public artwork is also fetched internally by Next's image optimizer.
     || path.startsWith("/assets/");

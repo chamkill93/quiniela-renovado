@@ -220,3 +220,146 @@
   .launchedLogo :global(.q-logo__plate) { width: 140px; margin-bottom: 10px; }
   .launched .title { font-size: 23px; }
 }
+
+/* Full-frame nighttime artwork: keep the complete scene visible and the labels legible. */
+.page {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: #071126;
+  color: #fff;
+}
+.art {
+  background: #050d20 url('/assets/contador/background/quinie-contador-lanzamiento-noche.png') center / contain no-repeat;
+}
+.art::after { display: none; }
+.mascot { display: none; }
+.brand { grid-column: 1; grid-row: 1; padding-bottom: 14px; }
+.brand :global(.q-logo__plate) { width: clamp(145px, 11vw, 195px); }
+.content { grid-column: 1; grid-row: 2; width: min(100%, 680px); transform: translateX(clamp(0px, 4vw, 72px)); }
+.eyebrow { color: #fff; text-shadow: 0 1px 10px #020817a6; }
+.title { color: #fff; text-shadow: 0 2px 20px #02081780; }
+.subtitle { color: #f1f3f9; text-shadow: 0 1px 10px #020817a6; }
+.card {
+  background: #06132cb3;
+  border-color: #ffffff65;
+  box-shadow: 0 16px 45px #02081766;
+}
+.digit { color: #ff536b; }
+.label { color: #fff; text-shadow: 0 1px 8px #0008; }
+.message h2 { color: #fff; text-shadow: 0 1px 10px #020817a6; }
+.message p { color: #f1f3f9; text-shadow: 0 1px 8px #020817a6; }
+.stages { color: #fff; text-shadow: 0 1px 8px #020817a6; }
+.stages > span + span { border-color: #ffffff6b; }
+.stages .active { color: #ff7083; }
+.socials > p { color: #fff; text-shadow: 0 1px 8px #020817a6; }
+.socialLinks a { border-color: #ffffff70; background: #06132cc9; }
+.socialLinks a:hover { background: #19294b; border-color: #fff; }
+.socialLinks span { color: #f1f3f9; }
+.socialLinks strong { color: #fff; }
+.socialLinks svg { color: #ff536b; }
+.celebration { border-color: #ffffff70; background: #06132ce8; box-shadow: 0 20px 80px #02081766; }
+.celebration p { color: #ff7083; }
+.celebration > span { color: #f1f3f9; }
+.hourlySiren { box-shadow: 0 5px 22px #0208179c; }
+
+@media (max-width: 900px) {
+  .page { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto 1fr auto; padding: 16px 18px 26px; }
+  .brand { grid-column: 1; grid-row: 1; padding-bottom: 0; }
+  .brand :global(.q-logo__plate) { width: clamp(118px, 24vw, 155px); }
+  .art {
+    position: relative;
+    inset: auto;
+    grid-column: 1;
+    grid-row: 2;
+    width: min(100%, 760px);
+    height: auto;
+    aspect-ratio: 1672 / 941;
+    margin: 12px auto 18px;
+    border-radius: 0;
+    background: transparent url('/assets/contador/background/quinie-contador-lanzamiento-noche.png') center / contain no-repeat;
+    box-shadow: none;
+  }
+  .content { grid-column: 1; grid-row: 3; max-width: 700px; align-self: start; transform: none; }
+  .page audio { display: none; }
+  .hourlySiren { position: static; grid-column: 1; grid-row: 4; justify-self: center; margin: 20px auto 0; }
+  .intro { margin: 2px 0 18px; }
+  .title { font-size: clamp(30px, 6vw, 48px); }
+  .subtitle { font-size: 15px; }
+  .digit { font-size: clamp(54px, 10vw, 86px); }
+  .card { gap: 10px; padding: 18px 8px; border-radius: 18px; }
+  .message { margin: 20px 0; }
+}
+@media (max-width: 480px) {
+  .page { padding-inline: 12px; }
+  .timer { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+  .digit { font-size: clamp(44px, 13vw, 60px); }
+  .card { padding: 15px 6px 12px; gap: 7px; }
+  .label { font-size: 10px; }
+  .eyebrow { font-size: 9px; }
+  .title { font-size: clamp(27px, 8vw, 34px); }
+  .subtitle { font-size: 13px; }
+  .message h2 { font-size: 22px; }
+  .message p { max-width: 290px; margin-inline: auto; font-size: 11px; line-height: 1.5; }
+  .stages { flex-wrap: wrap; gap: 8px 0; font-size: 10px; }
+  .stages > span { padding-inline: 7px; gap: 4px; }
+  .stages img { width: 12px; height: 12px; }
+  .socialLinks { gap: 7px; }
+  .socialLinks a { flex: 1 1 88px; min-width: 0; padding: 8px 6px; }
+  .socialLinks span { font-size: 9px; }
+  .socialLinks strong { font-size: 11px; }
+  .hourlySiren { right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); min-height: 42px; padding-inline: 12px; font-size: 12px; }
+}
+
+/* Desktop: show the whole artwork sharply, fill its side gutters, and keep every label in view. */
+@media (min-width: 901px) {
+  .art { background: #050d20; }
+  .art::before {
+    content: '';
+    position: absolute;
+    inset: -18px;
+    background: url('/assets/contador/background/quinie-contador-lanzamiento-noche.png') center / cover no-repeat;
+    filter: blur(18px) brightness(.42);
+    transform: scale(1.03);
+  }
+  .art::after {
+    display: block;
+    background: linear-gradient(90deg, #02081736, #02081722 42%, #02081752),
+      url('/assets/contador/background/quinie-contador-lanzamiento-noche.png') center / contain no-repeat;
+  }
+}
+
+@media (min-width: 901px) and (max-height: 720px) {
+  .page {
+    height: 100svh;
+    min-height: 100svh;
+    padding: 10px clamp(24px, 4vw, 64px);
+    grid-template-rows: auto minmax(0, 1fr);
+    overflow: hidden;
+  }
+  .brand { padding-bottom: 2px; }
+  .brand :global(.q-logo__plate) { width: 120px; }
+  .content { align-self: center; width: 100%; max-width: 840px; transform: translateX(clamp(0px, 13.5vw, 184px)); }
+  .intro { margin: 8px 0 12px; }
+  .eyebrow { font-size: 11px; }
+  .title { font-size: 40px; margin: 8px 0 6px; }
+  .subtitle { font-size: 15px; }
+  .timer { gap: 14px; }
+  .card { gap: 8px; padding: 14px 8px; border-radius: 20px; }
+  .card::after { display: none; }
+  .digit { font-size: clamp(58px, 6.3vw, 82px); }
+  .label { font-size: 11px; }
+  .message { margin: 12px 0; }
+  .message h2 { font-size: 24px; }
+  .message p { font-size: 13px; margin-top: 4px; }
+  .stages { font-size: 12px; }
+  .stages > span { padding-inline: 14px; }
+  .socials { margin-top: 8px; }
+  .socials > p { font-size: 10px; margin-bottom: 5px; }
+  .socialLinks { gap: 8px; }
+  .socialLinks a { flex-direction: row; gap: 8px; min-height: 38px; padding: 6px 12px; }
+  .socialLinks svg { width: 17px; height: 17px; }
+  .socialLinks span { font-size: 10px; }
+  .socialLinks strong { font-size: 12px; }
+}

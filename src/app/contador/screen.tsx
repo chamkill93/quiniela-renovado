@@ -8,10 +8,10 @@ import styles from "./screen.module.css";
 
 const labels = ["DÍAS", "HORAS", "MINUTOS", "SEGUNDOS"];
 const stages = [["gear", "Últimos ajustes"], ["check", "Pruebas finales"], ["rocket", "A producción"]];
-const HOURLY_SIREN_INTERVAL = 60 * 60 * 1000;
+const HOUR_IN_MS = 60 * 60 * 1000;
 
-export function CountdownScreen({ initialNow, mascot, audio, siren }: {
-  initialNow: number; mascot?: string; audio?: string; siren?: string;
+export function CountdownScreen({ initialNow, deploymentVersion = "development", audio, siren }: {
+  initialNow: number; deploymentVersion?: string; audio?: string; siren?: string;
 }) {
   const [now, setNow] = useState(initialNow);
   const [sound, setSound] = useState(false);
@@ -19,12 +19,46 @@ export function CountdownScreen({ initialNow, mascot, audio, siren }: {
   const audioRef = useRef<HTMLAudioElement>(null);
   const sirenRef = useRef<HTMLAudioElement>(null);
   const hourlySirenEnabledRef = useRef(false);
-  const lastHourlySirenAt = useRef(initialNow);
+  const previousRemainingMs = useRef(LAUNCH_AT - initialNow);
   useEffect(() => {
-    const update = () => setNow(Date.now());
-    const checkHourlySiren = () => {
-      if (!hourlySirenEnabledRef.current || Date.now() - lastHourlySirenAt.current < HOURLY_SIREN_INTERVAL) return;
-      lastHourlySirenAt.current = Date.now();
+    let refreshing = false;
+    const checkDeployment = async () => {
+      if (refreshing || document.visibilityState === "hidden") return;
+      try {
+        const response = await fetch("/api/contador-version", { cache: "no-store" });
+        if (!response.ok) return;
+        const latest = await response.json() as { version?: unknown };
+        if (typeof latest.version === "string" && latest.version && latest.version !== deploymentVersion) {
+          refreshing = true;
+          window.location.reload();
+        }
+      } catch {
+        // Retry on the next interval or when the visitor returns to the tab.
+      }
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") void checkDeployment();
+    };
+    void checkDeployment();
+    const timer = window.setInterval(checkDeployment, 30_000);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [deploymentVersion]);
+
+  useEffect(() => {
+    const update = () => {
+      const currentNow = Date.now();
+      const remainingMs = LAUNCH_AT - currentNow;
+      const previousMs = previousRemainingMs.current;
+      previousRemainingMs.current = remainingMs;
+      setNow(currentNow);
+
+      if (!hourlySirenEnabledRef.current || remainingMs <= 0 || previousMs <= remainingMs || previousMs <= 0) return;
+      if (Math.ceil(previousMs / HOUR_IN_MS) <= Math.ceil(remainingMs / HOUR_IN_MS)) return;
+
       const player = sirenRef.current;
       if (!player) return;
       player.currentTime = 0;
@@ -34,18 +68,12 @@ export function CountdownScreen({ initialNow, mascot, audio, siren }: {
       });
     };
     const timer = window.setInterval(update, 250);
-    const sirenTimer = window.setInterval(checkHourlySiren, 60_000);
     document.addEventListener("visibilitychange", update);
-    document.addEventListener("visibilitychange", checkHourlySiren);
     window.addEventListener("pageshow", update);
-    window.addEventListener("pageshow", checkHourlySiren);
     return () => {
       window.clearInterval(timer);
-      window.clearInterval(sirenTimer);
       document.removeEventListener("visibilitychange", update);
-      document.removeEventListener("visibilitychange", checkHourlySiren);
       window.removeEventListener("pageshow", update);
-      window.removeEventListener("pageshow", checkHourlySiren);
     };
   }, []);
   const { launched, values } = getCountdown(now);
@@ -64,7 +92,7 @@ export function CountdownScreen({ initialNow, mascot, audio, siren }: {
   function toggleHourlySiren() {
     const nextEnabled = !hourlySirenEnabledRef.current;
     hourlySirenEnabledRef.current = nextEnabled;
-    lastHourlySirenAt.current = Date.now();
+    previousRemainingMs.current = LAUNCH_AT - Date.now();
     setHourlySirenEnabled(nextEnabled);
     if (!nextEnabled && sirenRef.current) {
       sirenRef.current.pause();
@@ -74,16 +102,14 @@ export function CountdownScreen({ initialNow, mascot, audio, siren }: {
 
   return (
     <main className={`${styles.page} ${launched ? styles.launched : ""}`} data-testid="countdown-page">
-      <div className={styles.art} aria-hidden="true">
-        {mascot && <Image src={mascot} width={700} height={900} className={styles.mascot} alt="" priority />}
-      </div>
+      <div className={styles.art} aria-hidden="true" />
       <div className={`${styles.confetti} ${burst ? styles.burst : ""}`} aria-hidden="true">
         {Array.from({ length: 44 }, (_, i) => <i key={i} style={{
           "--x": `${(i * 37 + 7) % 100}%`, "--delay": `${-(i % 11)}s`,
           "--duration": `${8 + i % 7}s`, "--rotation": `${i * 31}deg`,
         } as CSSProperties} />)}
       </div>
-      <div className={styles.brand}><Logo size="lg" surface="light" /></div>
+      <div className={styles.brand}><Logo size="lg" surface="dark" /></div>
       <section className={styles.content} aria-labelledby="launch-title">
         <div className={styles.intro}>
           <p className={styles.eyebrow}><span /> 02 OCTUBRE 2026 · 00:00 PARAGUAY</p>
@@ -94,7 +120,7 @@ export function CountdownScreen({ initialNow, mascot, audio, siren }: {
         </div>
         {launched ? (
           <div className={styles.celebration}>
-            <div className={styles.launchedLogo}><Logo size="lg" surface="light" /></div>
+            <div className={styles.launchedLogo}><Logo size="lg" surface="dark" /></div>
             <p>¡Felicitaciones equipo!</p>
             <span>Lo hicimos juntos.</span>
           </div>
@@ -144,9 +170,10 @@ export function CountdownScreen({ initialNow, mascot, audio, siren }: {
       {siren && <>
         <audio ref={sirenRef} src={siren} preload="auto" />
         <button className={styles.hourlySiren} type="button" onClick={toggleHourlySiren} aria-pressed={hourlySirenEnabled}
-          aria-label={hourlySirenEnabled ? "Desactivar sirena cada hora" : "Activar sirena cada hora"}>
+          aria-label={hourlySirenEnabled ? "Desactivar sirena en cada hora restante" : "Activar sirena en cada hora restante"}
+          title="Suena al llegar a cada hora exacta que falta para el lanzamiento">
           <span aria-hidden="true">{hourlySirenEnabled ? "🔔" : "🔕"}</span>
-          {hourlySirenEnabled ? "Sirena horaria activada" : "Activar sirena horaria"}
+          {hourlySirenEnabled ? "Sirena por hora activada" : "Activar sirena por hora"}
         </button>
       </>}
     </main>
